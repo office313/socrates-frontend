@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
 import Login from './pages/Login'
+import Dashboard from './pages/Dashboard'
 
 function App() {
   const { usuario, loading } = useAuth()
@@ -13,7 +14,7 @@ function App() {
         <Route path="/*" element={
           <Layout usuario={usuario} loading={loading}>
             <Routes>
-              <Route path="/" element={<div style={{padding:24}}><h2 style={{color:'var(--blue)'}}>Radar de Oportunidades</h2><p style={{color:'var(--text-muted)',marginTop:8}}>Próximamente...</p></div>} />
+              <Route path="/" element={<Dashboard usuario={usuario} />} />
               <Route path="/analytics" element={<div style={{padding:24}}><h2 style={{color:'var(--blue)'}}>Analytics</h2><p style={{color:'var(--text-muted)',marginTop:8}}>Próximamente...</p></div>} />
               <Route path="/pipeline" element={<div style={{padding:24}}><h2 style={{color:'var(--blue)'}}>Pipeline</h2><p style={{color:'var(--text-muted)',marginTop:8}}>Próximamente...</p></div>} />
               <Route path="/keywords" element={<div style={{padding:24}}><h2 style={{color:'var(--blue)'}}>Keywords</h2><p style={{color:'var(--text-muted)',marginTop:8}}>Próximamente...</p></div>} />
