@@ -62,32 +62,19 @@ export default function Keywords() {
     <div style={{ padding: 24 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Keywords</h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ display: 'flex', background: '#f0f0f0', borderRadius: 8, padding: 3, gap: 2 }}>
-            <button onClick={() => cambiarModo('amplio')} style={{
-              padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: modo === 'amplio' ? 'var(--blue)' : 'transparent',
-              color: modo === 'amplio' ? 'white' : '#666', border: 'none',
-            }}>Modo Amplio</button>
-            <button onClick={() => cambiarModo('estricto')} style={{
-              padding: '6px 14px', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-              background: modo === 'estricto' ? 'var(--blue)' : 'transparent',
-              color: modo === 'estricto' ? 'white' : '#666', border: 'none',
-            }}>Modo Estricto</button>
-          </div>
-          <button onClick={buscarAhora} disabled={sincronizando} style={{
-            padding: '9px 20px', background: sincronizando ? '#ccc' : 'var(--red)',
-            color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: sincronizando ? 'default' : 'pointer'
-          }}>
-            {sincronizando ? 'Sincronizando...' : 'Buscar Ahora'}
-          </button>
-        </div>
+        <button onClick={buscarAhora} disabled={sincronizando} style={{
+          padding: '9px 20px', background: sincronizando ? '#ccc' : 'var(--red)',
+          color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: sincronizando ? 'default' : 'pointer'
+        }}>
+          {sincronizando ? 'Sincronizando...' : 'Buscar Ahora'}
+        </button>
       </div>
 
       <div style={{ background: modo === 'amplio' ? '#e8f0fb' : '#f3e5f5', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontSize: 12, color: modo === 'amplio' ? 'var(--blue)' : '#6a1b9a' }}>
         {modo === 'amplio'
-          ? 'Modo Amplio activo — el buscador tolera errores tipográficos y siempre ignora tildes y mayúsculas'
+          ? 'Modo Amplio activo — el buscador tolera errores tipográficos e ignora tildes y mayúsculas'
           : 'Modo Estricto activo — el buscador busca exactamente lo escrito, solo ignora tildes y mayúsculas'}
+        <span style={{ marginLeft: 8, opacity: 0.7 }}>· Puedes cambiarlo en Admin → Configuración</span>
       </div>
 
       {progreso && (
@@ -129,6 +116,7 @@ export default function Keywords() {
               <li>Añade <strong>códigos de ficha técnica</strong> si los conoces (ej: 105789)</li>
               <li>Incluye <strong>sinónimos</strong> — "compresor" y "compresora"</li>
               <li>No te preocupes por <strong>tildes ni mayúsculas</strong> — el sistema las ignora siempre</li>
+              <li>El <strong>Modo de búsqueda</strong> (Amplio o Estricto) se configura en Admin → Configuración</li>
               <li>Evita palabras muy genéricas como "compra" o "suministro" — generan demasiado ruido</li>
               <li>Prueba tus keywords en <strong>Analytics</strong> antes de añadirlas — si encuentras adjudicaciones relevantes, es una buena keyword</li>
               <li>Revisa tus keywords <strong>periódicamente</strong> y ajústalas según los resultados</li>
