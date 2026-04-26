@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Analytics from './pages/Analytics'
 import Keywords from './pages/Keywords'
+import Settings from './pages/Settings'
 
 function App() {
   const { usuario, loading } = useAuth()
@@ -21,8 +22,7 @@ function App() {
               <Route path="/analytics" element={<Analytics />} />
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/keywords" element={<Keywords />} />
-              <Route path="/admin" element={<div style={{padding:24}}><h2 style={{color:'var(--blue)'}}>Admin</h2></div>} />
-              <Route path="/cuenta" element={<div style={{padding:24}}><h2 style={{color:'var(--blue)'}}>Mi Cuenta</h2></div>} />
+              <Route path="/settings" element={<Settings usuario={usuario} />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>

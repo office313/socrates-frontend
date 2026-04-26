@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, BarChart2, GitCommit, Key, User, LogOut, Settings, BookOpen } from 'lucide-react'
+import { Radar, GitCommit, Key, User, LogOut, Settings, BookOpen } from 'lucide-react'
 
 const navItems = [
   { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
@@ -57,15 +57,9 @@ export default function Sidebar({ usuario }) {
       </nav>
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
-        {usuario?.rol === 'superadmin' && (
-          <NavLink to="/admin" style={({ isActive }) => linkStyle(isActive)}>
-            <Settings size={20} />
-            <span style={{ fontSize: 11 }}>Admin</span>
-          </NavLink>
-        )}
-        <NavLink to="/cuenta" style={({ isActive }) => linkStyle(isActive)}>
-          <User size={20} />
-          <span style={{ fontSize: 11 }}>Cuenta</span>
+        <NavLink to="/settings" style={({ isActive }) => linkStyle(isActive)}>
+          <Settings size={20} />
+          <span style={{ fontSize: 11 }}>Settings</span>
         </NavLink>
         <button onClick={handleLogout} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
