@@ -82,10 +82,10 @@ export default function Keywords() {
           <h2 style={{ fontSize: 15, fontWeight: 600, color: 'var(--blue)', margin: '0 0 16px' }}>Añadir Keywords</h2>
           <form onSubmit={agregarKeyword}>
             <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 4 }}>
-              Separadas por coma o una por línea
+              Escribe tus keywords separados por una coma
             </label>
             <textarea value={texto} onChange={e => setTexto(e.target.value)} rows={8}
-              placeholder={'malla, aire acondicionado, 105789, compresor\no una por línea'}
+              placeholder={'malla, aire acondicionado, 105789, compresor'}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, resize: 'vertical', marginBottom: 12 }} />
             <button type="submit" style={{
               width: '100%', padding: '10px', background: 'var(--blue)',
