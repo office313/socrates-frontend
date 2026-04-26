@@ -121,7 +121,7 @@ export default function Dashboard({ usuario }) {
                 return (
                   <tr key={l.numero_acto}
                     style={{ background: bg, borderLeft: urgente ? '3px solid #e65100' : '3px solid transparent', cursor: 'pointer' }}
-                    onClick={() => marcarVista(l.numero_acto)}>
+                    onClick={() => { marcarVista(l.numero_acto); if (l.url_fuente) window.open(l.url_fuente, '_blank') }}>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, opacity: vista ? 0.55 : 1 }}>{l.numero_acto}</td>
                     <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 25)}</td>
                     <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 40)}...</td>
