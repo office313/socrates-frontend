@@ -3,19 +3,40 @@ import axios from 'axios'
 
 const ROLES = ['usuario', 'supervisor', 'superadmin']
 
-function ModalUsuario({ usuario, empresas, onClose, onSave }) {
-  const [form, setForm] = useState(usuario || { nombre: '', email: '', password: '', rol: 'usuario', empresa_id: '' })
+function ModalUsuario({ usuarioActual, usuarioEditar, empresas, onClose, onSave }) {
+  const esNuevo = !usuarioEditar?.id
+  const [form, setForm] = useState(usuarioEditar || { nombre: '', email: '', password: '', confirmar: '', rol: 'usuario', empresa_id: usuarioActual?.empresa_id || '' })
+  const [error, setError] = useState('')
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const rolesDisponibles = usuarioActual?.rol === 'superadmin'
+    ? ['usuario', 'supervisor', 'superadmin']
+    : ['usuario', 'supervisor']
+
+  const validar = () => {
+    if (!form.nombre || !form.email) return 'Nombre y email son obligatorios'
+    if (esNuevo && !form.password) return 'La contraseña es obligatoria'
+    if (form.password && form.password !== form.confirmar) return 'Las contraseñas no coinciden'
+    return null
+  }
+
+  const handleSave = () => {
+    const err = validar()
+    if (err) { setError(err); return }
+    onSave({ ...form, empresa_id: usuarioActual?.rol === 'superadmin' ? form.empresa_id : usuarioActual?.empresa_id })
+  }
+
   const inputStyle = { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }
   const labelStyle = { display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 4 }
 
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: 16, width: 480, padding: 0, overflow: 'hidden' }}>
+      <div style={{ background: 'white', borderRadius: 16, width: 480, overflow: 'hidden' }}>
         <div style={{ padding: '16px 24px', background: 'var(--blue)' }}>
-          <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>{usuario?.id ? 'Editar Usuario' : 'Nuevo Usuario'}</h2>
+          <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>{esNuevo ? 'Nuevo Usuario' : 'Editar Usuario'}</h2>
         </div>
-        <div style={{ padding: 24, display: 'grid', gap: 16 }}>
+        <div style={{ padding: 24, display: 'grid', gap: 14 }}>
+          {error && <div style={{ background: '#ffebee', color: '#c62828', padding: '8px 12px', borderRadius: 8, fontSize: 12 }}>{error}</div>}
           <div>
             <label style={labelStyle}>Nombre</label>
             <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={inputStyle} />
@@ -24,27 +45,35 @@ function ModalUsuario({ usuario, empresas, onClose, onSave }) {
             <label style={labelStyle}>Email</label>
             <input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inputStyle} />
           </div>
-          <div>
-            <label style={labelStyle}>{usuario?.id ? 'Nueva contraseña (dejar vacío para no cambiar)' : 'Contraseña'}</label>
-            <input type="password" value={form.password || ''} onChange={e => set('password', e.target.value)} style={inputStyle} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={labelStyle}>{esNuevo ? 'Contraseña' : 'Nueva contraseña'}</label>
+              <input type="password" value={form.password || ''} onChange={e => set('password', e.target.value)} style={inputStyle} placeholder={esNuevo ? '' : 'Dejar vacío para no cambiar'} />
+            </div>
+            <div>
+              <label style={labelStyle}>Confirmar contraseña</label>
+              <input type="password" value={form.confirmar || ''} onChange={e => set('confirmar', e.target.value)} style={inputStyle} />
+            </div>
           </div>
           <div>
             <label style={labelStyle}>Rol</label>
             <select value={form.rol} onChange={e => set('rol', e.target.value)} style={inputStyle}>
-              {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+              {rolesDisponibles.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
-          <div>
-            <label style={labelStyle}>Empresa</label>
-            <select value={form.empresa_id || ''} onChange={e => set('empresa_id', e.target.value)} style={inputStyle}>
-              <option value="">Seleccionar empresa</option>
-              {empresas.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
-            </select>
-          </div>
+          {usuarioActual?.rol === 'superadmin' && (
+            <div>
+              <label style={labelStyle}>Empresa</label>
+              <select value={form.empresa_id || ''} onChange={e => set('empresa_id', e.target.value)} style={inputStyle}>
+                <option value="">Seleccionar empresa</option>
+                {empresas.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+              </select>
+            </div>
+          )}
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={onClose} style={{ padding: '8px 16px', background: '#f5f5f5', color: '#666', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Cancelar</button>
-          <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Guardar</button>
+          <button onClick={handleSave} style={{ padding: '8px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Guardar</button>
         </div>
       </div>
     </div>
@@ -116,7 +145,7 @@ export default function Settings({ usuario }) {
   return (
     <div style={{ padding: 24, maxWidth: 780 }}>
       {modalUsuario !== null && (
-        <ModalUsuario usuario={modalUsuario} empresas={empresas} onClose={() => setModalUsuario(null)} onSave={guardarUsuario} />
+        <ModalUsuario usuarioActual={usuario} usuarioEditar={modalUsuario} empresas={empresas} onClose={() => setModalUsuario(null)} onSave={guardarUsuario} />
       )}
 
       <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '0 0 24px' }}>Settings</h1>
