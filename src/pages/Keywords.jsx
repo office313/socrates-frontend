@@ -85,7 +85,7 @@ export default function Keywords() {
               Escribe tus keywords separados por una coma
             </label>
             <textarea value={texto} onChange={e => setTexto(e.target.value)} rows={8}
-              placeholder={'malla, aire acondicionado, 105789, compresor'}
+              placeholder={''}
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, resize: 'vertical', marginBottom: 12 }} />
             <button type="submit" style={{
               width: '100%', padding: '10px', background: 'var(--blue)',
@@ -95,6 +95,17 @@ export default function Keywords() {
           <p style={{ marginTop: 12, fontSize: 11, color: '#aaa' }}>
             Total: {keywords.length} keywords activas
           </p>
+          <div style={{ marginTop: 16, padding: 14, background: '#f8f9fa', borderRadius: 8, border: '1px solid #e5e7eb' }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)', margin: '0 0 8px' }}>Consejos para mejores resultados</p>
+            <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11, color: '#666', lineHeight: 1.8 }}>
+              <li>Usa términos <strong>genéricos</strong> — "malla" captura más que "malla quirúrgica expandida"</li>
+              <li>Añade <strong>códigos de ficha técnica</strong> si los conoces (ej: 105789)</li>
+              <li>Incluye <strong>sinónimos</strong> — "compresor" y "compresora"</li>
+              <li>Evita artículos — escribe "compresor", no "el compresor"</li>
+              <li>Las palabras <strong>cortas</strong> capturan más variantes</li>
+              <li>Revisa tus keywords periódicamente para ajustarlas</li>
+            </ul>
+          </div>
         </div>
 
         <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
