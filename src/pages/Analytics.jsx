@@ -119,7 +119,7 @@ export default function Analytics() {
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: '#f8f9fa' }}>
-                    {['No. Acto', 'Institución', 'Descripción', 'Adjudicatario', 'Fecha Adj.', 'Monto', ''].map((h, i) => (
+                    {['No. Acto', 'Institución', 'Descripción', 'Adjudicatario', 'Fecha Adj.', 'Monto'].map((h, i) => (
                       <th key={i} style={{ padding: '10px 16px', textAlign: i > 4 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12 }}>{h}</th>
                     ))}
                   </tr>
@@ -127,15 +127,16 @@ export default function Analytics() {
                 <tbody>
                   {resultados.map((r, i) => (
                     <tr key={r.numero_acto} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                      <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500, fontSize: 12 }}>{r.numero_acto}</td>
+                      <td style={{ padding: '10px 16px', fontSize: 12 }}>
+                        {r.url_fuente
+                          ? <a href={r.url_fuente} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontWeight: 500 }}>{r.numero_acto}</a>
+                          : <span style={{ color: 'var(--blue)', fontWeight: 500 }}>{r.numero_acto}</span>}
+                      </td>
                       <td style={{ padding: '10px 16px' }}>{(r.institucion || '-').substring(0, 25)}</td>
                       <td style={{ padding: '10px 16px', color: '#666' }}>{(r.descripcion || '-').substring(0, 45)}...</td>
                       <td style={{ padding: '10px 16px' }}>{(r.adjudicatario || '-').substring(0, 25)}</td>
                       <td style={{ padding: '10px 16px' }}>{fmtFecha(r.fecha_adjudicacion)}</td>
                       <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 600, color: '#2e7d32' }}>{fmt(r.monto)}</td>
-                      <td style={{ padding: '10px 16px', textAlign: 'right' }}>
-                        {r.url_fuente && <a href={r.url_fuente} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontSize: 12 }}>Ver →</a>}
-                      </td>
                     </tr>
                   ))}
                 </tbody>
