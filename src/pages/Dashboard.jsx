@@ -17,7 +17,8 @@ export default function Dashboard({ usuario }) {
     try { return JSON.parse(localStorage.getItem('lics_vistas') || '{}') } catch { return {} }
   })
 
-  const hoy = new Date().toISOString().split('T')[0]
+  const [filtro, setFiltro] = useState('todas') // 'todas', 'hoy', 'pipeline'
+  const [numerosPipeline, setNumerosPipeline] = useState(new Set())
 
   const marcarVista = (numeroActo) => {
     const nuevas = { ...vistas, [numeroActo]: true }
@@ -42,6 +43,8 @@ export default function Dashboard({ usuario }) {
     } catch { alert('Error al anadir al Pipeline') }
   }
 
+  const hoy = new Date().toISOString().split('T')[0]
+
   useEffect(() => {
     Promise.all([
       axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500&ordenar=fecha_cierre&direccion=asc'),
@@ -49,6 +52,8 @@ export default function Dashboard({ usuario }) {
       axios.get('/api/pipeline'),
     ]).then(([lics, sync, pipe]) => {
       const todas = lics.data.resultados || []
+      const pipItems = pipe.data.resultados || []
+      setNumerosPipeline(new Set(pipItems.map(p => p.numero_acto)))
       setStats({
         vigentes: lics.data.total || 0,
         cierranHoy: todas.filter(l => l.fecha_cierre === hoy).length,
@@ -60,6 +65,12 @@ export default function Dashboard({ usuario }) {
   }, [])
 
   const esHoy = (f) => f && f.substring(0, 10) === hoy
+
+  const licitacionesFiltradas = licitaciones.filter(l => {
+    if (filtro === 'hoy') return esHoy(l.fecha_cierre)
+    if (filtro === 'pipeline') return numerosPipeline.has(l.numero_acto)
+    return true
+  })
 
   return (
     <div style={{ padding: 24 }}>
@@ -80,17 +91,17 @@ export default function Dashboard({ usuario }) {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-        <div style={{ background: 'white', borderRadius: 12, padding: 20, border: '1px solid var(--border)' }}>
+        <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 20, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
           <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Licitaciones vigentes</p>
           <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--blue)' }}>{stats.vigentes}</p>
           <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>con tus keywords</p>
         </div>
-        <div style={{ background: stats.cierranHoy > 0 ? '#fff3e0' : 'white', borderRadius: 12, padding: 20, border: '1px solid ' + (stats.cierranHoy > 0 ? '#e65100' : 'var(--border)') }}>
+        <div onClick={() => setFiltro(filtro === 'hoy' ? 'todas' : 'hoy')} style={{ background: stats.cierranHoy > 0 ? '#fff3e0' : 'white', borderRadius: 12, padding: 20, border: filtro === 'hoy' ? '2px solid #e65100' : '1px solid ' + (stats.cierranHoy > 0 ? '#e65100' : 'var(--border)'), cursor: 'pointer' }}>
           <p style={{ margin: '0 0 8px', fontSize: 12, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text-muted)', fontWeight: 500 }}>Cierran hoy</p>
           <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text)' }}>{stats.cierranHoy}</p>
           <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>requieren atencion</p>
         </div>
-        <div style={{ background: 'white', borderRadius: 12, padding: 20, border: '1px solid var(--border)' }}>
+        <div onClick={() => setFiltro(filtro === 'pipeline' ? 'todas' : 'pipeline')} style={{ background: 'white', borderRadius: 12, padding: 20, border: filtro === 'pipeline' ? '2px solid #2e7d32' : '1px solid var(--border)', cursor: 'pointer' }}>
           <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>En Pipeline</p>
           <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: '#2e7d32' }}>{stats.pipeline}</p>
           <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>licitaciones activas</p>
@@ -100,7 +111,12 @@ export default function Dashboard({ usuario }) {
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--blue)' }}>Radar de Oportunidades</h2>
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{stats.vigentes} licitaciones</span>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            {licitacionesFiltradas.length} licitaciones
+            {filtro !== 'todas' && <span style={{ marginLeft: 8, background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
+              {filtro === 'hoy' ? 'Cierran hoy' : 'En Pipeline'}
+            </span>}
+          </span>
         </div>
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
@@ -114,7 +130,7 @@ export default function Dashboard({ usuario }) {
               </tr>
             </thead>
             <tbody>
-              {licitaciones.map((l, i) => {
+              {licitacionesFiltradas.map((l, i) => {
                 const vista = !!vistas[l.numero_acto]
                 const urgente = esHoy(l.fecha_cierre)
                 const bg = urgente ? '#fff3e0' : i % 2 === 0 ? 'white' : '#fafafa'
