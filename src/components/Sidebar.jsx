@@ -4,7 +4,7 @@ import { Radar, BarChart2, GitCommit, Key, User, LogOut, Settings } from 'lucide
 const navItems = [
   { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
   { to: '/', icon: Radar, label: 'Radar' },
-  { to: '/analytics', icon: BarChart2, label: 'Analytics' },
+  { to: '/analytics', icon: BarChart2, label: 'Explorer' },
   { to: '/keywords', icon: Key, label: 'Keywords' },
 ]
 
