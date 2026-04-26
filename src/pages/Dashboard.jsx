@@ -43,6 +43,8 @@ export default function Dashboard({ usuario }) {
     } catch { alert('Error al anadir al Pipeline') }
   }
 
+  const [pipelineItems, setPipelineItems] = useState([])
+
   const hoy = new Date().toISOString().split('T')[0]
 
   useEffect(() => {
@@ -54,6 +56,7 @@ export default function Dashboard({ usuario }) {
       const todas = lics.data.resultados || []
       const pipItems = pipe.data.resultados || []
       setNumerosPipeline(new Set(pipItems.map(p => p.numero_acto)))
+      setPipelineItems(pipItems)
       setStats({
         vigentes: lics.data.total || 0,
         cierranHoy: todas.filter(l => l.fecha_cierre === hoy).length,
@@ -66,11 +69,20 @@ export default function Dashboard({ usuario }) {
 
   const esHoy = (f) => f && f.substring(0, 10) === hoy
 
-  const licitacionesFiltradas = licitaciones.filter(l => {
-    if (filtro === 'hoy') return esHoy(l.fecha_cierre)
-    if (filtro === 'pipeline') return numerosPipeline.has(l.numero_acto)
-    return true
-  })
+  const licitacionesFiltradas = filtro === 'pipeline'
+    ? pipelineItems.map(p => ({
+        numero_acto: p.numero_acto,
+        institucion: p.institucion,
+        descripcion: p.descripcion,
+        keywords: [],
+        fecha_cierre: p.fecha_orden_compra || '',
+        presupuesto: p.precio_ofertado || p.precio_referencia,
+        url_fuente: p.url_fuente,
+      }))
+    : licitaciones.filter(l => {
+        if (filtro === 'hoy') return esHoy(l.fecha_cierre)
+        return true
+      })
 
   return (
     <div style={{ padding: 24 }}>
