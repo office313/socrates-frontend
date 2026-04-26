@@ -1,46 +1,17 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import axios from 'axios'
 
 export default function Keywords() {
   const [keywords, setKeywords] = useState([])
   const [texto, setTexto] = useState('')
-  const [progreso, setProgreso] = useState(null)
-  const [sincronizando, setSincronizando] = useState(false)
   const [modo, setModo] = useState('amplio')
-  const intervaloRef = useRef(null)
 
   const cargar = () => {
     axios.get('/api/keywords').then(r => setKeywords(r.data.keywords || []))
     axios.get('/api/keywords/modo').then(r => setModo(r.data.modo || 'amplio'))
   }
 
-  useEffect(() => {
-    cargar()
-    return () => { if (intervaloRef.current) clearInterval(intervaloRef.current) }
-  }, [])
-
-  const cambiarModo = (nuevoModo) => {
-    setModo(nuevoModo)
-    axios.post('/api/keywords/modo', { modo: nuevoModo })
-  }
-
-  const verificarProgreso = () => {
-    axios.get('/api/keywords/progreso').then(r => {
-      setProgreso(r.data)
-      if (r.data.estado === 'completo') {
-        setSincronizando(false)
-        if (intervaloRef.current) clearInterval(intervaloRef.current)
-        setTimeout(() => setProgreso(null), 3000)
-      }
-    })
-  }
-
-  const buscarAhora = () => {
-    axios.post('/api/keywords/buscar').then(() => {
-      setSincronizando(true)
-      intervaloRef.current = setInterval(verificarProgreso, 2000)
-    })
-  }
+  useEffect(() => { cargar() }, [])
 
   const agregarKeyword = (e) => {
     e.preventDefault()
@@ -60,36 +31,17 @@ export default function Keywords() {
 
   return (
     <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Keywords</h1>
-        <button onClick={buscarAhora} disabled={sincronizando} style={{
-          padding: '9px 20px', background: sincronizando ? '#ccc' : 'var(--red)',
-          color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: sincronizando ? 'default' : 'pointer'
-        }}>
-          {sincronizando ? 'Sincronizando...' : 'Buscar Ahora'}
-        </button>
       </div>
 
-      <div style={{ background: modo === 'amplio' ? '#e8f0fb' : '#f3e5f5', borderRadius: 8, padding: '10px 16px', marginBottom: 20, fontSize: 12, color: modo === 'amplio' ? 'var(--blue)' : '#6a1b9a' }}>
+      <div style={{ background: modo === 'amplio' ? '#e8f0fb' : '#f3e5f5', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 12, color: modo === 'amplio' ? 'var(--blue)' : '#6a1b9a', lineHeight: 1.6 }}>
+        <strong>{modo === 'amplio' ? 'Modo Amplio activo' : 'Modo Estricto activo'}</strong>
         {modo === 'amplio'
-          ? 'Modo Amplio activo — el buscador tolera errores tipográficos e ignora tildes y mayúsculas'
-          : 'Modo Estricto activo — el buscador busca exactamente lo escrito, solo ignora tildes y mayúsculas'}
-        <span style={{ marginLeft: 8, opacity: 0.7 }}>· Puedes cambiarlo en Admin → Configuración</span>
+          ? ' — el buscador tolera errores tipográficos e ignora tildes y mayúsculas. Ideal para capturar licitaciones aunque los funcionarios cometan faltas de ortografía.'
+          : ' — el buscador busca exactamente lo escrito, solo ignora tildes y mayúsculas. Más preciso pero puede perder licitaciones con errores tipográficos.'}
+        <span style={{ display: 'block', marginTop: 4, opacity: 0.75 }}>Puedes cambiar el modo en Admin → Configuración</span>
       </div>
-
-      {progreso && (
-        <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 16, marginBottom: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 13, color: '#666' }}>
-              {progreso.estado === 'completo' ? `Completado — ${progreso.licitaciones} licitaciones encontradas` : `Sincronizando... ${progreso.porcentaje}%`}
-            </span>
-            <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--blue)' }}>{progreso.porcentaje}%</span>
-          </div>
-          <div style={{ background: '#f0f0f0', borderRadius: 4, height: 8 }}>
-            <div style={{ background: 'var(--blue)', borderRadius: 4, height: 8, width: progreso.porcentaje + '%', transition: 'width 0.3s' }} />
-          </div>
-        </div>
-      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
         <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20 }}>

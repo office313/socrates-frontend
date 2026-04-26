@@ -1,16 +1,50 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
+const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
+const fmtFecha = (f) => {
+  if (!f) return '-'
+  const p = f.substring(0, 10).split('-')
+  return p[2] + '-' + p[1] + '-' + p[0]
+}
+
 export default function Dashboard({ usuario }) {
   const [stats, setStats] = useState({ vigentes: 0, cierranHoy: 0, pipeline: 0 })
   const [licitaciones, setLicitaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [ultimaSync, setUltimaSync] = useState('')
+  const [vistas, setVistas] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('lics_vistas') || '{}') } catch { return {} }
+  })
+
+  const hoy = new Date().toISOString().split('T')[0]
+
+  const marcarVista = (numeroActo) => {
+    const nuevas = { ...vistas, [numeroActo]: true }
+    setVistas(nuevas)
+    localStorage.setItem('lics_vistas', JSON.stringify(nuevas))
+  }
+
+  const anadirPipeline = async (e, l) => {
+    e.stopPropagation()
+    try {
+      const r = await axios.post('/api/pipeline', {
+        numero_acto: l.numero_acto,
+        institucion: l.institucion || '',
+        descripcion: l.descripcion || '',
+        tipo_proceso: l.tipo_proceso || '',
+        url_fuente: l.url_fuente || '',
+        precio_referencia: l.presupuesto || 0,
+        estado: 'En Preparacion'
+      })
+      if (r.data.error) { alert(r.data.error); return }
+      alert('Anadida al Pipeline')
+    } catch { alert('Error al anadir al Pipeline') }
+  }
 
   useEffect(() => {
-    const hoy = new Date().toISOString().split('T')[0]
     Promise.all([
-      axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=100&ordenar=fecha_cierre&direccion=asc'),
+      axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500&ordenar=fecha_cierre&direccion=asc'),
       axios.get('/api/ultima-sync'),
       axios.get('/api/pipeline'),
     ]).then(([lics, sync, pipe]) => {
@@ -20,17 +54,11 @@ export default function Dashboard({ usuario }) {
         cierranHoy: todas.filter(l => l.fecha_cierre === hoy).length,
         pipeline: pipe.data.total || 0,
       })
-      setLicitaciones(todas.slice(0, 8))
+      setLicitaciones(todas)
       setUltimaSync(sync.data.ultima_sync || '')
     }).finally(() => setLoading(false))
   }, [])
 
-  const hoy = new Date().toISOString().split('T')[0]
-  const fmt = (f) => {
-    if (!f) return '-'
-    const p = f.substring(0, 10).split('-')
-    return p[2] + '-' + p[1] + '-' + p[0]
-  }
   const esHoy = (f) => f && f.substring(0, 10) === hoy
 
   return (
@@ -80,25 +108,39 @@ export default function Dashboard({ usuario }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
-                {['No. Acto', 'Institucion', 'Keywords', 'Cierre', 'Precio Ref.'].map((h, i) => (
-                  <th key={h} style={{ padding: '10px 16px', textAlign: i > 2 ? 'right' : 'left', fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                {['No. Acto', 'Institucion', 'Descripcion', 'Keywords', 'Cierre', 'Precio Ref.', ''].map((h, i) => (
+                  <th key={i} style={{ padding: '10px 16px', textAlign: i > 4 ? 'right' : 'left', fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', fontSize: 11 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {licitaciones.map((l, i) => (
-                <tr key={l.numero_acto} style={{ background: esHoy(l.fecha_cierre) ? '#fff3e0' : i % 2 === 0 ? 'white' : '#fafafa', borderLeft: esHoy(l.fecha_cierre) ? '3px solid #e65100' : '3px solid transparent' }}>
-                  <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>{l.numero_acto}</td>
-                  <td style={{ padding: '10px 16px' }}>{(l.institucion || '-').substring(0, 30)}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    {(l.keywords || []).slice(0, 3).map(k => (
-                      <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
-                    ))}
-                  </td>
-                  <td style={{ padding: '10px 16px', textAlign: 'right', color: esHoy(l.fecha_cierre) ? '#e65100' : 'var(--text)', fontWeight: esHoy(l.fecha_cierre) ? 600 : 400 }}>{fmt(l.fecha_cierre)}</td>
-                  <td style={{ padding: '10px 16px', textAlign: 'right' }}>{l.presupuesto ? '$' + Number(l.presupuesto).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'}</td>
-                </tr>
-              ))}
+              {licitaciones.map((l, i) => {
+                const vista = !!vistas[l.numero_acto]
+                const urgente = esHoy(l.fecha_cierre)
+                const bg = urgente ? '#fff3e0' : i % 2 === 0 ? 'white' : '#fafafa'
+                return (
+                  <tr key={l.numero_acto}
+                    style={{ background: bg, borderLeft: urgente ? '3px solid #e65100' : '3px solid transparent', cursor: 'pointer' }}
+                    onClick={() => marcarVista(l.numero_acto)}>
+                    <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, opacity: vista ? 0.55 : 1 }}>{l.numero_acto}</td>
+                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 25)}</td>
+                    <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 40)}...</td>
+                    <td style={{ padding: '10px 16px' }}>
+                      {(l.keywords || []).slice(0, 3).map(k => (
+                        <span key={k} style={{ background: urgente ? '#ffe0b2' : 'var(--blue-light)', color: urgente ? '#e65100' : 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
+                      ))}
+                    </td>
+                    <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{fmtFecha(l.fecha_cierre)}</td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right', opacity: vista ? 0.55 : 1 }}>{fmt(l.presupuesto)}</td>
+                    <td style={{ padding: '8px 16px', textAlign: 'right' }}>
+                      <button onClick={(e) => anadirPipeline(e, l)}
+                        style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                        + Pipeline
+                      </button>
+                    </td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         )}
