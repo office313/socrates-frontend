@@ -1,10 +1,10 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, BarChart2, GitCommit, Key, User, LogOut, Settings } from 'lucide-react'
+import { Radar, BarChart2, GitCommit, Key, User, LogOut, Settings, BookOpen } from 'lucide-react'
 
 const navItems = [
   { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
   { to: '/', icon: Radar, label: 'Radar' },
-  { to: '/analytics', icon: BarChart2, label: 'Explorer' },
+  { to: '/analytics', icon: BookOpen, label: 'Explorer' },
   { to: '/keywords', icon: Key, label: 'Keywords' },
 ]
 
