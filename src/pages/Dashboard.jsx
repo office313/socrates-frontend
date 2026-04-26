@@ -161,10 +161,12 @@ export default function Dashboard({ usuario }) {
                     <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{fmtFecha(l.fecha_cierre)}</td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', opacity: vista ? 0.55 : 1 }}>{fmt(l.presupuesto)}</td>
                     <td style={{ padding: '8px 16px', textAlign: 'right' }}>
-                      <button onClick={(e) => anadirPipeline(e, l)}
-                        style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                        + Pipeline
-                      </button>
+                      {!numerosPipeline.has(l.numero_acto) && (
+                        <button onClick={(e) => anadirPipeline(e, l)}
+                          style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                          + Pipeline
+                        </button>
+                      )}
                     </td>
                   </tr>
                 )
