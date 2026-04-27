@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
@@ -133,7 +133,25 @@ export default function Dashboard({ usuario }) {
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   const [modalDetalle, setModalDetalle] = useState(null)
 
-  const marcarVista = (numeroActo) => {
+  const [sincronizando, setSincronizando] = useState(false)
+  const [progreso, setProgreso] = useState(null)
+  const intervaloRef = useRef(null)
+
+  const buscarAhora = () => {
+    setSincronizando(true)
+    axios.post('/api/keywords/buscar').then(() => {
+      intervaloRef.current = setInterval(() => {
+        axios.get('/api/keywords/progreso').then(r => {
+          setProgreso(r.data)
+          if (r.data.estado === 'completo') {
+            setSincronizando(false)
+            clearInterval(intervaloRef.current)
+            setTimeout(() => { setProgreso(null); window.location.reload() }, 2000)
+          }
+        })
+      }, 2000)
+    })
+  }
     const nuevas = { ...vistas, [numeroActo]: true }
     setVistas(nuevas)
     localStorage.setItem('lics_vistas', JSON.stringify(nuevas))
@@ -242,13 +260,34 @@ export default function Dashboard({ usuario }) {
             </h1>
           </div>
           {ultimaSync && (
-            <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'white', padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
-              Ultima sync: {ultimaSync}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'white', padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
+                Ultima sync: {ultimaSync}
+              </span>
+              <button onClick={buscarAhora} disabled={sincronizando} style={{
+                padding: '6px 14px', background: sincronizando ? '#ccc' : 'var(--red)',
+                color: 'white', borderRadius: 20, fontSize: 12, fontWeight: 600,
+                cursor: sincronizando ? 'default' : 'pointer', border: 'none'
+              }}>
+                {sincronizando ? 'Sincronizando...' : '⟳ Sincronizar'}
+              </button>
+            </div>
           )}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+        {progreso && (
+          <div style={{ background: 'white', borderRadius: 8, border: '1px solid var(--border)', padding: '10px 16px', marginTop: 8 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
+              <span style={{ color: '#666' }}>
+                {progreso.estado === 'completo' ? `✅ Completado — ${progreso.licitaciones} licitaciones encontradas` : `Sincronizando... ${progreso.porcentaje}%`}
+              </span>
+              <span style={{ fontWeight: 600, color: 'var(--blue)' }}>{progreso.porcentaje}%</span>
+            </div>
+            <div style={{ background: '#f0f0f0', borderRadius: 4, height: 6 }}>
+              <div style={{ background: 'var(--blue)', borderRadius: 4, height: 6, width: progreso.porcentaje + '%', transition: 'width 0.3s' }} />
+            </div>
+          </div>
+        )}
           <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
             <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Licitaciones vigentes</p>
             <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{stats.vigentes}</p>
