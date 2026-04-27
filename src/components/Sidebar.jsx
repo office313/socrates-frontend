@@ -1,12 +1,14 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, Key, User, LogOut, Settings, BookOpen } from 'lucide-react'
+import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2 } from 'lucide-react'
 
-const navItems = [
+const navItemsCliente = [
   { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
   { to: '/', icon: Radar, label: 'Radar' },
   { to: '/analytics', icon: BookOpen, label: 'Explorer' },
   { to: '/keywords', icon: Key, label: 'Keywords' },
 ]
+
+const CATPLAN_EMPRESA_ID = 2
 
 const linkStyle = (isActive) => ({
   display: 'flex', flexDirection: 'column', alignItems: 'center',
@@ -18,6 +20,7 @@ const linkStyle = (isActive) => ({
 
 export default function Sidebar({ usuario }) {
   const navigate = useNavigate()
+  const esCatplan = usuario?.empresa_id === CATPLAN_EMPRESA_ID
 
   const handleLogout = async () => {
     await fetch('/logout')
@@ -47,14 +50,23 @@ export default function Sidebar({ usuario }) {
         <span style={{ color: 'white', fontWeight: 700, fontSize: 20 }}>S</span>
       </div>
 
-      <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
-        {navItems.map(({ to, icon: Icon, label }) => (
-          <NavLink key={to} to={to} end={to === '/pipeline'} style={({ isActive }) => linkStyle(isActive)}>
-            <Icon size={20} />
-            <span style={{ fontSize: 11 }}>{label}</span>
+      {esCatplan ? (
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
+          <NavLink to="/clientes" style={({ isActive }) => linkStyle(isActive)}>
+            <Building2 size={20} />
+            <span style={{ fontSize: 11 }}>Clientes</span>
           </NavLink>
-        ))}
-      </nav>
+        </nav>
+      ) : (
+        <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
+          {navItemsCliente.map(({ to, icon: Icon, label }) => (
+            <NavLink key={to} to={to} end={to === '/pipeline'} style={({ isActive }) => linkStyle(isActive)}>
+              <Icon size={20} />
+              <span style={{ fontSize: 11 }}>{label}</span>
+            </NavLink>
+          ))}
+        </nav>
+      )}
 
       <div style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
         <NavLink to="/settings" style={({ isActive }) => linkStyle(isActive)}>
@@ -64,7 +76,8 @@ export default function Sidebar({ usuario }) {
         <button onClick={handleLogout} style={{
           display: 'flex', flexDirection: 'column', alignItems: 'center',
           padding: '10px 0', borderRadius: 8, gap: 4, width: '100%',
-          color: 'rgba(255,255,255,0.55)',
+          color: 'rgba(255,255,255,0.55)', border: 'none', cursor: 'pointer',
+          background: 'transparent',
         }}>
           <LogOut size={20} />
           <span style={{ fontSize: 11 }}>Salir</span>
