@@ -45,7 +45,7 @@ export default function Dashboard({ usuario }) {
 
   const [pipelineItems, setPipelineItems] = useState([])
 
-  const hoy = new Date().toISOString().split('T')[0]
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' })
 
   useEffect(() => {
     Promise.all([
