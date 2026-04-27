@@ -80,8 +80,8 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
                 </button>
               )}
               {!enWatchlist && !enPipeline && (
-                <button onClick={onWatchlist} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
-                  🔖 Añadir al Watchlist
+                <button onClick={onWatchlist} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                  + Añadir al Watchlist
                 </button>
               )}
               {lic.url_fuente && (
@@ -285,8 +285,8 @@ export default function Dashboard({ usuario }) {
                     <td style={{ padding: '8px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {!numerosWatchlist.has(l.numero_acto) && !numerosPipeline.has(l.numero_acto) && (
                         <button onClick={(e) => anadirWatchlist(e, l.numero_acto)}
-                          style={{ padding: '4px 8px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)', marginRight: 4 }}>
-                          🔖
+                          style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', marginRight: 4 }}>
+                          + Watch
                         </button>
                       )}
                       {!numerosPipeline.has(l.numero_acto) && (
