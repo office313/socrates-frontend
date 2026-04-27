@@ -1,12 +1,17 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2 } from 'lucide-react'
 
-const navItemsCliente = [
-  { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
-  { to: '/', icon: Radar, label: 'Radar' },
-  { to: '/analytics', icon: BookOpen, label: 'Explorer' },
-  { to: '/keywords', icon: Key, label: 'Keywords' },
-]
+const getNavItems = (usuario) => {
+  const items = [
+    { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
+    { to: '/', icon: Radar, label: 'Radar' },
+    { to: '/analytics', icon: BookOpen, label: 'Explorer' },
+  ]
+  if (usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') {
+    items.push({ to: '/keywords', icon: Key, label: 'Keywords' })
+  }
+  return items
+}
 
 const CATPLAN_EMPRESA_ID = 2
 
@@ -59,7 +64,7 @@ export default function Sidebar({ usuario }) {
         </nav>
       ) : (
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
-          {navItemsCliente.map(({ to, icon: Icon, label }) => (
+          {getNavItems(usuario).map(({ to, icon: Icon, label }) => (
             <NavLink key={to} to={to} end={to === '/pipeline'} style={({ isActive }) => linkStyle(isActive)}>
               <Icon size={20} />
               <span style={{ fontSize: 11 }}>{label}</span>
