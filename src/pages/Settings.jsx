@@ -104,9 +104,13 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
   const guardarUsuario = (form) => {
     const req = form.id ? axios.put(`/api/admin/usuarios/${form.id}`, form) : axios.post('/api/admin/usuarios', form)
     req.then(r => {
-      if (r.data.error) { setError(r.data.error); return }
+      console.log('Respuesta API:', r.data)
+      if (r.data.error) { alert('Error: ' + r.data.error); return }
       setModalUsr(null)
       cargarUsuarios()
+    }).catch(e => {
+      console.error('Error API:', e)
+      alert('Error de conexión: ' + e.message)
     })
   }
 
