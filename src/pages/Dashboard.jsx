@@ -73,6 +73,18 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
               </div>
             </div>
 
+            {(lic.contacto_nombre || lic.contacto_telefono || lic.contacto_email) && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>CONTACTO</p>
+                <div style={{ fontSize: 12, color: '#444', lineHeight: 1.8 }}>
+                  {lic.contacto_nombre && <div><span style={{ color: '#888' }}>Nombre: </span>{lic.contacto_nombre}</div>}
+                  {lic.contacto_cargo && <div><span style={{ color: '#888' }}>Cargo: </span>{lic.contacto_cargo}</div>}
+                  {lic.contacto_telefono && <div><span style={{ color: '#888' }}>Tel: </span>{lic.contacto_telefono}</div>}
+                  {lic.contacto_email && <div><span style={{ color: '#888' }}>Email: </span>{lic.contacto_email}</div>}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {!enPipeline && (
                 <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
@@ -141,14 +153,18 @@ export default function Dashboard({ usuario }) {
       const r = await axios.post('/api/pipeline', {
         numero_acto: l.numero_acto,
         institucion: l.institucion || '',
+        unidad_compra: l.unidad_compradora || '',
         descripcion: l.descripcion || '',
         tipo_proceso: l.tipo_proceso || '',
         url_fuente: l.url_fuente || '',
         precio_referencia: l.presupuesto || 0,
+        contacto: l.contacto_nombre || '',
+        telefono_contacto: l.contacto_telefono || '',
+        email_contacto: l.contacto_email || '',
         estado: 'En Preparacion'
       })
       if (r.data.error) { alert(r.data.error); return }
-      alert('Anadida al Pipeline')
+      setNumerosPipeline(prev => new Set([...prev, l.numero_acto]))
     } catch { alert('Error al anadir al Pipeline') }
   }
 

@@ -120,6 +120,7 @@ export default function Watchlist() {
     await axios.post('/api/pipeline', {
       numero_acto: l.numero_acto,
       institucion: l.institucion || '',
+      unidad_compra: l.unidad_compradora || '',
       descripcion: l.descripcion || '',
       url_fuente: l.url_fuente || '',
       precio_referencia: l.presupuesto || 0,
