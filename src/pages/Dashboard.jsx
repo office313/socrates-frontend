@@ -220,7 +220,6 @@ export default function Dashboard({ usuario }) {
 
   return (
     <div style={{ padding: 24 }}>
-      {sincronizando && <RadarSync progreso={progreso} />}
       {modalDetalle && (
         <ModalDetalle
           lic={modalDetalle}
@@ -281,6 +280,8 @@ export default function Dashboard({ usuario }) {
           </div>
         </div>
       </div>
+
+      {sincronizando && <RadarSync progreso={progreso} />}
 
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
