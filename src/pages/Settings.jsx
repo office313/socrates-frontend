@@ -82,59 +82,200 @@ function ModalUsuario({ usuarioActual, usuarioEditar, empresas, onClose, onSave 
 
 function ModalEmpresa({ empresa, onClose, onSave }) {
   const esNuevo = !empresa?.id
+  const [tab, setTab] = useState('datos')
   const [form, setForm] = useState(empresa || { nombre: '', ruc: '', direccion: '', codigo_proveedor: '', telefono: '', email: '', cedula_representante: '', nombre_representante: '', usuarios_permitidos: 5 })
+  const [usuarios, setUsuarios] = useState([])
+  const [modalUsr, setModalUsr] = useState(null)
+  const [error, setError] = useState('')
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const is = { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }
   const ls = { display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 4 }
 
+  const cargarUsuarios = () => {
+    if (empresa?.id) {
+      axios.get('/api/admin/usuarios').then(r => {
+        setUsuarios((r.data.usuarios || []).filter(u => u.empresa_id === empresa.id))
+      })
+    }
+  }
+
+  useEffect(() => { cargarUsuarios() }, [])
+
+  const guardarUsuario = (form) => {
+    const req = form.id ? axios.put(`/api/admin/usuarios/${form.id}`, form) : axios.post('/api/admin/usuarios', form)
+    req.then(r => {
+      if (r.data.error) { setError(r.data.error); return }
+      setModalUsr(null)
+      cargarUsuarios()
+    })
+  }
+
+  const eliminarUsuario = (id) => {
+    if (!confirm('¿Eliminar este usuario?')) return
+    axios.delete(`/api/admin/usuarios/${id}`).then(() => cargarUsuarios())
+  }
+
+  const tabStyle = (t) => ({
+    padding: '8px 16px', fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'none',
+    borderBottom: tab === t ? '2px solid white' : '2px solid transparent',
+    color: tab === t ? 'white' : 'rgba(255,255,255,0.6)',
+  })
+
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: 16, width: 600, maxHeight: '90vh', overflow: 'auto' }}>
-        <div style={{ padding: '16px 24px', background: 'var(--blue)', position: 'sticky', top: 0 }}>
-          <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>{esNuevo ? 'Nueva Empresa' : 'Editar Empresa'}</h2>
+      {modalUsr !== null && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <ModalUsuarioSimple empresa={empresa} usuarioEditar={modalUsr} onClose={() => setModalUsr(null)} onSave={guardarUsuario} />
         </div>
-        <div style={{ padding: 24, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-          <div style={{ gridColumn: '1/-1' }}>
-            <label style={ls}>Nombre de la Empresa</label>
-            <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={is} />
+      )}
+      <div style={{ background: 'white', borderRadius: 16, width: 640, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '16px 24px 0', background: 'var(--blue)', borderRadius: '16px 16px 0 0', flexShrink: 0 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+            <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>{esNuevo ? 'Nueva Empresa' : form.nombre}</h2>
+            <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 20, cursor: 'pointer' }}>×</button>
           </div>
-          <div>
-            <label style={ls}>RUC</label>
-            <input value={form.ruc || ''} onChange={e => set('ruc', e.target.value)} style={is} placeholder="1234567-1-123456 DV 00" />
-          </div>
-          <div>
-            <label style={ls}>Código de Proveedor del Estado</label>
-            <input value={form.codigo_proveedor || ''} onChange={e => set('codigo_proveedor', e.target.value)} style={is} placeholder="1000000000" />
-          </div>
-          <div style={{ gridColumn: '1/-1' }}>
-            <label style={ls}>Dirección</label>
-            <input value={form.direccion || ''} onChange={e => set('direccion', e.target.value)} style={is} />
-          </div>
-          <div>
-            <label style={ls}>Teléfono</label>
-            <input value={form.telefono || ''} onChange={e => set('telefono', e.target.value)} style={is} />
-          </div>
-          <div>
-            <label style={ls}>Email de contacto</label>
-            <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} style={is} />
-          </div>
-          <div>
-            <label style={ls}>Nombre del Representante Legal</label>
-            <input value={form.nombre_representante || ''} onChange={e => set('nombre_representante', e.target.value)} style={is} />
-          </div>
-          <div>
-            <label style={ls}>Cédula del Representante Legal</label>
-            <input value={form.cedula_representante || ''} onChange={e => set('cedula_representante', e.target.value)} style={is} placeholder="8-123-4567" />
-          </div>
-          <div>
-            <label style={ls}>Usuarios permitidos</label>
-            <input type="number" value={form.usuarios_permitidos || 5} onChange={e => set('usuarios_permitidos', parseInt(e.target.value))} style={is} min="1" />
-          </div>
+          {!esNuevo && (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button style={tabStyle('datos')} onClick={() => setTab('datos')}>Datos</button>
+              <button style={tabStyle('usuarios')} onClick={() => setTab('usuarios')}>Usuarios ({usuarios.length})</button>
+            </div>
+          )}
         </div>
-        <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8, position: 'sticky', bottom: 0, background: 'white' }}>
-          <button onClick={onClose} style={{ padding: '8px 16px', background: '#f5f5f5', color: '#666', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Cancelar</button>
-          <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Guardar</button>
+
+        <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
+          {error && <div style={{ background: '#ffebee', color: '#c62828', padding: '8px 12px', borderRadius: 8, fontSize: 12, marginBottom: 12 }}>{error}</div>}
+
+          {(esNuevo || tab === 'datos') && (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={ls}>Nombre de la Empresa</label>
+                <input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={is} />
+              </div>
+              <div>
+                <label style={ls}>RUC</label>
+                <input value={form.ruc || ''} onChange={e => set('ruc', e.target.value)} style={is} />
+              </div>
+              <div>
+                <label style={ls}>Código de Proveedor del Estado</label>
+                <input value={form.codigo_proveedor || ''} onChange={e => set('codigo_proveedor', e.target.value)} style={is} />
+              </div>
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={ls}>Dirección</label>
+                <input value={form.direccion || ''} onChange={e => set('direccion', e.target.value)} style={is} />
+              </div>
+              <div>
+                <label style={ls}>Teléfono</label>
+                <input value={form.telefono || ''} onChange={e => set('telefono', e.target.value)} style={is} autoComplete="off" />
+              </div>
+              <div>
+                <label style={ls}>Email de contacto</label>
+                <input type="email" value={form.email || ''} onChange={e => set('email', e.target.value)} style={is} />
+              </div>
+              <div>
+                <label style={ls}>Nombre del Representante Legal</label>
+                <input value={form.nombre_representante || ''} onChange={e => set('nombre_representante', e.target.value)} style={is} />
+              </div>
+              <div>
+                <label style={ls}>Cédula del Representante Legal</label>
+                <input value={form.cedula_representante || ''} onChange={e => set('cedula_representante', e.target.value)} style={is} />
+              </div>
+              <div>
+                <label style={ls}>Usuarios permitidos</label>
+                <input type="number" value={form.usuarios_permitidos || 5} onChange={e => set('usuarios_permitidos', parseInt(e.target.value))} style={is} min="1" />
+              </div>
+            </div>
+          )}
+
+          {!esNuevo && tab === 'usuarios' && (
+            <div>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+                <button onClick={() => setModalUsr({})} style={{ padding: '7px 14px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>+ Nuevo Usuario</button>
+              </div>
+              {usuarios.length === 0 ? (
+                <p style={{ color: '#aaa', textAlign: 'center', padding: 24 }}>No hay usuarios en esta empresa</p>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa' }}>
+                      {['Nombre', 'Email', 'Teléfono', 'Rol', ''].map(h => (
+                        <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 11 }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usuarios.map((u, i) => (
+                      <tr key={u.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={{ padding: '8px 12px' }}>{u.nombre}</td>
+                        <td style={{ padding: '8px 12px', color: '#666' }}>{u.email}</td>
+                        <td style={{ padding: '8px 12px', color: '#666' }}>{u.telefono || '-'}</td>
+                        <td style={{ padding: '8px 12px' }}>
+                          <span style={{ background: u.rol === 'supervisor' ? '#e8f0fb' : '#f5f5f5', color: u.rol === 'supervisor' ? 'var(--blue)' : '#666', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{u.rol}</span>
+                        </td>
+                        <td style={{ padding: '8px 12px', textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                          <button onClick={() => setModalUsr(u)} style={{ padding: '3px 10px', background: 'var(--blue-light)', color: 'var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Editar</button>
+                          <button onClick={() => eliminarUsuario(u.id)} style={{ padding: '3px 10px', background: '#ffebee', color: '#c62828', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Eliminar</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          )}
         </div>
+
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8, flexShrink: 0 }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: '#f5f5f5', color: '#666', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Cerrar</button>
+          {(esNuevo || tab === 'datos') && (
+            <button onClick={() => onSave(form)} style={{ padding: '8px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Guardar</button>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ModalUsuarioSimple({ empresa, usuarioEditar, onClose, onSave }) {
+  const esNuevo = !usuarioEditar?.id
+  const [form, setForm] = useState(usuarioEditar || { nombre: '', email: '', password: '', confirmar: '', rol: 'usuario', telefono: '' })
+  const [error, setError] = useState('')
+  const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
+  const is = { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }
+  const ls = { display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 4 }
+
+  const handleSave = () => {
+    if (!form.nombre || !form.email) { setError('Nombre y email son obligatorios'); return }
+    if (esNuevo && !form.password) { setError('La contraseña es obligatoria'); return }
+    if (form.password && form.password !== form.confirmar) { setError('Las contraseñas no coinciden'); return }
+    onSave({ ...form, empresa_id: parseInt(empresa.id) })
+  }
+
+  return (
+    <div style={{ background: 'white', borderRadius: 16, width: 480, overflow: 'hidden' }}>
+      <div style={{ padding: '16px 24px', background: 'var(--blue)' }}>
+        <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>{esNuevo ? 'Nuevo Usuario' : 'Editar Usuario'}</h2>
+      </div>
+      <div style={{ padding: 24, display: 'grid', gap: 14 }}>
+        {error && <div style={{ background: '#ffebee', color: '#c62828', padding: '8px 12px', borderRadius: 8, fontSize: 12 }}>{error}</div>}
+        <div><label style={ls}>Nombre</label><input value={form.nombre} onChange={e => set('nombre', e.target.value)} style={is} /></div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div><label style={ls}>Email</label><input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={is} /></div>
+          <div><label style={ls}>Teléfono</label><input value={form.telefono || ''} onChange={e => set('telefono', e.target.value)} style={is} autoComplete="off" /></div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div><label style={ls}>{esNuevo ? 'Contraseña' : 'Nueva contraseña'}</label><input type="password" value={form.password || ''} onChange={e => set('password', e.target.value)} style={is} autoComplete="new-password" /></div>
+          <div><label style={ls}>Confirmar contraseña</label><input type="password" value={form.confirmar || ''} onChange={e => set('confirmar', e.target.value)} style={is} autoComplete="new-password" /></div>
+        </div>
+        <div>
+          <label style={ls}>Rol</label>
+          <select value={form.rol} onChange={e => set('rol', e.target.value)} style={is}>
+            {['usuario', 'supervisor'].map(r => <option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+      </div>
+      <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+        <button onClick={onClose} style={{ padding: '8px 16px', background: '#f5f5f5', color: '#666', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Cancelar</button>
+        <button onClick={handleSave} style={{ padding: '8px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Guardar</button>
       </div>
     </div>
   )
