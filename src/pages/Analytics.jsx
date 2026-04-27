@@ -239,26 +239,37 @@ export default function Analytics({ usuario }) {
                 <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--blue)' }}>{licitacionEncontrada.numero_acto}</h2>
                 <p style={{ margin: '4px 0 0', fontSize: 12, color: '#666' }}>{licitacionEncontrada.institucion}</p>
               </div>
-              <div style={{ padding: 20 }}>
-                <p style={{ fontSize: 13, color: '#444', marginBottom: 16, lineHeight: 1.6 }}>{licitacionEncontrada.descripcion}</p>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20, fontSize: 13 }}>
-                  <div><span style={{ color: '#888' }}>Cierre: </span><strong>{fmtFecha(licitacionEncontrada.fecha_cierre)}</strong></div>
-                  <div><span style={{ color: '#888' }}>Precio Ref.: </span><strong>{fmt(licitacionEncontrada.presupuesto)}</strong></div>
-                  <div><span style={{ color: '#888' }}>Tipo: </span>{licitacionEncontrada.tipo_proceso}</div>
-                  <div><span style={{ color: '#888' }}>Unidad: </span>{licitacionEncontrada.unidad_compradora || '-'}</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '300px 1fr' }}>
+                <div style={{ padding: 20, borderRight: '1px solid #e5e7eb' }}>
+                  <p style={{ fontSize: 13, color: '#444', marginBottom: 16, lineHeight: 1.6 }}>{licitacionEncontrada.descripcion}</p>
+                  <div style={{ fontSize: 12, color: '#444', lineHeight: 2, marginBottom: 16 }}>
+                    <div><span style={{ color: '#888' }}>Cierre: </span><strong>{fmtFecha(licitacionEncontrada.fecha_cierre)}</strong></div>
+                    <div><span style={{ color: '#888' }}>Precio Ref.: </span><strong>{fmt(licitacionEncontrada.presupuesto)}</strong></div>
+                    <div><span style={{ color: '#888' }}>Tipo: </span>{licitacionEncontrada.tipo_proceso}</div>
+                    <div><span style={{ color: '#888' }}>Unidad: </span>{licitacionEncontrada.unidad_compradora || '-'}</div>
+                    {licitacionEncontrada.contacto_nombre && <div><span style={{ color: '#888' }}>Contacto: </span>{licitacionEncontrada.contacto_nombre}</div>}
+                    {licitacionEncontrada.contacto_telefono && <div><span style={{ color: '#888' }}>Tel: </span>{licitacionEncontrada.contacto_telefono}</div>}
+                    {licitacionEncontrada.contacto_email && <div><span style={{ color: '#888' }}>Email: </span>{licitacionEncontrada.contacto_email}</div>}
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <button onClick={() => anadirPipeline(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                      + Añadir al Pipeline
+                    </button>
+                    <button onClick={() => anadirWatchlist(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                      + Añadir al Watchlist
+                    </button>
+                    {licitacionEncontrada.url_fuente && (
+                      <a href={licitacionEncontrada.url_fuente} target="_blank" rel="noreferrer" style={{ padding: '9px 20px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>
+                        Abrir en PanamaCompra ↗
+                      </a>
+                    )}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <button onClick={() => anadirPipeline(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                    + Añadir al Pipeline
-                  </button>
-                  <button onClick={() => anadirWatchlist(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                    + Añadir al Watchlist
-                  </button>
-                  {licitacionEncontrada.url_fuente && (
-                    <a href={licitacionEncontrada.url_fuente} target="_blank" rel="noreferrer" style={{ padding: '9px 20px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
-                      Ver en PanamaCompra ↗
-                    </a>
-                  )}
+                <div style={{ height: 500 }}>
+                  {licitacionEncontrada.url_fuente
+                    ? <iframe src={licitacionEncontrada.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                    : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
+                  }
                 </div>
               </div>
             </div>
