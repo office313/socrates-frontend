@@ -248,7 +248,7 @@ export default function Settings({ usuario }) {
         <button onClick={guardarCuenta} style={bs}>Guardar cambios</button>
       </div>
 
-      {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && (
+      {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && usuario?.empresa_id !== 2 && (
         <div style={ss}>
           <h2 style={ts}>Modo de Búsqueda</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
