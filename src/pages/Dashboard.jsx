@@ -162,7 +162,7 @@ export default function Dashboard({ usuario }) {
         telefono_contacto: l.contacto_telefono || '',
         email_contacto: l.contacto_email || '',
         agente: usuario?.nombre || '',
-        estado: 'En Preparacion'
+        estado: 'En Preparación'
       })
       if (r.data.error) { alert(r.data.error); return }
       setNumerosPipeline(prev => new Set([...prev, l.numero_acto]))
