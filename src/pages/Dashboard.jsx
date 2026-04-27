@@ -113,9 +113,7 @@ export default function Dashboard({ usuario }) {
   const [pipelineItems, setPipelineItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [ultimaSync, setUltimaSync] = useState('')
-  const [vistas, setVistas] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('lics_vistas') || '{}') } catch { return {} }
-  })
+  const [vistas, setVistas] = useState(new Set())
   const [filtro, setFiltro] = useState('todas')
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
@@ -143,9 +141,9 @@ export default function Dashboard({ usuario }) {
   }
 
   const marcarVista = (numeroActo) => {
-    const nuevas = { ...vistas, [numeroActo]: true }
-    setVistas(nuevas)
-    localStorage.setItem('lics_vistas', JSON.stringify(nuevas))
+    if (vistas.has(numeroActo)) return
+    setVistas(prev => new Set([...prev, numeroActo]))
+    axios.post(`/api/vistas/${numeroActo}`)
   }
 
   const anadirWatchlist = async (e, numeroActo) => {
@@ -186,10 +184,12 @@ export default function Dashboard({ usuario }) {
       axios.get('/api/ultima-sync'),
       axios.get('/api/pipeline'),
       axios.get('/api/watchlist'),
-    ]).then(([lics, sync, pipe, watch]) => {
+      axios.get('/api/vistas'),
+    ]).then(([lics, sync, pipe, watch, vistasData]) => {
       const todas = lics.data.resultados || []
       const pipItems = pipe.data.resultados || []
       const watchItems = watch.data.resultados || []
+      setVistas(new Set(vistasData.data.vistas || []))
       setNumerosPipeline(new Set(pipItems.map(p => p.numero_acto)))
       setNumerosWatchlist(new Set(watchItems.map(w => w.numero_acto)))
       setPipelineItems(pipItems)
@@ -308,7 +308,7 @@ export default function Dashboard({ usuario }) {
             </thead>
             <tbody>
               {licitacionesFiltradas.map((l, i) => {
-                const vista = !!vistas[l.numero_acto]
+                const vista = vistas.has(l.numero_acto)
                 const urgente = esHoy(l.fecha_cierre)
                 const bg = urgente ? '#fff3e0' : i % 2 === 0 ? 'white' : '#fafafa'
                 return (
