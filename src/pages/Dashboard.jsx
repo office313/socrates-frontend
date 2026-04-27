@@ -108,7 +108,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
 }
 
 export default function Dashboard({ usuario }) {
-  const [stats, setStats] = useState({ vigentes: 0, cierranHoy: 0, pipeline: 0 })
+  const [stats, setStats] = useState({ vigentes: 0, cierranHoy: 0, pipeline: 0, watchlist: 0 })
   const [licitaciones, setLicitaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [ultimaSync, setUltimaSync] = useState('')
@@ -173,6 +173,7 @@ export default function Dashboard({ usuario }) {
         vigentes: lics.data.total || 0,
         cierranHoy: todas.filter(l => l.fecha_cierre === hoy).length,
         pipeline: pipe.data.total || 0,
+        watchlist: watchItems.length,
       })
       setLicitaciones(todas)
       setUltimaSync(sync.data.ultima_sync || '')
@@ -191,6 +192,8 @@ export default function Dashboard({ usuario }) {
         presupuesto: p.precio_ofertado || p.precio_referencia,
         url_fuente: p.url_fuente,
       }))
+    : filtro === 'watchlist'
+    ? licitaciones.filter(l => numerosWatchlist.has(l.numero_acto))
     : licitaciones.filter(l => {
         if (filtro === 'hoy') return esHoy(l.fecha_cierre)
         return true
@@ -208,37 +211,47 @@ export default function Dashboard({ usuario }) {
           onWatchlist={() => { anadirWatchlist({ stopPropagation: () => {} }, modalDetalle.numero_acto); setModalDetalle(null) }}
         />
       )}
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-        <div>
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
-            {new Date().toLocaleDateString('es-PA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-          </p>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '4px 0 0' }}>
-            Buenos dias, {usuario?.nombre?.split(' ')[0]}
-          </h1>
+      <div style={{
+        position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)',
+        paddingBottom: 16, marginBottom: 8
+      }}>
+        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+          <div>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
+              {new Date().toLocaleDateString('es-PA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '4px 0 0' }}>
+              Buenos dias, {usuario?.nombre?.split(' ')[0]}
+            </h1>
+          </div>
+          {ultimaSync && (
+            <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'white', padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
+              Ultima sync: {ultimaSync}
+            </span>
+          )}
         </div>
-        {ultimaSync && (
-          <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'white', padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
-            Ultima sync: {ultimaSync}
-          </span>
-        )}
-      </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
-        <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 20, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>Licitaciones vigentes</p>
-          <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: 'var(--blue)' }}>{stats.vigentes}</p>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>con tus keywords</p>
-        </div>
-        <div onClick={() => setFiltro(filtro === 'hoy' ? 'todas' : 'hoy')} style={{ background: stats.cierranHoy > 0 ? '#fff3e0' : 'white', borderRadius: 12, padding: 20, border: filtro === 'hoy' ? '2px solid #e65100' : '1px solid ' + (stats.cierranHoy > 0 ? '#e65100' : 'var(--border)'), cursor: 'pointer' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 12, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text-muted)', fontWeight: 500 }}>Cierran hoy</p>
-          <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text)' }}>{stats.cierranHoy}</p>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>requieren atencion</p>
-        </div>
-        <div onClick={() => setFiltro(filtro === 'pipeline' ? 'todas' : 'pipeline')} style={{ background: 'white', borderRadius: 12, padding: 20, border: filtro === 'pipeline' ? '2px solid #2e7d32' : '1px solid var(--border)', cursor: 'pointer' }}>
-          <p style={{ margin: '0 0 8px', fontSize: 12, color: 'var(--text-muted)', fontWeight: 500 }}>En Pipeline</p>
-          <p style={{ margin: 0, fontSize: 32, fontWeight: 700, color: '#2e7d32' }}>{stats.pipeline}</p>
-          <p style={{ margin: '4px 0 0', fontSize: 11, color: 'var(--text-muted)' }}>licitaciones activas</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Licitaciones vigentes</p>
+            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{stats.vigentes}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>con tus keywords</p>
+          </div>
+          <div onClick={() => setFiltro(filtro === 'hoy' ? 'todas' : 'hoy')} style={{ background: stats.cierranHoy > 0 ? '#fff3e0' : 'white', borderRadius: 12, padding: 16, border: filtro === 'hoy' ? '2px solid #e65100' : '1px solid ' + (stats.cierranHoy > 0 ? '#e65100' : 'var(--border)'), cursor: 'pointer' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text-muted)', fontWeight: 500 }}>Cierran hoy</p>
+            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text)' }}>{stats.cierranHoy}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>requieren atención</p>
+          </div>
+          <div onClick={() => setFiltro(filtro === 'pipeline' ? 'todas' : 'pipeline')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'pipeline' ? '2px solid #2e7d32' : '1px solid var(--border)', cursor: 'pointer' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>En Pipeline</p>
+            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: '#2e7d32' }}>{stats.pipeline}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>licitaciones activas</p>
+          </div>
+          <div onClick={() => setFiltro(filtro === 'watchlist' ? 'todas' : 'watchlist')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'watchlist' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Watchlist</p>
+            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{stats.watchlist}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>en observación</p>
+          </div>
         </div>
       </div>
 
@@ -248,7 +261,7 @@ export default function Dashboard({ usuario }) {
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {licitacionesFiltradas.length} licitaciones
             {filtro !== 'todas' && <span style={{ marginLeft: 8, background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
-              {filtro === 'hoy' ? 'Cierran hoy' : 'En Pipeline'}
+              {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Pipeline' : 'Watchlist'}
             </span>}
           </span>
         </div>
