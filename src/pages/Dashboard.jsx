@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import RadarSync from '../components/RadarSync'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
@@ -219,6 +220,7 @@ export default function Dashboard({ usuario }) {
 
   return (
     <div style={{ padding: 24 }}>
+      {sincronizando && <RadarSync progreso={progreso} />}
       {modalDetalle && (
         <ModalDetalle
           lic={modalDetalle}
@@ -255,20 +257,6 @@ export default function Dashboard({ usuario }) {
             </button>
           </div>
         </div>
-
-        {progreso && (
-          <div style={{ background: 'white', borderRadius: 8, border: '1px solid var(--border)', padding: '10px 16px', marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
-              <span style={{ color: '#666' }}>
-                {progreso.estado === 'completo' ? `Completado — ${progreso.licitaciones} licitaciones` : `Sincronizando... ${progreso.porcentaje}%`}
-              </span>
-              <span style={{ fontWeight: 600, color: 'var(--blue)' }}>{progreso.porcentaje}%</span>
-            </div>
-            <div style={{ background: '#f0f0f0', borderRadius: 4, height: 6 }}>
-              <div style={{ background: 'var(--blue)', borderRadius: 4, height: 6, width: progreso.porcentaje + '%', transition: 'width 0.3s' }} />
-            </div>
-          </div>
-        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
