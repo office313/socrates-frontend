@@ -29,13 +29,10 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
           </div>
           <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
         </div>
-
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', flex: 1, overflow: 'hidden' }}>
           <div style={{ padding: 20, borderRight: '1px solid #e5e7eb', overflow: 'auto' }}>
             <p style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.5 }}
-              dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.descripcion, lic.keywords) }}
-            />
-
+              dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.descripcion, lic.keywords) }} />
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>KEYWORDS</p>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
@@ -44,17 +41,13 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
                 ))}
               </div>
             </div>
-
             {lic.items_texto && (
               <div style={{ marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>RENGLONES</p>
-                <div
-                  style={{ fontSize: 12, color: '#444', lineHeight: 1.7, background: '#f8f9fa', borderRadius: 8, padding: 10, maxHeight: 200, overflow: 'auto' }}
-                  dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.items_texto, lic.keywords) }}
-                />
+                <div style={{ fontSize: 12, color: '#444', lineHeight: 1.7, background: '#f8f9fa', borderRadius: 8, padding: 10, maxHeight: 150, overflow: 'auto' }}
+                  dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.items_texto, lic.keywords) }} />
               </div>
             )}
-
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>DETALLES</p>
               <div style={{ fontSize: 12, color: '#444', lineHeight: 2 }}>
@@ -72,8 +65,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
                 </div>
               </div>
             </div>
-
-            {(lic.contacto_nombre || lic.contacto_telefono || lic.contacto_email) && (
+            {(lic.contacto_nombre || lic.contacto_telefono) && (
               <div style={{ marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>CONTACTO</p>
                 <div style={{ fontSize: 12, color: '#444', lineHeight: 1.8 }}>
@@ -84,7 +76,6 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
                 </div>
               </div>
             )}
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {!enPipeline && (
                 <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
@@ -103,15 +94,11 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
               )}
             </div>
           </div>
-
           <div style={{ overflow: 'hidden' }}>
-            {lic.url_fuente ? (
-              <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
-            ) : (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>
-                Sin URL disponible
-              </div>
-            )}
+            {lic.url_fuente
+              ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+              : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
+            }
           </div>
         </div>
       </div>
@@ -122,20 +109,21 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
 export default function Dashboard({ usuario }) {
   const [stats, setStats] = useState({ vigentes: 0, cierranHoy: 0, pipeline: 0, watchlist: 0 })
   const [licitaciones, setLicitaciones] = useState([])
+  const [pipelineItems, setPipelineItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [ultimaSync, setUltimaSync] = useState('')
   const [vistas, setVistas] = useState(() => {
     try { return JSON.parse(localStorage.getItem('lics_vistas') || '{}') } catch { return {} }
   })
-
   const [filtro, setFiltro] = useState('todas')
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   const [modalDetalle, setModalDetalle] = useState(null)
-
   const [sincronizando, setSincronizando] = useState(false)
   const [progreso, setProgreso] = useState(null)
   const intervaloRef = useRef(null)
+
+  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' })
 
   const buscarAhora = () => {
     setSincronizando(true)
@@ -152,6 +140,8 @@ export default function Dashboard({ usuario }) {
       }, 2000)
     })
   }
+
+  const marcarVista = (numeroActo) => {
     const nuevas = { ...vistas, [numeroActo]: true }
     setVistas(nuevas)
     localStorage.setItem('lics_vistas', JSON.stringify(nuevas))
@@ -162,6 +152,7 @@ export default function Dashboard({ usuario }) {
     try {
       await axios.post(`/api/watchlist/${numeroActo}`)
       setNumerosWatchlist(prev => new Set([...prev, numeroActo]))
+      setStats(s => ({ ...s, watchlist: s.watchlist + 1 }))
     } catch { alert('Error al añadir al Watchlist') }
   }
 
@@ -184,12 +175,9 @@ export default function Dashboard({ usuario }) {
       })
       if (r.data.error) { alert(r.data.error); return }
       setNumerosPipeline(prev => new Set([...prev, l.numero_acto]))
+      setStats(s => ({ ...s, pipeline: s.pipeline + 1 }))
     } catch { alert('Error al anadir al Pipeline') }
   }
-
-  const [pipelineItems, setPipelineItems] = useState([])
-
-  const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' })
 
   useEffect(() => {
     Promise.all([
@@ -219,20 +207,15 @@ export default function Dashboard({ usuario }) {
 
   const licitacionesFiltradas = filtro === 'pipeline'
     ? pipelineItems.map(p => ({
-        numero_acto: p.numero_acto,
-        institucion: p.institucion,
-        descripcion: p.descripcion,
-        keywords: [],
+        numero_acto: p.numero_acto, institucion: p.institucion,
+        descripcion: p.descripcion, keywords: [],
         fecha_cierre: p.fecha_orden_compra || '',
         presupuesto: p.precio_ofertado || p.precio_referencia,
         url_fuente: p.url_fuente,
       }))
     : filtro === 'watchlist'
     ? licitaciones.filter(l => numerosWatchlist.has(l.numero_acto))
-    : licitaciones.filter(l => {
-        if (filtro === 'hoy') return esHoy(l.fecha_cierre)
-        return true
-      })
+    : licitaciones.filter(l => filtro === 'hoy' ? esHoy(l.fecha_cierre) : true)
 
   return (
     <div style={{ padding: 24 }}>
@@ -246,11 +229,9 @@ export default function Dashboard({ usuario }) {
           onWatchlist={() => { anadirWatchlist({ stopPropagation: () => {} }, modalDetalle.numero_acto); setModalDetalle(null) }}
         />
       )}
-      <div style={{
-        position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)',
-        paddingBottom: 16, marginBottom: 8
-      }}>
-        <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)', paddingBottom: 16, marginBottom: 8 }}>
+        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
           <div>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
               {new Date().toLocaleDateString('es-PA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -259,27 +240,27 @@ export default function Dashboard({ usuario }) {
               Buenos dias, {usuario?.nombre?.split(' ')[0]}
             </h1>
           </div>
-          {ultimaSync && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {ultimaSync && (
               <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'white', padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
                 Ultima sync: {ultimaSync}
               </span>
-              <button onClick={buscarAhora} disabled={sincronizando} style={{
-                padding: '6px 14px', background: sincronizando ? '#ccc' : 'var(--red)',
-                color: 'white', borderRadius: 20, fontSize: 12, fontWeight: 600,
-                cursor: sincronizando ? 'default' : 'pointer', border: 'none'
-              }}>
-                {sincronizando ? 'Sincronizando...' : '⟳ Sincronizar'}
-              </button>
-            </div>
-          )}
+            )}
+            <button onClick={buscarAhora} disabled={sincronizando} style={{
+              padding: '6px 14px', background: sincronizando ? '#ccc' : 'var(--red)',
+              color: 'white', borderRadius: 20, fontSize: 12, fontWeight: 600,
+              cursor: sincronizando ? 'default' : 'pointer', border: 'none'
+            }}>
+              {sincronizando ? 'Sincronizando...' : '⟳ Sincronizar'}
+            </button>
+          </div>
         </div>
 
         {progreso && (
-          <div style={{ background: 'white', borderRadius: 8, border: '1px solid var(--border)', padding: '10px 16px', marginTop: 8 }}>
+          <div style={{ background: 'white', borderRadius: 8, border: '1px solid var(--border)', padding: '10px 16px', marginBottom: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6, fontSize: 12 }}>
               <span style={{ color: '#666' }}>
-                {progreso.estado === 'completo' ? `✅ Completado — ${progreso.licitaciones} licitaciones encontradas` : `Sincronizando... ${progreso.porcentaje}%`}
+                {progreso.estado === 'completo' ? `Completado — ${progreso.licitaciones} licitaciones` : `Sincronizando... ${progreso.porcentaje}%`}
               </span>
               <span style={{ fontWeight: 600, color: 'var(--blue)' }}>{progreso.porcentaje}%</span>
             </div>
@@ -288,6 +269,7 @@ export default function Dashboard({ usuario }) {
             </div>
           </div>
         )}
+
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
           <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
             <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Licitaciones vigentes</p>
@@ -317,9 +299,11 @@ export default function Dashboard({ usuario }) {
           <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--blue)' }}>Radar de Oportunidades</h2>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
             {licitacionesFiltradas.length} licitaciones
-            {filtro !== 'todas' && <span style={{ marginLeft: 8, background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
-              {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Pipeline' : 'Watchlist'}
-            </span>}
+            {filtro !== 'todas' && (
+              <span style={{ marginLeft: 8, background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
+                {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Pipeline' : 'Watchlist'}
+              </span>
+            )}
           </span>
         </div>
         {loading ? (
@@ -328,7 +312,7 @@ export default function Dashboard({ usuario }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
-                {['No. Acto', 'Institucion', 'Descripcion', 'Keywords', 'Cierre', 'Precio Ref.', ''].map((h, i) => (
+                {['No. Acto', 'Institución', 'Descripción', 'Keywords', 'Cierre', 'Precio Ref.', ''].map((h, i) => (
                   <th key={i} style={{ padding: '10px 16px', textAlign: i > 4 ? 'right' : 'left', fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', fontSize: 11 }}>{h}</th>
                 ))}
               </tr>
