@@ -32,7 +32,9 @@ function ModalDetalle({ lic, onClose, onPipeline, enPipeline }) {
 
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', flex: 1, overflow: 'hidden' }}>
           <div style={{ padding: 20, borderRight: '1px solid #e5e7eb', overflow: 'auto' }}>
-            <p style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.5 }}>{lic.descripcion}</p>
+            <p style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.5 }}
+              dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.descripcion, lic.keywords) }}
+            />
 
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>KEYWORDS</p>
