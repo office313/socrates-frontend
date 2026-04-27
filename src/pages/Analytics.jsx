@@ -55,22 +55,32 @@ export default function Analytics({ usuario }) {
       .finally(() => setLoading(false))
   }
 
-  const buscarPorNumero = () => {
+  const buscarPorNumero = async () => {
     if (!numeroActo.trim()) return
     setBuscandoNumero(true)
     setLicitacionEncontrada(null)
     setMsgNumero('')
-    axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500')
-      .then(r => {
-        const todas = r.data.resultados || []
-        const encontrada = todas.find(l => l.numero_acto.toLowerCase() === numeroActo.trim().toLowerCase())
-        if (encontrada) {
-          setLicitacionEncontrada(encontrada)
-        } else {
-          setMsgNumero('No se encontró ninguna licitación vigente con ese número')
-        }
-      })
-      .finally(() => setBuscandoNumero(false))
+    try {
+      // Primero buscar en BD local
+      const r = await axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500')
+      const todas = r.data.resultados || []
+      const encontrada = todas.find(l => l.numero_acto.toLowerCase() === numeroActo.trim().toLowerCase())
+      if (encontrada) {
+        setLicitacionEncontrada(encontrada)
+        return
+      }
+      // Si no está en BD local, buscar en PanamaCompra
+      const r2 = await axios.get(`/api/buscar-numero?numero=${encodeURIComponent(numeroActo.trim())}`)
+      if (r2.data.resultado) {
+        setLicitacionEncontrada(r2.data.resultado)
+      } else {
+        setMsgNumero('No se encontró ninguna licitación con ese número')
+      }
+    } catch {
+      setMsgNumero('Error al buscar')
+    } finally {
+      setBuscandoNumero(false)
+    }
   }
 
   const anadirPipeline = async (l) => {
