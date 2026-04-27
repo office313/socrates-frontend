@@ -8,6 +8,16 @@ const fmtFecha = (f) => {
   return p[2] + '-' + p[1] + '-' + p[0]
 }
 
+function resaltarKeywords(texto, keywords) {
+  if (!texto || !keywords || keywords.length === 0) return texto
+  let resultado = texto
+  keywords.forEach(kw => {
+    const regex = new RegExp(`(${kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
+    resultado = resultado.replace(regex, '<mark style="background:#fff3cd;color:#856404;padding:0 2px;border-radius:3px;font-weight:600">$1</mark>')
+  })
+  return resultado
+}
+
 function ModalDetalle({ lic, onClose, onPipeline, enPipeline }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -32,6 +42,16 @@ function ModalDetalle({ lic, onClose, onPipeline, enPipeline }) {
                 ))}
               </div>
             </div>
+
+            {lic.items_texto && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>RENGLONES</p>
+                <div
+                  style={{ fontSize: 12, color: '#444', lineHeight: 1.7, background: '#f8f9fa', borderRadius: 8, padding: 10, maxHeight: 200, overflow: 'auto' }}
+                  dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.items_texto, lic.keywords) }}
+                />
+              </div>
+            )}
 
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>DETALLES</p>
