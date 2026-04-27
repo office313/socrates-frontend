@@ -266,40 +266,6 @@ export default function Settings({ usuario }) {
         </div>
       )}
 
-      {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && (
-        <div style={ss}>
-          <h2 style={ts}>Gestión de Usuarios</h2>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
-            <button onClick={() => setModalUsuario({})} style={bs}>+ Nuevo Usuario</button>
-          </div>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: '#f8f9fa' }}>
-                {['Nombre', 'Email', 'Rol', 'Empresa', ''].map(h => (
-                  <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {usuarios.map((u, i) => (
-                <tr key={u.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                  <td style={{ padding: '10px 16px' }}>{u.nombre}</td>
-                  <td style={{ padding: '10px 16px', color: '#666' }}>{u.email}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ background: u.rol === 'superadmin' ? '#fff3e0' : u.rol === 'supervisor' ? '#e8f0fb' : '#f5f5f5', color: u.rol === 'superadmin' ? '#e65100' : u.rol === 'supervisor' ? 'var(--blue)' : '#666', padding: '2px 10px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{u.rol}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#666' }}>{u.empresa || '-'}</td>
-                  <td style={{ padding: '10px 16px', textAlign: 'right', display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                    <button onClick={() => setModalUsuario(u)} style={{ padding: '4px 12px', background: 'var(--blue-light)', color: 'var(--blue)', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Editar</button>
-                    <button onClick={() => eliminarUsuario(u.id)} style={{ padding: '4px 12px', background: '#ffebee', color: '#c62828', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Eliminar</button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-
       {usuario?.rol === 'superadmin' && (
         <div style={ss}>
           <h2 style={ts}>Gestión de Empresas</h2>
@@ -315,7 +281,7 @@ export default function Settings({ usuario }) {
               </tr>
             </thead>
             <tbody>
-              {empresas.map((e, i) => (
+              {empresas.filter(e => e.nombre !== 'CATPLAN').map((e, i) => (
                 <tr key={e.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
                   <td style={{ padding: '10px 16px', fontWeight: 500 }}>{e.nombre}</td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{e.ruc || '-'}</td>
