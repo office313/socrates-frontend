@@ -18,7 +18,7 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
-function ModalDetalle({ lic, onClose, onPipeline, enPipeline }) {
+function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWatchlist }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -77,6 +77,11 @@ function ModalDetalle({ lic, onClose, onPipeline, enPipeline }) {
               {!enPipeline && (
                 <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
                   + Añadir al Pipeline
+                </button>
+              )}
+              {!enWatchlist && !enPipeline && (
+                <button onClick={onWatchlist} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
+                  🔖 Añadir al Watchlist
                 </button>
               )}
               {lic.url_fuente && (
@@ -197,8 +202,10 @@ export default function Dashboard({ usuario }) {
         <ModalDetalle
           lic={modalDetalle}
           enPipeline={numerosPipeline.has(modalDetalle.numero_acto)}
+          enWatchlist={numerosWatchlist.has(modalDetalle.numero_acto)}
           onClose={() => setModalDetalle(null)}
           onPipeline={() => { anadirPipeline({ stopPropagation: () => {} }, modalDetalle); setModalDetalle(null) }}
+          onWatchlist={() => { anadirWatchlist({ stopPropagation: () => {} }, modalDetalle.numero_acto); setModalDetalle(null) }}
         />
       )}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
@@ -279,7 +286,7 @@ export default function Dashboard({ usuario }) {
                       {!numerosWatchlist.has(l.numero_acto) && !numerosPipeline.has(l.numero_acto) && (
                         <button onClick={(e) => anadirWatchlist(e, l.numero_acto)}
                           style={{ padding: '4px 8px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)', marginRight: 4 }}>
-                          👁
+                          🔖
                         </button>
                       )}
                       {!numerosPipeline.has(l.numero_acto) && (
