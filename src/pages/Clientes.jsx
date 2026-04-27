@@ -15,7 +15,7 @@ function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
     if (!form.nombre || !form.email) { setError('Nombre y email son obligatorios'); return }
     if (esNuevo && !form.password) { setError('La contraseña es obligatoria'); return }
     if (form.password && form.password !== form.confirmar) { setError('Las contraseñas no coinciden'); return }
-    onSave({ ...form, empresa_id: empresa.id })
+    onSave({ ...form, empresa_id: parseInt(empresa.id) })
   }
 
   return (
@@ -39,13 +39,13 @@ function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
             </div>
             <div>
               <label style={ls}>Teléfono</label>
-              <input value={form.telefono || ''} onChange={e => set('telefono', e.target.value)} style={is} />
+              <input value={form.telefono || ''} onChange={e => set('telefono', e.target.value)} style={is} autoComplete="off" />
             </div>
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={ls}>{esNuevo ? 'Contraseña' : 'Nueva contraseña'}</label>
-              <input type="password" value={form.password || ''} onChange={e => set('password', e.target.value)} style={is} placeholder={esNuevo ? '' : 'Dejar vacío para no cambiar'} />
+              <input type="password" value={form.password || ''} onChange={e => set('password', e.target.value)} style={is} autoComplete="new-password" placeholder={esNuevo ? '' : 'Dejar vacío para no cambiar'} />
             </div>
             <div>
               <label style={ls}>Confirmar contraseña</label>
