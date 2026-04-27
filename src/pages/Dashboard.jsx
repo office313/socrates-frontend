@@ -161,6 +161,7 @@ export default function Dashboard({ usuario }) {
         contacto: l.contacto_nombre || '',
         telefono_contacto: l.contacto_telefono || '',
         email_contacto: l.contacto_email || '',
+        agente: usuario?.nombre || '',
         estado: 'En Preparacion'
       })
       if (r.data.error) { alert(r.data.error); return }
