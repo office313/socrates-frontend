@@ -8,6 +8,78 @@ const fmtFecha = (f) => {
   return p[2] + '-' + p[1] + '-' + p[0]
 }
 
+function ModalDetalle({ lic, onClose, onPipeline, enPipeline }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+        <div style={{ padding: '14px 20px', background: 'var(--blue)', borderRadius: '16px 16px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h2 style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: 0 }}>{lic.numero_acto}</h2>
+            <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: '2px 0 0' }}>{lic.institucion}</p>
+          </div>
+          <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', flex: 1, overflow: 'hidden' }}>
+          <div style={{ padding: 20, borderRight: '1px solid #e5e7eb', overflow: 'auto' }}>
+            <p style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.5 }}>{lic.descripcion}</p>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>KEYWORDS</p>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {(lic.keywords || []).map(k => (
+                  <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 500 }}>{k}</span>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>DETALLES</p>
+              <div style={{ fontSize: 12, color: '#444', lineHeight: 2 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#888' }}>Cierre</span>
+                  <span style={{ fontWeight: 600 }}>{fmtFecha(lic.fecha_cierre)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#888' }}>Precio Ref.</span>
+                  <span style={{ fontWeight: 600 }}>{fmt(lic.presupuesto)}</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ color: '#888' }}>Publicación</span>
+                  <span>{fmtFecha(lic.fecha_publicacion)}</span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {!enPipeline && (
+                <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                  + Añadir al Pipeline
+                </button>
+              )}
+              {lic.url_fuente && (
+                <a href={lic.url_fuente} target="_blank" rel="noreferrer" style={{ padding: '8px 16px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
+                  Abrir en PanamaCompra ↗
+                </a>
+              )}
+            </div>
+          </div>
+
+          <div style={{ overflow: 'hidden' }}>
+            {lic.url_fuente ? (
+              <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>
+                Sin URL disponible
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Dashboard({ usuario }) {
   const [stats, setStats] = useState({ vigentes: 0, cierranHoy: 0, pipeline: 0 })
   const [licitaciones, setLicitaciones] = useState([])
@@ -17,8 +89,9 @@ export default function Dashboard({ usuario }) {
     try { return JSON.parse(localStorage.getItem('lics_vistas') || '{}') } catch { return {} }
   })
 
-  const [filtro, setFiltro] = useState('todas') // 'todas', 'hoy', 'pipeline'
+  const [filtro, setFiltro] = useState('todas')
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
+  const [modalDetalle, setModalDetalle] = useState(null)
 
   const marcarVista = (numeroActo) => {
     const nuevas = { ...vistas, [numeroActo]: true }
@@ -86,6 +159,14 @@ export default function Dashboard({ usuario }) {
 
   return (
     <div style={{ padding: 24 }}>
+      {modalDetalle && (
+        <ModalDetalle
+          lic={modalDetalle}
+          enPipeline={numerosPipeline.has(modalDetalle.numero_acto)}
+          onClose={() => setModalDetalle(null)}
+          onPipeline={() => { anadirPipeline({ stopPropagation: () => {} }, modalDetalle); setModalDetalle(null) }}
+        />
+      )}
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
         <div>
           <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
@@ -149,7 +230,7 @@ export default function Dashboard({ usuario }) {
                 return (
                   <tr key={l.numero_acto}
                     style={{ background: bg, borderLeft: urgente ? '3px solid #e65100' : '3px solid transparent', cursor: 'pointer' }}
-                    onClick={() => { marcarVista(l.numero_acto); if (l.url_fuente) window.open(l.url_fuente, '_blank') }}>
+                    onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, opacity: vista ? 0.55 : 1 }}>{l.numero_acto}</td>
                     <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 25)}</td>
                     <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 40)}...</td>
