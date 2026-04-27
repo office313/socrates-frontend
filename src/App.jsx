@@ -22,6 +22,7 @@ function App() {
             <Routes>
               <Route path="/" element={<Dashboard usuario={usuario} />} />
               <Route path="/watchlist" element={<Watchlist />} />
+              <Route path="/analytics" element={<Analytics />} />
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/keywords" element={<Keywords />} />
               <Route path="/settings" element={<Settings usuario={usuario} />} />
