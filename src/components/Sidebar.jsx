@@ -1,10 +1,11 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2 } from 'lucide-react'
+import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Eye } from 'lucide-react'
 
 const getNavItems = (usuario) => {
   const items = [
     { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
     { to: '/', icon: Radar, label: 'Radar' },
+    { to: '/watchlist', icon: Eye, label: 'Watchlist' },
     { to: '/analytics', icon: BookOpen, label: 'Explorer' },
   ]
   if (usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') {

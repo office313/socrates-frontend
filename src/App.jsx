@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Analytics from './pages/Analytics'
 import Keywords from './pages/Keywords'
+import Watchlist from './pages/Watchlist'
 import Settings from './pages/Settings'
 import Clientes from './pages/Clientes'
 
@@ -20,7 +21,7 @@ function App() {
           <Layout usuario={usuario} loading={loading}>
             <Routes>
               <Route path="/" element={<Dashboard usuario={usuario} />} />
-              <Route path="/analytics" element={<Analytics />} />
+              <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/pipeline" element={<Pipeline />} />
               <Route path="/keywords" element={<Keywords />} />
               <Route path="/settings" element={<Settings usuario={usuario} />} />

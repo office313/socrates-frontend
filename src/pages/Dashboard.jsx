@@ -113,12 +113,21 @@ export default function Dashboard({ usuario }) {
 
   const [filtro, setFiltro] = useState('todas')
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
+  const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   const [modalDetalle, setModalDetalle] = useState(null)
 
   const marcarVista = (numeroActo) => {
     const nuevas = { ...vistas, [numeroActo]: true }
     setVistas(nuevas)
     localStorage.setItem('lics_vistas', JSON.stringify(nuevas))
+  }
+
+  const anadirWatchlist = async (e, numeroActo) => {
+    e.stopPropagation()
+    try {
+      await axios.post(`/api/watchlist/${numeroActo}`)
+      setNumerosWatchlist(prev => new Set([...prev, numeroActo]))
+    } catch { alert('Error al añadir al Watchlist') }
   }
 
   const anadirPipeline = async (e, l) => {
@@ -147,10 +156,13 @@ export default function Dashboard({ usuario }) {
       axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500&ordenar=fecha_cierre&direccion=asc'),
       axios.get('/api/ultima-sync'),
       axios.get('/api/pipeline'),
-    ]).then(([lics, sync, pipe]) => {
+      axios.get('/api/watchlist'),
+    ]).then(([lics, sync, pipe, watch]) => {
       const todas = lics.data.resultados || []
       const pipItems = pipe.data.resultados || []
+      const watchItems = watch.data.resultados || []
       setNumerosPipeline(new Set(pipItems.map(p => p.numero_acto)))
+      setNumerosWatchlist(new Set(watchItems.map(w => w.numero_acto)))
       setPipelineItems(pipItems)
       setStats({
         vigentes: lics.data.total || 0,
@@ -263,7 +275,13 @@ export default function Dashboard({ usuario }) {
                     </td>
                     <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{fmtFecha(l.fecha_cierre)}</td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', opacity: vista ? 0.55 : 1 }}>{fmt(l.presupuesto)}</td>
-                    <td style={{ padding: '8px 16px', textAlign: 'right' }}>
+                    <td style={{ padding: '8px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {!numerosWatchlist.has(l.numero_acto) && !numerosPipeline.has(l.numero_acto) && (
+                        <button onClick={(e) => anadirWatchlist(e, l.numero_acto)}
+                          style={{ padding: '4px 8px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)', marginRight: 4 }}>
+                          👁
+                        </button>
+                      )}
                       {!numerosPipeline.has(l.numero_acto) && (
                         <button onClick={(e) => anadirPipeline(e, l)}
                           style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
