@@ -363,9 +363,6 @@ export default function Settings({ usuario }) {
 
   return (
     <div style={{ padding: 24, maxWidth: 780 }}>
-      {modalUsuario !== null && (
-        <ModalUsuario usuarioActual={usuario} usuarioEditar={modalUsuario} empresas={empresas} onClose={() => setModalUsuario(null)} onSave={guardarUsuario} />
-      )}
       {modalEmpresa !== null && (
         <ModalEmpresa empresa={modalEmpresa} onClose={() => setModalEmpresa(null)} onSave={guardarEmpresa} />
       )}
