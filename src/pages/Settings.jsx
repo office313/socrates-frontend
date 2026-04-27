@@ -244,11 +244,11 @@ function ModalUsuarioSimple({ empresa, usuarioEditar, onClose, onSave }) {
   const ls = { display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 4 }
 
   const handleSave = () => {
-    console.log('handleSave llamado', form)
+    console.log('empresa:', empresa, 'form:', form)
+    alert('empresa_id: ' + (empresa?.id) + ' nombre: ' + form.nombre)
     if (!form.nombre || !form.email) { setError('Nombre y email son obligatorios'); return }
     if (esNuevo && !form.password) { setError('La contraseña es obligatoria'); return }
     if (form.password && form.password !== form.confirmar) { setError('Las contraseñas no coinciden'); return }
-    console.log('Enviando a API', { ...form, empresa_id: parseInt(empresa.id) })
     onSave({ ...form, empresa_id: parseInt(empresa.id) })
   }
 
