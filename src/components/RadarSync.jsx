@@ -67,11 +67,18 @@ export default function RadarSync({ progreso }) {
   useEffect(() => {
     if (!progreso) return
     const pct = progreso.porcentaje || 0
-    const lt = Math.floor(pct / (100 / LOGS.length))
-    if (lt > logIdx && logIdx < LOGS.length - 1) {
-      setLogLines(prev => [...prev, { text: LOGS[logIdx], active: logIdx === lt - 1 }].slice(-5))
-      setLogIdx(lt)
-    }
+    const totalLogs = LOGS.length
+    const lt = Math.floor(pct / (100 / totalLogs))
+    setLogLines(prev => {
+      const needed = Math.min(lt, totalLogs - 1)
+      if (prev.length >= needed) return prev
+      const newLines = []
+      for (let i = prev.length; i < needed; i++) {
+        newLines.push({ text: LOGS[i], active: i === needed - 1 })
+      }
+      return [...prev, ...newLines].slice(-5)
+    })
+    setLogIdx(lt)
   }, [progreso])
 
   const pct = progreso?.porcentaje || 0
