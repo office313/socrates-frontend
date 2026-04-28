@@ -290,6 +290,7 @@ export default function Settings({ usuario }) {
   const [passwordActual, setPasswordActual] = useState('')
   const [passwordNuevo, setPasswordNuevo] = useState('')
   const [modo, setModo] = useState('amplio')
+  const [modoKeywords, setModoKeywords] = useState('compartido')
   const [usuarios, setUsuarios] = useState([])
   const [empresas, setEmpresas] = useState([])
   const [msg, setMsg] = useState('')
@@ -302,6 +303,7 @@ export default function Settings({ usuario }) {
 
   useEffect(() => {
     axios.get('/api/keywords/modo').then(r => setModo(r.data.modo || 'amplio'))
+    axios.get('/api/empresa/config').then(r => setModoKeywords(r.data.modo_keywords || 'compartido'))
     if (usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') {
       cargarUsuarios()
     }
@@ -404,6 +406,32 @@ export default function Settings({ usuario }) {
             {modo === 'amplio'
               ? 'Modo Amplio — tolera errores tipográficos e ignora tildes y mayúsculas. Recomendado para PanamaCompra.'
               : 'Modo Estricto — busca exactamente lo escrito, solo ignora tildes y mayúsculas.'}
+          </p>
+        </div>
+      )}
+
+      {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && usuario?.empresa_id !== 2 && (
+        <div style={ss}>
+          <h2 style={ts}>Modo de Keywords y Pipeline</h2>
+          <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
+            Define si los keywords y el Pipeline son compartidos por toda la empresa o individuales por usuario.
+          </p>
+          <div style={{ display: 'flex', background: '#f0f0f0', borderRadius: 8, padding: 4, gap: 4, width: 'fit-content', marginBottom: 12 }}>
+            <button onClick={() => { setModoKeywords('compartido'); axios.post('/api/empresa/config', { modo_keywords: 'compartido' }).then(() => mostrarMsg('Modo actualizado')) }} style={{
+              padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+              background: modoKeywords === 'compartido' ? 'var(--blue)' : 'transparent',
+              color: modoKeywords === 'compartido' ? 'white' : '#666',
+            }}>Compartido</button>
+            <button onClick={() => { setModoKeywords('individual'); axios.post('/api/empresa/config', { modo_keywords: 'individual' }).then(() => mostrarMsg('Modo actualizado')) }} style={{
+              padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none',
+              background: modoKeywords === 'individual' ? 'var(--blue)' : 'transparent',
+              color: modoKeywords === 'individual' ? 'white' : '#666',
+            }}>Individual por usuario</button>
+          </div>
+          <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
+            {modoKeywords === 'compartido'
+              ? 'Compartido — todos los usuarios ven las mismas licitaciones y comparten el Pipeline.'
+              : 'Individual — cada usuario gestiona sus propios keywords y Pipeline. El supervisor ve todo.'}
           </p>
         </div>
       )}
