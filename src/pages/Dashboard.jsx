@@ -126,18 +126,18 @@ export default function Dashboard({ usuario }) {
 
   const buscarAhora = () => {
     setSincronizando(true)
-    axios.post('/api/keywords/buscar').then(() => {
-      intervaloRef.current = setInterval(() => {
-        axios.get('/api/keywords/progreso').then(r => {
-          setProgreso(r.data)
-          if (r.data.estado === 'completo') {
-            setSincronizando(false)
-            clearInterval(intervaloRef.current)
-            setTimeout(() => { setProgreso(null); window.location.reload() }, 2000)
-          }
-        })
-      }, 2000)
-    })
+    setProgreso({ porcentaje: 0, licitaciones: 0, estado: 'sincronizando' })
+    axios.post('/api/keywords/buscar')
+    intervaloRef.current = setInterval(() => {
+      axios.get('/api/keywords/progreso').then(r => {
+        setProgreso(r.data)
+        if (r.data.estado === 'completo') {
+          setSincronizando(false)
+          clearInterval(intervaloRef.current)
+          setTimeout(() => { setProgreso(null); window.location.reload() }, 3000)
+        }
+      })
+    }, 2000)
   }
 
   const marcarVista = (numeroActo) => {
