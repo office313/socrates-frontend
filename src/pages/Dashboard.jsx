@@ -127,7 +127,7 @@ export default function Dashboard({ usuario }) {
   const buscarAhora = () => {
     setSincronizando(true)
     setProgreso({ porcentaje: 0, licitaciones: 0, estado: 'sincronizando' })
-    axios.post('/api/keywords/buscar')
+    axios.post('/api/keywords/buscar-ahora')
     intervaloRef.current = setInterval(() => {
       axios.get('/api/keywords/progreso').then(r => {
         setProgreso(r.data)
