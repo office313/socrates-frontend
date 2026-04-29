@@ -410,11 +410,9 @@ export default function Settings({ usuario }) {
               <>
                 {!totpQR ? (
                   <button onClick={() => {
-                    fetch('/api/totp/generar').then(r => {
-                      const secret = r.headers.get('X-TOTP-Secret')
-                      return r.blob().then(b => ({ blob: b, secret }))
-                    }).then(({ blob, secret }) => {
-                      setTotpQR(URL.createObjectURL(blob))
+                    axios.get('/api/totp/generar', { responseType: 'blob' }).then(r => {
+                      const url = URL.createObjectURL(r.data)
+                      setTotpQR(url)
                     })
                   }} style={bs}>Activar 2FA</button>
                 ) : (
@@ -424,17 +422,21 @@ export default function Settings({ usuario }) {
                       2. Introduce el código de 6 dígitos que aparece en la app
                     </p>
                     <img src={totpQR} alt="QR Code" style={{ width: 180, height: 180, border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 16, display: 'block' }} />
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                      <input value={totpCodigo} onChange={e => setTotpCodigo(e.target.value)} placeholder="Código de 6 dígitos"
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                      <input value={totpCodigo} onChange={e => setTotpCodigo(e.target.value)}
+                        placeholder="Código de 6 dígitos"
                         style={{ ...is, width: 180 }} maxLength={6} />
                       <button onClick={() => {
-                        axios.post('/api/totp/activar', { codigo: totpCodigo }).then(r => {
-                          if (r.data.ok) { setTotp(true); setTotpQR(null); setTotpMsg(''); mostrarMsg('2FA activado correctamente') }
-                          else setTotpMsg(r.data.error || 'Código incorrecto')
-                        })
+                        if (!totpCodigo || totpCodigo.length < 6) { setTotpMsg('Introduce el código de 6 dígitos'); return }
+                        axios.post('/api/totp/activar', { codigo: totpCodigo })
+                          .then(r => {
+                            if (r.data.ok) { setTotp(true); setTotpQR(null); setTotpCodigo(''); setTotpMsg(''); mostrarMsg('2FA activado correctamente') }
+                            else setTotpMsg(r.data.error || 'Código incorrecto')
+                          })
+                          .catch(() => setTotpMsg('Error de conexión'))
                       }} style={bs}>Verificar y activar</button>
                     </div>
-                    {totpMsg && <p style={{ color: '#c62828', fontSize: 12, marginTop: 8 }}>{totpMsg}</p>}
+                    {totpMsg && <p style={{ color: '#c62828', fontSize: 12, marginTop: 4 }}>{totpMsg}</p>}
                   </div>
                 )}
               </>
