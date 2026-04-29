@@ -19,7 +19,6 @@ const RANGOS = [
 
 export default function Analytics({ usuario }) {
   const [tab, setTab] = useState('historico')
-  // Histórico
   const [keywords, setKeywords] = useState('')
   const [institucion, setInstitucion] = useState('')
   const [adjudicatario, setAdjudicatario] = useState('')
@@ -30,6 +29,34 @@ export default function Analytics({ usuario }) {
   const [montoTotal, setMontoTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [buscado, setBuscado] = useState(false)
+
+  // Leer parámetros de URL y auto-buscar
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const kws = params.get('keywords')
+    const rng = params.get('rango')
+    const auto = params.get('auto')
+    if (kws) {
+      setKeywords(kws)
+      if (rng) setRango(rng)
+      if (auto === '1') {
+        // Auto-ejecutar búsqueda
+        const searchParams = new URLSearchParams()
+        searchParams.append('keywords', kws)
+        searchParams.append('rango', rng || 'anio')
+        searchParams.append('ordenar', 'fecha')
+        setLoading(true)
+        axios.get('/api/analytics?' + searchParams.toString())
+          .then(r => {
+            setResultados(r.data.resultados || [])
+            setTotal(r.data.total || 0)
+            setMontoTotal(r.data.monto_total || 0)
+            setBuscado(true)
+          })
+          .finally(() => setLoading(false))
+      }
+    }
+  }, [])
   // Búsqueda por número
   const [numeroActo, setNumeroActo] = useState('')
   const [licitacionEncontrada, setLicitacionEncontrada] = useState(null)

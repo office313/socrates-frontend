@@ -88,6 +88,14 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
                   + Añadir al Watchlist
                 </button>
               )}
+              {(lic.keywords || []).length > 0 && (
+                <button onClick={() => {
+                  const kws = lic.keywords.join(', ')
+                  window.location.href = `/app/analytics?keywords=${encodeURIComponent(kws)}&rango=anio&auto=1`
+                }} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
+                  📊 Estudio de Mercado
+                </button>
+              )}
               {lic.url_fuente && (
                 <a href={lic.url_fuente} target="_blank" rel="noreferrer" style={{ padding: '8px 16px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
                   Abrir en PanamaCompra ↗
