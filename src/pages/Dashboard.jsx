@@ -20,7 +20,7 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
-function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWatchlist }) {
+function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -90,11 +90,8 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
                 </button>
               )}
               {(lic.keywords || []).length > 0 && (
-                <button onClick={() => {
-                  const kws = lic.keywords.join(', ')
-                  navigate(`/analytics?keywords=${encodeURIComponent(kws)}&rango=anio&auto=1`)
-                }} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
-                  📊 Estudio de Mercado
+                <button onClick={onEstudio} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
+                  Estudio de Mercado
                 </button>
               )}
               {lic.url_fuente && (
@@ -238,6 +235,7 @@ export default function Dashboard({ usuario }) {
           onClose={() => setModalDetalle(null)}
           onPipeline={() => { anadirPipeline({ stopPropagation: () => {} }, modalDetalle); setModalDetalle(null) }}
           onWatchlist={() => { anadirWatchlist({ stopPropagation: () => {} }, modalDetalle.numero_acto); setModalDetalle(null) }}
+          onEstudio={() => { setModalDetalle(null); navigate(`/analytics?keywords=${encodeURIComponent((modalDetalle.keywords || []).join(', '))}&rango=anio&auto=1`) }}
         />
       )}
 
