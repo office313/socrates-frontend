@@ -450,6 +450,7 @@ export default function Settings({ usuario }) {
           <div style={{ background: '#f8f9fa', borderRadius: 10, padding: 16, fontSize: 12, color: '#666', maxWidth: 220, lineHeight: 1.7 }}>
             <p style={{ fontWeight: 600, color: 'var(--blue)', marginBottom: 8 }}>Apps recomendadas</p>
             <p>📱 <strong>Google Authenticator</strong><br/>iOS y Android</p>
+            <p>📱 <strong>Microsoft Authenticator</strong><br/>iOS y Android</p>
             <p>📱 <strong>Authy</strong><br/>iOS, Android y escritorio</p>
           </div>
         </div>
