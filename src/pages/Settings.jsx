@@ -291,6 +291,10 @@ export default function Settings({ usuario }) {
   const [passwordNuevo, setPasswordNuevo] = useState('')
   const [modo, setModo] = useState('amplio')
   const [modoKeywords, setModoKeywords] = useState('compartido')
+  const [totp, setTotp] = useState(false)
+  const [totpQR, setTotpQR] = useState(null)
+  const [totpCodigo, setTotpCodigo] = useState('')
+  const [totpMsg, setTotpMsg] = useState('')
   const [usuarios, setUsuarios] = useState([])
   const [empresas, setEmpresas] = useState([])
   const [msg, setMsg] = useState('')
@@ -304,6 +308,7 @@ export default function Settings({ usuario }) {
   useEffect(() => {
     axios.get('/api/keywords/modo').then(r => setModo(r.data.modo || 'amplio'))
     axios.get('/api/empresa/config').then(r => setModoKeywords(r.data.modo_keywords || 'compartido'))
+    axios.get('/api/totp/estado').then(r => setTotp(r.data.activo || false))
     if (usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') {
       cargarUsuarios()
     }
@@ -392,9 +397,63 @@ export default function Settings({ usuario }) {
         <button onClick={guardarCuenta} style={bs}>Guardar cambios</button>
       </div>
 
+      <div style={ss}>
+        <h2 style={ts}>Verificación en dos pasos (2FA)</h2>
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 24 }}>
+          <div style={{ flex: 1 }}>
+            <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
+              {totp
+                ? '✅ La verificación en dos pasos está activada. Tu cuenta está protegida.'
+                : 'La verificación en dos pasos añade una capa extra de seguridad. Al iniciar sesión necesitarás tu contraseña y un código de tu app de autenticación.'}
+            </p>
+            {!totp ? (
+              <>
+                {!totpQR ? (
+                  <button onClick={() => {
+                    fetch('/api/totp/generar').then(r => {
+                      const secret = r.headers.get('X-TOTP-Secret')
+                      return r.blob().then(b => ({ blob: b, secret }))
+                    }).then(({ blob, secret }) => {
+                      setTotpQR(URL.createObjectURL(blob))
+                    })
+                  }} style={bs}>Activar 2FA</button>
+                ) : (
+                  <div>
+                    <p style={{ fontSize: 13, color: '#444', marginBottom: 12 }}>
+                      1. Escanea este código QR con <strong>Google Authenticator</strong> o <strong>Authy</strong><br/>
+                      2. Introduce el código de 6 dígitos que aparece en la app
+                    </p>
+                    <img src={totpQR} alt="QR Code" style={{ width: 180, height: 180, border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 16, display: 'block' }} />
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                      <input value={totpCodigo} onChange={e => setTotpCodigo(e.target.value)} placeholder="Código de 6 dígitos"
+                        style={{ ...is, width: 180 }} maxLength={6} />
+                      <button onClick={() => {
+                        axios.post('/api/totp/activar', { codigo: totpCodigo }).then(r => {
+                          if (r.data.ok) { setTotp(true); setTotpQR(null); setTotpMsg(''); mostrarMsg('2FA activado correctamente') }
+                          else setTotpMsg(r.data.error || 'Código incorrecto')
+                        })
+                      }} style={bs}>Verificar y activar</button>
+                    </div>
+                    {totpMsg && <p style={{ color: '#c62828', fontSize: 12, marginTop: 8 }}>{totpMsg}</p>}
+                  </div>
+                )}
+              </>
+            ) : (
+              <button onClick={() => {
+                if (!confirm('¿Desactivar la verificación en dos pasos?')) return
+                axios.post('/api/totp/desactivar').then(() => { setTotp(false); mostrarMsg('2FA desactivado') })
+              }} style={{ ...bs, background: '#ffebee', color: '#c62828' }}>Desactivar 2FA</button>
+            )}
+          </div>
+          <div style={{ background: '#f8f9fa', borderRadius: 10, padding: 16, fontSize: 12, color: '#666', maxWidth: 220, lineHeight: 1.7 }}>
+            <p style={{ fontWeight: 600, color: 'var(--blue)', marginBottom: 8 }}>Apps recomendadas</p>
+            <p>📱 <strong>Google Authenticator</strong><br/>iOS y Android</p>
+            <p>📱 <strong>Authy</strong><br/>iOS, Android y escritorio</p>
+          </div>
+        </div>
+      </div>
+
       {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && usuario?.empresa_id !== 2 && (
-        <div style={ss}>
-          <h2 style={ts}>Modo de Búsqueda</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
             Configura cómo el sistema busca licitaciones. Afecta a todos los usuarios de tu empresa.
           </p>
