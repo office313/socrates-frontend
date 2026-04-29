@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import RadarSync from '../components/RadarSync'
 
@@ -91,7 +92,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
               {(lic.keywords || []).length > 0 && (
                 <button onClick={() => {
                   const kws = lic.keywords.join(', ')
-                  window.location.href = `/app/analytics?keywords=${encodeURIComponent(kws)}&rango=anio&auto=1`
+                  navigate(`/analytics?keywords=${encodeURIComponent(kws)}&rango=anio&auto=1`)
                 }} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
                   📊 Estudio de Mercado
                 </button>
@@ -116,6 +117,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, enPipeline, enWat
 }
 
 export default function Dashboard({ usuario }) {
+  const navigate = useNavigate()
   const [stats, setStats] = useState({ vigentes: 0, cierranHoy: 0, pipeline: 0, watchlist: 0 })
   const [licitaciones, setLicitaciones] = useState([])
   const [pipelineItems, setPipelineItems] = useState([])

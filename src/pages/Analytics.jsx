@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import axios from 'axios'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
@@ -18,6 +19,7 @@ const RANGOS = [
 ]
 
 export default function Analytics({ usuario }) {
+  const location = useLocation()
   const [tab, setTab] = useState('historico')
   const [keywords, setKeywords] = useState('')
   const [institucion, setInstitucion] = useState('')
@@ -30,9 +32,8 @@ export default function Analytics({ usuario }) {
   const [loading, setLoading] = useState(false)
   const [buscado, setBuscado] = useState(false)
 
-  // Leer parámetros de URL y auto-buscar
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
+    const params = new URLSearchParams(location.search)
     const kws = params.get('keywords')
     const rng = params.get('rango')
     const auto = params.get('auto')
@@ -40,7 +41,6 @@ export default function Analytics({ usuario }) {
       setKeywords(kws)
       if (rng) setRango(rng)
       if (auto === '1') {
-        // Auto-ejecutar búsqueda
         const searchParams = new URLSearchParams()
         searchParams.append('keywords', kws)
         searchParams.append('rango', rng || 'anio')
@@ -56,7 +56,7 @@ export default function Analytics({ usuario }) {
           .finally(() => setLoading(false))
       }
     }
-  }, [])
+  }, [location.search])
   // Búsqueda por número
   const [numeroActo, setNumeroActo] = useState('')
   const [licitacionEncontrada, setLicitacionEncontrada] = useState(null)
