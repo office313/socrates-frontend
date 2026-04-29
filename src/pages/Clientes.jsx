@@ -266,6 +266,10 @@ export default function Clientes() {
                             </td>
                             <td style={{ padding: '8px 12px', textAlign: 'right', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                               <button onClick={() => { setEmpresaSeleccionada(e); setModalUsuario(u) }} style={{ padding: '3px 10px', background: 'var(--blue-light)', color: 'var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Editar</button>
+                              {u.totp_activo ? (
+                                <button onClick={() => { if(confirm('¿Desactivar 2FA de este usuario?')) axios.post(`/api/totp/desactivar-usuario/${u.id}`).then(() => cargarUsuarios()) }}
+                                  style={{ padding: '3px 10px', background: '#fff3e0', color: '#e65100', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>🔐 2FA</button>
+                              ) : null}
                               <button onClick={() => eliminarUsuario(u.id)} style={{ padding: '3px 10px', background: '#ffebee', color: '#c62828', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Eliminar</button>
                             </td>
                           </tr>
