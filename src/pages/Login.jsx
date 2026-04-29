@@ -116,6 +116,18 @@ export default function Login() {
               style={{ width: '100%', padding: '10px', background: 'none', color: '#888', border: 'none', fontSize: 13, cursor: 'pointer', marginTop: 8 }}>
               ← Volver
             </button>
+            <div style={{ textAlign: 'center', marginTop: 8 }}>
+              <button type="button" onClick={async () => {
+                await fetch('/api/totp/solicitar-reset', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email })
+                })
+                alert('Si tu cuenta tiene 2FA activo, recibirás un email con instrucciones para desactivarlo.')
+              }} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}>
+                ¿Perdiste acceso a tu autenticador?
+              </button>
+            </div>
           </form>
         )}
       </div>
