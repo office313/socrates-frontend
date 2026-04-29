@@ -12,12 +12,10 @@ export function useAuth() {
           setUsuario(r.data)
         } else {
           setUsuario(null)
-          window.location.href = '/app/login'
         }
       })
       .catch(() => {
         setUsuario(null)
-        window.location.href = '/app/login'
       })
       .finally(() => setLoading(false))
   }
