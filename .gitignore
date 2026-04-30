@@ -22,3 +22,21 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Bases de datos locales (nunca subir)
+*.db
+*.sqlite
+*.sqlite3
+
+# Backups y temporales
+*.bak
+*.backup
+*.tmp
+*~
+
+# Entornos
+.env
+.env.local
+
+# Builds (los regenera npm run build)
+node_modules/
