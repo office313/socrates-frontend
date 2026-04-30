@@ -167,6 +167,7 @@ export default function Dashboard({ usuario }) {
     try {
       const r = await axios.post('/api/pipeline', {
         numero_acto: l.numero_acto,
+        fecha_cierre: l.fecha_cierre || '',
         institucion: l.institucion || '',
         unidad_compra: l.unidad_compradora || '',
         descripcion: l.descripcion || '',

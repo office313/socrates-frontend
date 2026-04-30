@@ -1,14 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
-
-// Convierte 'YYYY-MM-DD' a 'DD-MM-YYYY' para mostrar
-const fmtFecha = (s) => {
-  if (!s || typeof s !== 'string') return '-'
-  const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
-  return m ? `${m[3]}-${m[2]}-${m[1]}` : s
-}
-
 const ESTADOS = [
   'En Preparación', 'Presentada', 'Teóric. Ganada', 'Empatada', 'En Espera',
   'Adjudicada', 'No Adjudicada', 'Teóric. Perdida', 'En Litigio',
@@ -130,6 +122,7 @@ function Modal({ item, onClose, onSave, onDelete }) {
               {input('Contacto', 'contacto')}
               {input('Teléfono', 'telefono_contacto')}
               {input('Email', 'email_contacto')}
+              {input('Fecha Envío Propuesta', 'fecha_envio_propuesta', 'date')}
               <div style={{ gridColumn: '1/-1' }}>{input('Descripción', 'descripcion', 'text', { textarea: true })}</div>
               <div style={{ gridColumn: '1/-1' }}>{input('Observaciones', 'observaciones', 'text', { textarea: true })}</div>
             </div>
@@ -263,20 +256,19 @@ export default function Pipeline() {
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: '#f8f9fa' }}>
-              {['No. Acto', 'Fecha cierre', 'Institución', 'Descripción', 'Agente', 'Estado', 'P. Ref.', 'P. Ofertado'].map((h, i) => (
-                <th key={h} style={{ padding: '10px 16px', textAlign: i > 5 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12 }}>{h}</th>
+              {['No. Acto', 'Institución', 'Descripción', 'Agente', 'Estado', 'P. Ref.', 'P. Ofertado'].map((h, i) => (
+                <th key={h} style={{ padding: '10px 16px', textAlign: i > 4 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12 }}>{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {filtrados.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>No hay licitaciones en el pipeline</td></tr>
+              <tr><td colSpan={7} style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>No hay licitaciones en el pipeline</td></tr>
             ) : filtrados.map((p, i) => (
               <tr key={p.id} onClick={() => setModal(p)} style={{ cursor: 'pointer', background: i % 2 === 0 ? 'white' : '#fafafa' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
                 onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafafa'}>
                 <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>{p.numero_acto}</td>
-                <td style={{ padding: '10px 16px', color: '#666' }}>{fmtFecha(p.fecha_cierre)}</td>
                 <td style={{ padding: '10px 16px' }}>{(p.institucion || '-').substring(0, 25)}</td>
                 <td style={{ padding: '10px 16px', color: '#666' }}>{(p.descripcion || '-').substring(0, 40)}...</td>
                 <td style={{ padding: '10px 16px' }}>{p.agente || '-'}</td>
