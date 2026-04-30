@@ -310,8 +310,28 @@ export default function Dashboard({ usuario }) {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
-                {['No. Acto', 'Institución', 'Descripción', 'Keywords', 'Cierre', 'Precio Ref.', ''].map((h, i) => (
-                  <th key={i} style={{ padding: '10px 16px', textAlign: i > 4 ? 'right' : 'left', fontWeight: 600, color: 'var(--text-muted)', borderBottom: '1px solid var(--border)', fontSize: 11 }}>{h}</th>
+                {[
+                  {h: 'No. Acto',     w: '14%'},
+                  {h: 'Institución',  w: '15%'},
+                  {h: 'Descripción',  w: 'auto'},
+                  {h: 'Keywords',     w: '12%'},
+                  {h: 'Cierre',       w: '110px'},
+                  {h: 'Precio Ref.',  w: '110px'},
+                  {h: '',             w: '170px'},
+                ].map((col, i) => (
+                  <th key={i} style={{
+                    padding: '10px 16px',
+                    textAlign: i > 4 ? 'right' : 'left',
+                    fontWeight: 600,
+                    color: 'var(--text-muted)',
+                    borderBottom: '1px solid var(--border)',
+                    fontSize: 11,
+                    width: col.w,
+                    position: 'sticky',
+                    top: 0,
+                    background: '#f8f9fa',
+                    zIndex: 2,
+                  }}>{col.h}</th>
                 ))}
               </tr>
             </thead>
@@ -332,7 +352,7 @@ export default function Dashboard({ usuario }) {
                         <span key={k} style={{ background: urgente ? '#ffe0b2' : 'var(--blue-light)', color: urgente ? '#e65100' : 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
                       ))}
                     </td>
-                    <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{fmtFecha(l.fecha_cierre)}</td>
+                    <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', opacity: vista ? 0.55 : 1 }}>{fmt(l.presupuesto)}</td>
                     <td style={{ padding: '8px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       {!numerosWatchlist.has(l.numero_acto) && !numerosPipeline.has(l.numero_acto) && (
