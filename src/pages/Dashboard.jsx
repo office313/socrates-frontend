@@ -292,7 +292,7 @@ export default function Dashboard({ usuario }) {
 
       {sincronizando && <RadarSync progreso={progreso} />}
 
-      <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
+      <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: 'var(--blue)' }}>Radar de Oportunidades</h2>
           <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
@@ -328,7 +328,7 @@ export default function Dashboard({ usuario }) {
                     fontSize: 11,
                     width: col.w,
                     position: 'sticky',
-                    top: 0,
+                    top: 176,
                     background: '#f8f9fa',
                     zIndex: 2,
                   }}>{col.h}</th>
