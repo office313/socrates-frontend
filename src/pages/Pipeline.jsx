@@ -10,19 +10,19 @@ const fmtFecha = (s) => {
 }
 
 const ESTADOS = [
-  'En Preparación', 'Presentada', 'Teóric. Ganada', 'Empatada',
-  'Adjudicada', 'No Adjudicada', 'Teóric. Perdida', 'En Litigio',
+  'En Preparación', 'Presentada', 'Mejor Oferta', 'Empatada',
+  'Adjudicada', 'No Adjudicada', 'No Mejor Oferta', 'En Litigio',
   'Pte. Entrega Material', 'Entregado Material OK', 'Limbo'
 ]
 
 const COLORES = {
   'En Preparación': { bg: '#e3f2fd', color: '#1565c0' },
   'Presentada': { bg: '#fff3e0', color: '#e65100' },
-  'Teóric. Ganada': { bg: '#e8f5e9', color: '#2e7d32' },
+  'Mejor Oferta': { bg: '#e8f5e9', color: '#2e7d32' },
   'Empatada': { bg: '#f3e5f5', color: '#6a1b9a' },
   'Adjudicada': { bg: '#1b5e20', color: 'white' },
   'No Adjudicada': { bg: '#ffebee', color: '#c62828' },
-  'Teóric. Perdida': { bg: '#fce4ec', color: '#880e4f' },
+  'No Mejor Oferta': { bg: '#fce4ec', color: '#880e4f' },
   'En Litigio': { bg: '#ff6f00', color: 'white' },
   'Pte. Entrega Material': { bg: '#e0f7fa', color: '#006064' },
   'Entregado Material OK': { bg: '#00695c', color: 'white' },
@@ -146,6 +146,11 @@ function Modal({ item, onClose, onSave, onDelete, onPrev, onNext, hasPrev, hasNe
               style={{ color: 'white', fontSize: 18, background: 'none', border: 'none', cursor: hasNext ? 'pointer' : 'not-allowed', opacity: hasNext ? 1 : 0.3, padding: '4px 8px' }}>›</button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            {form.fecha_cierre ? (
+              <div style={{ color: 'white', fontSize: 14, fontWeight: 600 }}>
+                Cierre: {fmtFecha(form.fecha_cierre)}
+              </div>
+            ) : null}
             {form.precio_referencia ? (
               <div style={{ color: 'white', fontSize: 14, fontWeight: 600 }}>
                 Precio Ref.: US$ {Number(form.precio_referencia).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
