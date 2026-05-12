@@ -21,7 +21,7 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
-function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist, tieneTrack }) {
+function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist, tieneTrack, onMarcarNoLeida }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -100,6 +100,9 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
                   Abrir en PanamaCompra ↗
                 </a>
               )}
+              <button onClick={onMarcarNoLeida} style={{ padding: '8px 16px', background: 'white', color: '#666', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)' }}>
+                ◯ Marcar como NO leída
+              </button>
             </div>
           </div>
           <div style={{ overflow: 'hidden' }}>
@@ -153,6 +156,20 @@ export default function Dashboard({ usuario }) {
     if (vistas.has(numeroActo)) return
     setVistas(prev => new Set([...prev, numeroActo]))
     axios.post(`/api/vistas/${numeroActo}`)
+  }
+
+  const marcarNoLeida = async (numeroActo) => {
+    if (!vistas.has(numeroActo)) return
+    setVistas(prev => {
+      const s = new Set(prev)
+      s.delete(numeroActo)
+      return s
+    })
+    try {
+      await axios.delete(`/api/vistas/${numeroActo}`)
+    } catch (e) {
+      setVistas(prev => new Set([...prev, numeroActo]))
+    }
   }
 
   const anadirWatchlist = async (e, numeroActo) => {
@@ -233,7 +250,28 @@ export default function Dashboard({ usuario }) {
     ? licitaciones.filter(l => numerosPipeline.has(l.numero_acto))
     : filtro === 'watchlist'
     ? licitaciones.filter(l => numerosWatchlist.has(l.numero_acto))
+    : filtro === 'noleidas'
+    ? licitaciones.filter(l => !vistas.has(l.numero_acto))
     : licitaciones.filter(l => filtro === 'hoy' ? esHoy(l.fecha_cierre) : true)
+
+  const noLeidasCount = licitaciones.filter(l => !vistas.has(l.numero_acto)).length
+
+  const marcarTodasLeidas = async () => {
+    const nuevasMarcadas = licitacionesFiltradas
+      .map(l => l.numero_acto)
+      .filter(n => !vistas.has(n))
+    if (nuevasMarcadas.length === 0) return
+    setVistas(prev => new Set([...prev, ...nuevasMarcadas]))
+    try {
+      await axios.post('/api/vistas/marcar-todas', { numeros: nuevasMarcadas })
+    } catch (e) {
+      setVistas(prev => {
+        const s = new Set(prev)
+        nuevasMarcadas.forEach(n => s.delete(n))
+        return s
+      })
+    }
+  }
 
   return (
     <div style={{ padding: 24 }}>
@@ -247,6 +285,7 @@ export default function Dashboard({ usuario }) {
           onPipeline={() => { anadirPipeline({ stopPropagation: () => {} }, modalDetalle); setModalDetalle(null) }}
           onWatchlist={() => { anadirWatchlist({ stopPropagation: () => {} }, modalDetalle.numero_acto); setModalDetalle(null) }}
           onEstudio={() => { setModalDetalle(null); navigate(`/analytics?keywords=${encodeURIComponent((modalDetalle.keywords || []).join(', '))}&rango=anio&auto=1`) }}
+          onMarcarNoLeida={() => marcarNoLeida(modalDetalle.numero_acto)}
         />
       )}
 
@@ -266,6 +305,15 @@ export default function Dashboard({ usuario }) {
                 Ultima sync: {ultimaSync}
               </span>
             )}
+            <button onClick={marcarTodasLeidas} disabled={noLeidasCount === 0} style={{
+              padding: '6px 14px', background: 'white',
+              color: noLeidasCount === 0 ? '#aaa' : 'var(--text)',
+              borderRadius: 20, fontSize: 12, fontWeight: 600,
+              cursor: noLeidasCount === 0 ? 'default' : 'pointer',
+              border: '1px solid var(--border)'
+            }}>
+              ✓ Marcar como leídas
+            </button>
             <button onClick={buscarAhora} disabled={sincronizando} style={{
               padding: '6px 14px', background: sincronizando ? '#ccc' : 'var(--red)',
               color: 'white', borderRadius: 20, fontSize: 12, fontWeight: 600,
@@ -276,7 +324,7 @@ export default function Dashboard({ usuario }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: tieneTrack ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)', gap: 12 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: tieneTrack ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', gap: 12 }}>
           <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
             <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Licitaciones vigentes</p>
             <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{stats.vigentes}</p>
@@ -294,6 +342,11 @@ export default function Dashboard({ usuario }) {
               <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>licitaciones activas</p>
             </div>
           )}
+          <div onClick={() => setFiltro(filtro === 'noleidas' ? 'todas' : 'noleidas')} style={{ background: noLeidasCount > 0 ? '#fff8e1' : 'white', borderRadius: 12, padding: 16, border: filtro === 'noleidas' ? '2px solid #ef6c00' : '1px solid ' + (noLeidasCount > 0 ? '#ef6c00' : 'var(--border)'), cursor: 'pointer' }}>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: noLeidasCount > 0 ? '#ef6c00' : 'var(--text-muted)', fontWeight: 500 }}>No leídas</p>
+            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: noLeidasCount > 0 ? '#ef6c00' : 'var(--text-muted)' }}>{noLeidasCount}</p>
+            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>sin abrir</p>
+          </div>
           <div onClick={() => setFiltro(filtro === 'watchlist' ? 'todas' : 'watchlist')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'watchlist' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
             <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Watchlist</p>
             <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{stats.watchlist}</p>
@@ -311,7 +364,7 @@ export default function Dashboard({ usuario }) {
             {licitacionesFiltradas.length} licitaciones
             {filtro !== 'todas' && (
               <span style={{ marginLeft: 8, background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
-                {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Track' : 'Watchlist'}
+                {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Track' : filtro === 'noleidas' ? 'No leídas' : 'Watchlist'}
               </span>
             )}
           </span>
