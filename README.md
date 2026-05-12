@@ -1,16 +1,70 @@
-# React + Vite
+# socrates-frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Frontend React de Socrates Pro. Bundle compilado se sirve desde el
+backend FastAPI (repo socrates-pro-backend) en
+/static/react/.
 
-Currently, two official plugins are available:
+## Stack
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- React 19
+- Vite 8
+- React Router DOM
+- Axios
+- Recharts (gráficos)
 
-## React Compiler
+## Desarrollo local
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+```bash
+npm install
+npm run dev
+```
 
-## Expanding the ESLint configuration
+Vite arranca en http://localhost:5173/ con proxy a backend en
+http://localhost:8000/ (configurado en vite.config.js).
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Build de producción
+
+```bash
+npm run build
+```
+
+Genera bundle compilado en ./dist/.
+
+## Deploy a producción
+
+Build local + scp manual al servidor backend:
+
+```bash
+npm run build
+scp -r dist/* socrates:/home/ubuntu/panamacompra/frontend/static/react/
+```
+
+El backend FastAPI sirve estos archivos en /static/react/ via
+StaticFiles. No requiere restart del backend tras deploy del bundle
+(es contenido estático).
+
+## Workflow
+
+1. Editar .jsx localmente.
+2. `npm run dev` para probar en http://localhost:5173/.
+3. Commit + push a GitHub (origin/master).
+4. `npm run build` para generar bundle.
+5. scp del bundle al servidor.
+6. Recargar el navegador del cliente.
+
+## Backup automático del bundle anterior
+
+(Opcional, pero recomendado) Antes del scp, hacer backup en servidor:
+
+```bash
+ssh socrates 'cd /home/ubuntu/panamacompra/frontend/static/ &&
+cp -r react react.bak.$(date +%Y%m%d_%H%M%S)'
+```
+
+## Histórico relevante
+
+- **12-may-2026**: workflow migrado a build local + scp manual
+  (antes: build directo desde servidor con outDir absoluto al
+  backend). Cambio en vite.config.js.
+- **4-may-2026**: rediseño Track-premium desplegado (build hecho en
+  servidor, código fuente sin commit hasta 12-may).

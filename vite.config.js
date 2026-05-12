@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   build: {
-    outDir: '/home/ubuntu/panamacompra/frontend/static/react',
+    outDir: './dist',
     emptyOutDir: true,
   },
   server: {
