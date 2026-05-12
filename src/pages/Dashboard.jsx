@@ -205,14 +205,16 @@ export default function Dashboard({ usuario }) {
       if (vistasResult.status === 'fulfilled') {
         setVistas(new Set(vistasResult.value.data.vistas || []))
       }
-      setNumerosPipeline(new Set(pipItems.map(p => p.numero_acto)))
-      setNumerosWatchlist(new Set(watchItems.map(w => w.numero_acto)))
+      const numPipeSet = new Set(pipItems.map(p => p.numero_acto))
+      const numWatchSet = new Set(watchItems.map(w => w.numero_acto))
+      setNumerosPipeline(numPipeSet)
+      setNumerosWatchlist(numWatchSet)
       setPipelineItems(pipItems)
       setStats({
         vigentes: licsResult.status === 'fulfilled' ? (licsResult.value.data.total || 0) : 0,
         cierranHoy: todas.filter(l => l.fecha_cierre === hoy).length,
-        pipeline: pipeResult.status === 'fulfilled' ? (pipeResult.value.data.total || 0) : 0,
-        watchlist: watchItems.length,
+        pipeline: todas.filter(l => numPipeSet.has(l.numero_acto)).length,
+        watchlist: todas.filter(l => numWatchSet.has(l.numero_acto)).length,
       })
       setLicitaciones(todas)
       if (syncResult.status === 'fulfilled') {
@@ -228,13 +230,7 @@ export default function Dashboard({ usuario }) {
   const esHoy = (f) => f && f.substring(0, 10) === hoy
 
   const licitacionesFiltradas = filtro === 'pipeline'
-    ? pipelineItems.map(p => ({
-        numero_acto: p.numero_acto, institucion: p.institucion,
-        descripcion: p.descripcion, keywords: [],
-        fecha_cierre: p.fecha_orden_compra || '',
-        presupuesto: p.precio_ofertado || p.precio_referencia,
-        url_fuente: p.url_fuente,
-      }))
+    ? licitaciones.filter(l => numerosPipeline.has(l.numero_acto))
     : filtro === 'watchlist'
     ? licitaciones.filter(l => numerosWatchlist.has(l.numero_acto))
     : licitaciones.filter(l => filtro === 'hoy' ? esHoy(l.fecha_cierre) : true)
