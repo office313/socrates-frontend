@@ -101,12 +101,19 @@ export default function Watchlist() {
   const esHoy = (f) => f && f.substring(0, 10) === hoy
 
   const cargar = () => {
-    Promise.all([
+    Promise.allSettled([
       axios.get('/api/watchlist'),
       axios.get('/api/pipeline'),
-    ]).then(([w, p]) => {
-      setLicitaciones(w.data.resultados || [])
-      setPipeline(new Set((p.data.resultados || []).map(x => x.numero_acto)))
+    ]).then(results => {
+      const [wResult, pResult] = results
+      if (wResult.status === 'fulfilled') {
+        setLicitaciones(wResult.value.data.resultados || [])
+      }
+      if (pResult.status === 'fulfilled') {
+        setPipeline(new Set((pResult.value.data.resultados || []).map(x => x.numero_acto)))
+      } else {
+        console.warn('/api/pipeline rejected:', pResult.reason?.response?.status)
+      }
     }).finally(() => setLoading(false))
   }
 

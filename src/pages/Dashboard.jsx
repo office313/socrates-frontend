@@ -189,28 +189,39 @@ export default function Dashboard({ usuario }) {
   }
 
   useEffect(() => {
-    Promise.all([
+    Promise.allSettled([
       axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500&ordenar=fecha_cierre&direccion=asc'),
       axios.get('/api/ultima-sync'),
       axios.get('/api/pipeline'),
       axios.get('/api/watchlist'),
       axios.get('/api/vistas'),
-    ]).then(([lics, sync, pipe, watch, vistasData]) => {
-      const todas = lics.data.resultados || []
-      const pipItems = pipe.data.resultados || []
-      const watchItems = watch.data.resultados || []
-      setVistas(new Set(vistasData.data.vistas || []))
+    ]).then(results => {
+      const [licsResult, syncResult, pipeResult, watchResult, vistasResult] = results
+
+      const todas = licsResult.status === 'fulfilled' ? (licsResult.value.data.resultados || []) : []
+      const pipItems = pipeResult.status === 'fulfilled' ? (pipeResult.value.data.resultados || []) : []
+      const watchItems = watchResult.status === 'fulfilled' ? (watchResult.value.data.resultados || []) : []
+
+      if (vistasResult.status === 'fulfilled') {
+        setVistas(new Set(vistasResult.value.data.vistas || []))
+      }
       setNumerosPipeline(new Set(pipItems.map(p => p.numero_acto)))
       setNumerosWatchlist(new Set(watchItems.map(w => w.numero_acto)))
       setPipelineItems(pipItems)
       setStats({
-        vigentes: lics.data.total || 0,
+        vigentes: licsResult.status === 'fulfilled' ? (licsResult.value.data.total || 0) : 0,
         cierranHoy: todas.filter(l => l.fecha_cierre === hoy).length,
-        pipeline: pipe.data.total || 0,
+        pipeline: pipeResult.status === 'fulfilled' ? (pipeResult.value.data.total || 0) : 0,
         watchlist: watchItems.length,
       })
       setLicitaciones(todas)
-      setUltimaSync(sync.data.ultima_sync || '')
+      if (syncResult.status === 'fulfilled') {
+        setUltimaSync(syncResult.value.data.ultima_sync || '')
+      }
+
+      if (pipeResult.status === 'rejected') {
+        console.warn('/api/pipeline rejected:', pipeResult.reason?.response?.status)
+      }
     }).finally(() => setLoading(false))
   }, [])
 
