@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import Keywords from './Keywords'
 import axios from 'axios'
+import { useTrack } from '../hooks/useTrack'
 
 const ROLES = ['usuario', 'supervisor', 'superadmin']
 
@@ -291,6 +292,7 @@ function ModalUsuarioSimple({ empresa, usuarioEditar, onClose, onSave }) {
 }
 
 export default function Settings({ usuario }) {
+  const tieneTrack = useTrack()
   const [nombre, setNombre] = useState(usuario?.nombre || '')
   const [passwordActual, setPasswordActual] = useState('')
   const [passwordNuevo, setPasswordNuevo] = useState('')
@@ -528,9 +530,11 @@ export default function Settings({ usuario }) {
           </p>
         </div>
         <div style={ss}>
-          <h2 style={ts}>Modo de Keywords y Track</h2>
+          <h2 style={ts}>{tieneTrack ? 'Modo de Keywords y Track' : 'Modo de Keywords'}</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
-            Define si los keywords y Track son compartidos por toda la empresa o individuales por usuario.
+            {tieneTrack
+              ? 'Define si los keywords y Track son compartidos por toda la empresa o individuales por usuario.'
+              : 'Define si los keywords son compartidos por toda la empresa o individuales por usuario.'}
           </p>
           <div style={{ display: 'flex', background: '#f0f0f0', borderRadius: 8, padding: 4, gap: 4, width: 'fit-content', marginBottom: 12 }}>
             <button onClick={() => { setModoKeywords('compartido'); axios.post('/api/empresa/config', { modo_keywords: 'compartido' }).then(() => mostrarMsg('Modo actualizado')) }} style={{
@@ -546,8 +550,12 @@ export default function Settings({ usuario }) {
           </div>
           <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
             {modoKeywords === 'compartido'
-              ? 'Compartido — todos los usuarios ven las mismas licitaciones y comparten Track.'
-              : 'Individual — cada usuario gestiona sus propios keywords y Track. El supervisor ve todo.'}
+              ? (tieneTrack
+                  ? 'Compartido — todos los usuarios ven las mismas licitaciones y comparten Track.'
+                  : 'Compartido — todos los usuarios ven las mismas licitaciones.')
+              : (tieneTrack
+                  ? 'Individual — cada usuario gestiona sus propios keywords y Track. El supervisor ve todo.'
+                  : 'Individual — cada usuario gestiona sus propios keywords. El supervisor ve todo.')}
           </p>
         </div>
               <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #e5e7eb' }}>

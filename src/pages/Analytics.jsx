@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from 'axios'
+import { useTrack } from '../hooks/useTrack'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
@@ -20,6 +21,7 @@ const RANGOS = [
 
 export default function Analytics({ usuario }) {
   const location = useLocation()
+  const tieneTrack = useTrack()
   const [tab, setTab] = useState('historico')
   const [keywords, setKeywords] = useState('')
   const [institucion, setInstitucion] = useState('')
@@ -317,9 +319,11 @@ export default function Analytics({ usuario }) {
                     {licitacionEncontrada.contacto_email && <div><span style={{ color: '#888' }}>Email: </span>{licitacionEncontrada.contacto_email}</div>}
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                    <button onClick={() => anadirPipeline(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                      + Añadir a Track
-                    </button>
+                    {tieneTrack && (
+                      <button onClick={() => anadirPipeline(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                        + Añadir a Track
+                      </button>
+                    )}
                     <button onClick={() => anadirWatchlist(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
                       + Añadir al Watchlist
                     </button>
@@ -343,7 +347,7 @@ export default function Analytics({ usuario }) {
           {!licitacionEncontrada && !buscandoNumero && !msgNumero && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
               <p style={{ fontSize: 16, marginBottom: 8 }}>Introduce el número de licitación</p>
-              <p style={{ fontSize: 13 }}>Busca una licitación vigente por su número exacto para añadirla a Track o Watchlist</p>
+              <p style={{ fontSize: 13 }}>{tieneTrack ? 'Busca una licitación vigente por su número exacto para añadirla a Track o Watchlist' : 'Busca una licitación vigente por su número exacto para añadirla al Watchlist'}</p>
             </div>
           )}
         </div>
@@ -385,10 +389,12 @@ export default function Analytics({ usuario }) {
                   {adjSeleccionada.contacto_telefono && <div><span style={{ color: '#888' }}>Tel: </span>{adjSeleccionada.contacto_telefono}</div>}
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                  <button onClick={() => anadirAdjPipeline(adjSeleccionada)}
-                    style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                    + Añadir a Track
-                  </button>
+                  {tieneTrack && (
+                    <button onClick={() => anadirAdjPipeline(adjSeleccionada)}
+                      style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                      + Añadir a Track
+                    </button>
+                  )}
                   <button onClick={() => anadirAdjWatchlist(adjSeleccionada)}
                     style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
                     + Añadir al Watchlist

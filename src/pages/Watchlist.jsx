@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import { useTrack } from '../hooks/useTrack'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
@@ -18,7 +19,7 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
-function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline }) {
+function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline, tieneTrack }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -62,7 +63,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline }) {
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {!enPipeline && (
+              {tieneTrack && !enPipeline && (
                 <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
                   → Mover a Track
                 </button>
@@ -90,6 +91,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline }) {
 }
 
 export default function Watchlist() {
+  const tieneTrack = useTrack()
   const [licitaciones, setLicitaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalDetalle, setModalDetalle] = useState(null)
@@ -137,6 +139,7 @@ export default function Watchlist() {
         <ModalDetalle
           lic={modalDetalle}
           enPipeline={pipeline.has(modalDetalle.numero_acto)}
+          tieneTrack={tieneTrack}
           onClose={() => setModalDetalle(null)}
           onPipeline={() => moverPipeline(modalDetalle)}
           onEliminar={() => eliminar(modalDetalle.numero_acto)}
