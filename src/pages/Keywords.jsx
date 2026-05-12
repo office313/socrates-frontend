@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
-export default function Keywords() {
+export default function Keywords({ standalone = false }) {
   const [keywords, setKeywords] = useState([])
   const [texto, setTexto] = useState('')
   const [modo, setModo] = useState('amplio')
@@ -30,17 +30,18 @@ export default function Keywords() {
   }
 
   return (
-    <div style={{ padding: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Keywords</h1>
-      </div>
+    <div style={{ padding: standalone ? 24 : 0 }}>
+      {standalone && (
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Keywords</h1>
+        </div>
+      )}
 
       <div style={{ background: modo === 'amplio' ? '#e8f0fb' : '#f3e5f5', borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontSize: 12, color: modo === 'amplio' ? 'var(--blue)' : '#6a1b9a', lineHeight: 1.6 }}>
         <strong>{modo === 'amplio' ? 'Modo Amplio activo' : 'Modo Estricto activo'}</strong>
         {modo === 'amplio'
           ? ' — el buscador tolera errores tipográficos e ignora tildes y mayúsculas. Ideal para capturar licitaciones aunque los funcionarios cometan faltas de ortografía.'
           : ' — el buscador busca exactamente lo escrito, solo ignora tildes y mayúsculas. Más preciso pero puede perder licitaciones con errores tipográficos.'}
-        <span style={{ display: 'block', marginTop: 4, opacity: 0.75 }}>Puedes cambiar el modo en Admin → Configuración</span>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 20 }}>
@@ -54,7 +55,7 @@ export default function Keywords() {
               style={{ width: '100%', padding: '10px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, resize: 'vertical', marginBottom: 12 }} />
             <button type="submit" style={{
               width: '100%', padding: '10px', background: 'var(--blue)',
-              color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer'
+              color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none'
             }}>Añadir</button>
           </form>
           <p style={{ marginTop: 12, fontSize: 11, color: '#aaa' }}>
@@ -68,9 +69,8 @@ export default function Keywords() {
               <li>Añade <strong>códigos de ficha técnica</strong> si los conoces (ej: 105789)</li>
               <li>Incluye <strong>sinónimos</strong> — "compresor" y "compresora"</li>
               <li>No te preocupes por <strong>tildes ni mayúsculas</strong> — el sistema las ignora siempre</li>
-              <li>El <strong>Modo de búsqueda</strong> (Amplio o Estricto) se configura en Admin → Configuración</li>
               <li>Evita palabras muy genéricas como "compra" o "suministro" — generan demasiado ruido</li>
-              <li>Prueba tus keywords en <strong>Analytics</strong> antes de añadirlas — si encuentras adjudicaciones relevantes, es una buena keyword</li>
+              <li>Prueba tus keywords en <strong>Explorer</strong> antes de añadirlas — si encuentras adjudicaciones relevantes, es una buena keyword</li>
               <li>Revisa tus keywords <strong>periódicamente</strong> y ajústalas según los resultados</li>
             </ul>
           </div>

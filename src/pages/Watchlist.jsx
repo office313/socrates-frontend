@@ -64,7 +64,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {!enPipeline && (
                 <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                  → Mover a Pipeline
+                  → Mover a Track
                 </button>
               )}
               <button onClick={onEliminar} style={{ padding: '8px 16px', background: '#ffebee', color: '#c62828', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>

@@ -31,6 +31,8 @@ export default function Analytics({ usuario }) {
   const [montoTotal, setMontoTotal] = useState(0)
   const [loading, setLoading] = useState(false)
   const [buscado, setBuscado] = useState(false)
+  const [adjSeleccionada, setAdjSeleccionada] = useState(null)
+  const [toast, setToast] = useState(null)
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -123,7 +125,43 @@ export default function Analytics({ usuario }) {
       estado: 'En Preparación'
     })
     if (r.data.error) { alert(r.data.error); return }
-    setMsgNumero('✅ Añadida al Pipeline')
+    setMsgNumero('✅ Añadida a Track')
+  }
+
+  const showToast = (texto, ok = true) => {
+    setToast({ texto, ok })
+    setTimeout(() => setToast(null), 3000)
+  }
+
+  const anadirAdjPipeline = async (a) => {
+    try {
+      const r = await axios.post('/api/pipeline', {
+        numero_acto: a.numero_acto,
+        institucion: a.institucion || '',
+        descripcion: a.descripcion || '',
+        url_fuente: a.url_fuente || '',
+        precio_ofertado: a.monto || 0,
+        fecha_orden_compra: a.fecha_adjudicacion || '',
+        contacto: a.adjudicatario || '',
+        estado: ''
+      })
+      if (r.data.error) { showToast(r.data.error, false); return }
+      setAdjSeleccionada(null)
+      showToast('Añadida a Track')
+    } catch (e) {
+      showToast('Error al añadir a Track', false)
+    }
+  }
+
+  const anadirAdjWatchlist = async (a) => {
+    try {
+      const r = await axios.post(`/api/watchlist/${a.numero_acto}`)
+      if (r.data.error) { showToast(r.data.error, false); return }
+      setAdjSeleccionada(null)
+      showToast('Añadida al Watchlist')
+    } catch (e) {
+      showToast('Error al añadir al Watchlist', false)
+    }
   }
 
   const anadirWatchlist = async (l) => {
@@ -212,12 +250,11 @@ export default function Analytics({ usuario }) {
                     </thead>
                     <tbody>
                       {resultados.map((r, i) => (
-                        <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                          <td style={{ padding: '10px 16px', fontSize: 12 }}>
-                            {r.url_fuente
-                              ? <a href={r.url_fuente} target="_blank" rel="noreferrer" style={{ color: 'var(--blue)', fontWeight: 500 }}>{r.numero_acto}</a>
-                              : <span style={{ color: 'var(--blue)', fontWeight: 500 }}>{r.numero_acto}</span>}
-                          </td>
+                        <tr key={i} onClick={() => setAdjSeleccionada(r)}
+                          style={{ background: i % 2 === 0 ? 'white' : '#fafafa', cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#e8f0fb'}
+                          onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafafa'}>
+                          <td style={{ padding: '10px 16px', fontSize: 12, color: 'var(--blue)', fontWeight: 500 }}>{r.numero_acto}</td>
                           <td style={{ padding: '10px 16px' }}>{(r.institucion || '-').substring(0, 25)}</td>
                           <td style={{ padding: '10px 16px', color: '#666' }}>{(r.descripcion || '-').substring(0, 45)}...</td>
                           <td style={{ padding: '10px 16px' }}>{(r.adjudicatario || '-').substring(0, 25)}</td>
@@ -281,7 +318,7 @@ export default function Analytics({ usuario }) {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <button onClick={() => anadirPipeline(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                      + Añadir al Pipeline
+                      + Añadir a Track
                     </button>
                     <button onClick={() => anadirWatchlist(licitacionEncontrada)} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
                       + Añadir al Watchlist
@@ -306,9 +343,71 @@ export default function Analytics({ usuario }) {
           {!licitacionEncontrada && !buscandoNumero && !msgNumero && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
               <p style={{ fontSize: 16, marginBottom: 8 }}>Introduce el número de licitación</p>
-              <p style={{ fontSize: 13 }}>Busca una licitación vigente por su número exacto para añadirla al Pipeline o Watchlist</p>
+              <p style={{ fontSize: 13 }}>Busca una licitación vigente por su número exacto para añadirla a Track o Watchlist</p>
             </div>
           )}
+        </div>
+      )}
+
+      {toast && (
+        <div style={{
+          position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)',
+          background: toast.ok ? '#2e7d32' : '#c62828', color: 'white',
+          padding: '12px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 2000,
+          display: 'flex', alignItems: 'center', gap: 8
+        }}>
+          <span>{toast.ok ? '✓' : '✕'}</span>
+          {toast.texto}
+        </div>
+      )}
+      {adjSeleccionada && (
+        <div onClick={() => setAdjSeleccionada(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: 12, width: '90%', maxWidth: 1100, maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', background: 'var(--blue-light)', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h2 style={{ margin: 0, fontSize: 14, fontWeight: 600, color: 'var(--blue)' }}>{adjSeleccionada.numero_acto}</h2>
+                <p style={{ margin: '4px 0 0', fontSize: 12, color: '#666' }}>{adjSeleccionada.institucion}</p>
+              </div>
+              <button onClick={() => setAdjSeleccionada(null)}
+                style={{ color: '#888', fontSize: 24, background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', flex: 1, overflow: 'hidden' }}>
+              <div style={{ padding: 20, borderRight: '1px solid #e5e7eb', overflow: 'auto' }}>
+                <p style={{ fontSize: 13, color: '#444', marginBottom: 16, lineHeight: 1.6 }}>{adjSeleccionada.descripcion}</p>
+                <div style={{ fontSize: 12, color: '#444', lineHeight: 2, marginBottom: 16 }}>
+                  <div><span style={{ color: '#888' }}>Adjudicatario: </span><strong>{adjSeleccionada.adjudicatario || '-'}</strong></div>
+                  <div><span style={{ color: '#888' }}>Fecha Adj.: </span><strong>{fmtFecha(adjSeleccionada.fecha_adjudicacion)}</strong></div>
+                  <div><span style={{ color: '#888' }}>Monto: </span><strong style={{ color: '#2e7d32' }}>{fmt(adjSeleccionada.monto)}</strong></div>
+                  {adjSeleccionada.contacto_email && <div><span style={{ color: '#888' }}>Email: </span>{adjSeleccionada.contacto_email}</div>}
+                  {adjSeleccionada.contacto_telefono && <div><span style={{ color: '#888' }}>Tel: </span>{adjSeleccionada.contacto_telefono}</div>}
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <button onClick={() => anadirAdjPipeline(adjSeleccionada)}
+                    style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                    + Añadir a Track
+                  </button>
+                  <button onClick={() => anadirAdjWatchlist(adjSeleccionada)}
+                    style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+                    + Añadir al Watchlist
+                  </button>
+                  {adjSeleccionada.url_fuente && (
+                    <a href={adjSeleccionada.url_fuente} target="_blank" rel="noreferrer"
+                      style={{ padding: '9px 20px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>
+                      Abrir en PanamaCompra ↗
+                    </a>
+                  )}
+                </div>
+              </div>
+              <div style={{ overflow: 'hidden' }}>
+                {adjSeleccionada.url_fuente
+                  ? <iframe src={adjSeleccionada.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                  : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

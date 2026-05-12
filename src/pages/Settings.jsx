@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import Keywords from './Keywords'
 import axios from 'axios'
 
 const ROLES = ['usuario', 'supervisor', 'superadmin']
@@ -83,7 +84,7 @@ function ModalUsuario({ usuarioActual, usuarioEditar, empresas, onClose, onSave 
 function ModalEmpresa({ empresa, onClose, onSave }) {
   const esNuevo = !empresa?.id
   const [tab, setTab] = useState('datos')
-  const [form, setForm] = useState(empresa || { nombre: '', ruc: '', direccion: '', codigo_proveedor: '', telefono: '', email: '', cedula_representante: '', nombre_representante: '', usuarios_permitidos: 5 })
+  const [form, setForm] = useState(empresa || { nombre: '', ruc: '', direccion: '', codigo_proveedor: '', telefono: '', email: '', cedula_representante: '', nombre_representante: '', usuarios_permitidos: 5, modulo_track: 1, track_expira_en: '' })
   const [usuarios, setUsuarios] = useState([])
   const [modalUsr, setModalUsr] = useState(null)
   const [error, setError] = useState('')
@@ -299,12 +300,14 @@ export default function Settings({ usuario }) {
   const [totpQR, setTotpQR] = useState(null)
   const [totpCodigo, setTotpCodigo] = useState('')
   const [totpMsg, setTotpMsg] = useState('')
+  const [desactivarPaso, setDesactivarPaso] = useState(false)
   const [usuarios, setUsuarios] = useState([])
   const [empresas, setEmpresas] = useState([])
   const [msg, setMsg] = useState('')
   const [msgColor, setMsgColor] = useState('green')
   const [modalUsuario, setModalUsuario] = useState(null)
   const [modalEmpresa, setModalEmpresa] = useState(null)
+  const [modalKeywords, setModalKeywords] = useState(false)
 
   const cargarUsuarios = () => axios.get('/api/admin/usuarios').then(r => setUsuarios(r.data.usuarios || []))
   const cargarEmpresas = () => axios.get('/api/admin/empresas').then(r => setEmpresas(r.data.empresas || []))
@@ -445,10 +448,35 @@ export default function Settings({ usuario }) {
                 )}
               </>
             ) : (
-              <button onClick={() => {
-                if (!confirm('¿Desactivar la verificación en dos pasos?')) return
-                axios.post('/api/totp/desactivar').then(() => { setTotp(false); mostrarMsg('2FA desactivado') })
-              }} style={{ ...bs, background: '#ffebee', color: '#c62828' }}>Desactivar 2FA</button>
+              <>
+                {!desactivarPaso ? (
+                  <button onClick={() => { setDesactivarPaso(true); setTotpCodigo(''); setTotpMsg('') }}
+                    style={{ ...bs, background: '#ffebee', color: '#c62828' }}>Desactivar 2FA</button>
+                ) : (
+                  <div>
+                    <p style={{ fontSize: 13, color: '#444', marginBottom: 12 }}>
+                      Para desactivar la verificación en dos pasos, introduce el código de 6 dígitos de tu app autenticadora.
+                    </p>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                      <input value={totpCodigo} onChange={e => setTotpCodigo(e.target.value.replace(/\D/g, ''))}
+                        placeholder="Código de 6 dígitos" autoFocus
+                        style={{ ...is, width: 180 }} maxLength={6} />
+                      <button onClick={() => {
+                        if (!totpCodigo || totpCodigo.length < 6) { setTotpMsg('Introduce el código de 6 dígitos'); return }
+                        axios.post('/api/totp/desactivar', { codigo: totpCodigo })
+                          .then(r => {
+                            if (r.data.ok) { setTotp(false); setDesactivarPaso(false); setTotpCodigo(''); setTotpMsg(''); mostrarMsg('2FA desactivado') }
+                            else setTotpMsg(r.data.error || 'Código incorrecto')
+                          })
+                          .catch(() => setTotpMsg('Error de conexión'))
+                      }} style={{ ...bs, background: '#ffebee', color: '#c62828' }}>Verificar y desactivar</button>
+                      <button onClick={() => { setDesactivarPaso(false); setTotpCodigo(''); setTotpMsg('') }}
+                        style={{ padding: '8px 16px', background: '#f5f5f5', color: '#666', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Cancelar</button>
+                    </div>
+                    {totpMsg && <p style={{ color: '#c62828', fontSize: 12, marginTop: 4 }}>{totpMsg}</p>}
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div style={{ background: '#f8f9fa', borderRadius: 10, padding: 16, fontSize: 12, color: '#666', maxWidth: 220, lineHeight: 1.7 }}>
@@ -461,6 +489,29 @@ export default function Settings({ usuario }) {
       </div>
 
       {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && usuario?.empresa_id !== 2 && (
+        <div style={ss}>
+          <h2 style={ts}>Keywords</h2>
+          <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
+            Las keywords son las palabras clave que el sistema usará para detectar licitaciones relevantes para tu empresa en el Radar.
+          </p>
+          <button onClick={() => setModalKeywords(true)}
+            style={{ padding: '10px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+            Gestionar Keywords
+          </button>
+        </div>
+      )}
+
+      {modalKeywords && (
+        <div onClick={() => setModalKeywords(false)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: 12, width: '95%', maxWidth: 1200, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 24px', background: 'var(--blue)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ color: 'white', fontSize: 16, fontWeight: 600, margin: 0 }}>Gestión de Keywords</h2>
+              <button onClick={() => setModalKeywords(false)}
+                style={{ color: 'white', fontSize: 24, background: 'none', border: 'none', cursor: 'pointer', lineHeight: 1 }}>×</button>
+            </div>
+            <div style={{ flex: 1, overflow: 'auto', padding: 24 }}>
         <div style={ss}>
           <h2 style={ts}>Modo de Búsqueda</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
@@ -476,13 +527,10 @@ export default function Settings({ usuario }) {
               : 'Modo Estricto — busca exactamente lo escrito, solo ignora tildes y mayúsculas.'}
           </p>
         </div>
-      )}
-
-      {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && usuario?.empresa_id !== 2 && (
         <div style={ss}>
-          <h2 style={ts}>Modo de Keywords y Pipeline</h2>
+          <h2 style={ts}>Modo de Keywords y Track</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
-            Define si los keywords y el Pipeline son compartidos por toda la empresa o individuales por usuario.
+            Define si los keywords y Track son compartidos por toda la empresa o individuales por usuario.
           </p>
           <div style={{ display: 'flex', background: '#f0f0f0', borderRadius: 8, padding: 4, gap: 4, width: 'fit-content', marginBottom: 12 }}>
             <button onClick={() => { setModoKeywords('compartido'); axios.post('/api/empresa/config', { modo_keywords: 'compartido' }).then(() => mostrarMsg('Modo actualizado')) }} style={{
@@ -498,13 +546,21 @@ export default function Settings({ usuario }) {
           </div>
           <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
             {modoKeywords === 'compartido'
-              ? 'Compartido — todos los usuarios ven las mismas licitaciones y comparten el Pipeline.'
-              : 'Individual — cada usuario gestiona sus propios keywords y Pipeline. El supervisor ve todo.'}
+              ? 'Compartido — todos los usuarios ven las mismas licitaciones y comparten Track.'
+              : 'Individual — cada usuario gestiona sus propios keywords y Track. El supervisor ve todo.'}
           </p>
+        </div>
+              <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #e5e7eb' }}>
+                <Keywords />
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
-      {usuario?.rol === 'superadmin' && (
+
+
+      {usuario?.rol === 'superadmin' && usuario?.empresa_id !== 2 && (
         <div style={ss}>
           <h2 style={ts}>Gestión de Empresas</h2>
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>

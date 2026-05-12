@@ -3,13 +3,12 @@ import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark 
 
 const getNavItems = (usuario) => {
   const items = [
-    { to: '/pipeline', icon: GitCommit, label: 'Pipeline' },
     { to: '/', icon: Radar, label: 'Radar' },
     { to: '/watchlist', icon: Bookmark, label: 'Watchlist' },
     { to: '/analytics', icon: BookOpen, label: 'Explorer' },
   ]
-  if (usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') {
-    items.push({ to: '/keywords', icon: Key, label: 'Keywords' })
+  if (usuario?.modulos?.track) {
+    items.unshift({ to: '/pipeline', icon: GitCommit, label: 'Track' })
   }
   return items
 }

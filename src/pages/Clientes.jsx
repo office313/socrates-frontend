@@ -70,7 +70,7 @@ function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
 
 function ModalEmpresa({ empresa, onClose, onSave }) {
   const esNuevo = !empresa?.id
-  const [form, setForm] = useState(empresa || { nombre: '', ruc: '', direccion: '', codigo_proveedor: '', telefono: '', email: '', cedula_representante: '', nombre_representante: '', usuarios_permitidos: 5 })
+  const [form, setForm] = useState(empresa || { nombre: '', ruc: '', direccion: '', codigo_proveedor: '', telefono: '', email: '', cedula_representante: '', nombre_representante: '', usuarios_permitidos: 5, modulo_track: 1, track_expira_en: '' })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const is = { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }
   const ls = { display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 4 }
@@ -117,6 +117,22 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
           <div>
             <label style={ls}>Usuarios permitidos</label>
             <input type="number" value={form.usuarios_permitidos || 5} onChange={e => set('usuarios_permitidos', parseInt(e.target.value))} style={is} min="1" />
+          </div>
+          <div style={{ gridColumn: '1/-1', marginTop: 8, padding: 14, background: '#f8f9fa', borderRadius: 10, border: '1px solid #e5e7eb' }}>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontSize: 13, fontWeight: 600, color: 'var(--blue)' }}>
+              <input type="checkbox" checked={!!form.modulo_track}
+                onChange={e => set('modulo_track', e.target.checked ? 1 : 0)}
+                style={{ width: 16, height: 16, cursor: 'pointer' }} />
+              Módulo Track activo
+            </label>
+            {!!form.modulo_track && (
+              <div style={{ marginTop: 12, paddingLeft: 26 }}>
+                <label style={ls}>Expira el (dejar vacío = sin expiración)</label>
+                <input type="date" value={form.track_expira_en || ''}
+                  onChange={e => set('track_expira_en', e.target.value)}
+                  style={{ ...is, maxWidth: 220 }} />
+              </div>
+            )}
           </div>
         </div>
         <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end', gap: 8, position: 'sticky', bottom: 0, background: 'white' }}>

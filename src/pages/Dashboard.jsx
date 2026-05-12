@@ -81,7 +81,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {!enPipeline && (
                 <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                  + Añadir al Pipeline
+                  + Añadir a Track
                 </button>
               )}
               {!enWatchlist && !enPipeline && (
@@ -183,7 +183,7 @@ export default function Dashboard({ usuario }) {
       if (r.data.error) { alert(r.data.error); return }
       setNumerosPipeline(prev => new Set([...prev, l.numero_acto]))
       setStats(s => ({ ...s, pipeline: s.pipeline + 1 }))
-    } catch { alert('Error al anadir al Pipeline') }
+    } catch { alert('Error al añadir a Track') }
   }
 
   useEffect(() => {
@@ -278,7 +278,7 @@ export default function Dashboard({ usuario }) {
             <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>requieren atención</p>
           </div>
           <div onClick={() => setFiltro(filtro === 'pipeline' ? 'todas' : 'pipeline')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'pipeline' ? '2px solid #2e7d32' : '1px solid var(--border)', cursor: 'pointer' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>En Pipeline</p>
+            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>En Track</p>
             <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: '#2e7d32' }}>{stats.pipeline}</p>
             <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>licitaciones activas</p>
           </div>
@@ -299,7 +299,7 @@ export default function Dashboard({ usuario }) {
             {licitacionesFiltradas.length} licitaciones
             {filtro !== 'todas' && (
               <span style={{ marginLeft: 8, background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
-                {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Pipeline' : 'Watchlist'}
+                {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Track' : 'Watchlist'}
               </span>
             )}
           </span>
@@ -364,7 +364,7 @@ export default function Dashboard({ usuario }) {
                       {!numerosPipeline.has(l.numero_acto) && (
                         <button onClick={(e) => anadirPipeline(e, l)}
                           style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                          + Pipeline
+                          + Track
                         </button>
                       )}
                     </td>
