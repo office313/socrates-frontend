@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import RadarSync from '../components/RadarSync'
+import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 import { useTrack } from '../hooks/useTrack'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
@@ -104,15 +105,17 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
               )}
               {lic.url_fuente && (
                 <a href={lic.url_fuente} target="_blank" rel="noreferrer" style={{ padding: '8px 16px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
-                  Abrir en PanamaCompra ↗
+                  Abrir fuente ↗
                 </a>
               )}
             </div>
           </div>
           <div style={{ overflow: 'hidden' }}>
-            {lic.url_fuente
-              ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
-              : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
+            {esFuenteACP(lic)
+              ? <PanelLicitacionACP lic={lic} />
+              : lic.url_fuente
+                ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
             }
           </div>
         </div>

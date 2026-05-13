@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 
 
 // Convierte 'YYYY-MM-DD' a 'DD-MM-YYYY' para mostrar
@@ -241,7 +242,11 @@ function Modal({ item, onClose, onSave, onDelete, onPrev, onNext, hasPrev, hasNe
             </div>
           )}
           {tab === 'pliego' && (
-            <iframe key={form.url_fuente || form.numero_acto} src={form.url_fuente || ''} style={{ width: '100%', height: 500, border: 'none', borderRadius: 8 }} />
+            esFuenteACP(form)
+              ? <div style={{ height: 500, overflow: 'auto', border: '1px solid #e5e7eb', borderRadius: 8 }}>
+                  <PanelLicitacionACP lic={form} />
+                </div>
+              : <iframe key={form.url_fuente || form.numero_acto} src={form.url_fuente || ''} style={{ width: '100%', height: 500, border: 'none', borderRadius: 8 }} />
           )}
         </div>
 

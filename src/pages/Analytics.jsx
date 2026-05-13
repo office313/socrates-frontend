@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import axios from 'axios'
+import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
+import PanelAdjudicacionACP from '../components/PanelAdjudicacionACP'
 import { useTrack } from '../hooks/useTrack'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
@@ -329,15 +331,17 @@ export default function Analytics({ usuario }) {
                     </button>
                     {licitacionEncontrada.url_fuente && (
                       <a href={licitacionEncontrada.url_fuente} target="_blank" rel="noreferrer" style={{ padding: '9px 20px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>
-                        Abrir en PanamaCompra ↗
+                        Abrir fuente ↗
                       </a>
                     )}
                   </div>
                 </div>
                 <div style={{ height: 500 }}>
-                  {licitacionEncontrada.url_fuente
-                    ? <iframe src={licitacionEncontrada.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
-                    : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
+                  {esFuenteACP(licitacionEncontrada)
+                    ? <PanelLicitacionACP lic={licitacionEncontrada} />
+                    : licitacionEncontrada.url_fuente
+                      ? <iframe src={licitacionEncontrada.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                      : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
                   }
                 </div>
               </div>
@@ -402,15 +406,17 @@ export default function Analytics({ usuario }) {
                   {adjSeleccionada.url_fuente && (
                     <a href={adjSeleccionada.url_fuente} target="_blank" rel="noreferrer"
                       style={{ padding: '9px 20px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none', textAlign: 'center' }}>
-                      Abrir en PanamaCompra ↗
+                      Abrir fuente ↗
                     </a>
                   )}
                 </div>
               </div>
               <div style={{ overflow: 'hidden' }}>
-                {adjSeleccionada.url_fuente
-                  ? <iframe src={adjSeleccionada.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
-                  : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>}
+                {esFuenteACP(adjSeleccionada)
+                  ? <PanelAdjudicacionACP adj={adjSeleccionada} />
+                  : adjSeleccionada.url_fuente
+                    ? <iframe src={adjSeleccionada.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                    : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>}
               </div>
             </div>
           </div>
