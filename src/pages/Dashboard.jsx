@@ -388,12 +388,12 @@ export default function Dashboard({ usuario }) {
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
                 {[
-                  {h: '',             w: '60px'},
-                  {h: 'No. Acto',     w: '180px'},
-                  {h: 'Institución',  w: '15%'},
+                  {h: '',             w: '45px'},
+                  {h: 'No. Acto',     w: '220px'},
+                  {h: 'Institución',  w: '20%'},
                   {h: 'Descripción',  w: 'auto'},
-                  {h: 'Keywords',     w: '10%'},
-                  {h: 'Cierre',       w: '110px'},
+                  {h: 'Keywords',     w: '13%'},
+                  {h: 'Cierre',       w: '90px'},
                   {h: 'Precio Ref.',  w: '110px'},
                 ].map((col, i) => (
                   <th key={i} style={{
@@ -432,8 +432,8 @@ export default function Dashboard({ usuario }) {
                       ) : null}
                     </td>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, opacity: vista ? 0.55 : 1 }}>{l.numero_acto}</td>
-                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 35)}</td>
-                    <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 70)}...</td>
+                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 45)}</td>
+                    <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 90)}...</td>
                     <td style={{ padding: '10px 16px' }}>
                       {(l.keywords || []).slice(0, 3).map(k => (
                         <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
