@@ -12,6 +12,14 @@ const TIPO_PROCESO_LABEL = {
   AD: 'Adjudicación Directa',
 }
 
+// Léxico oficial SLI (Canal de Panamá) para el campo Estatus.
+// Mapeo desde los valores internos que usa la BD para ACP.
+const ESTADO_ACP_LABEL = {
+  Vigente: 'ANUNCIO',
+  Cerrada: 'CERRADA',
+  Adjudicada: 'ADJUDICADA',
+}
+
 // Colores del SLI (extraídos de captura de referencia).
 const COLOR_BORDO = '#a02020'
 const BG_SECCION = '#dfd6c8'
@@ -19,7 +27,7 @@ const BG_LABEL = '#e8eef5'
 const COLOR_LINK = '#1b8b3d'
 
 // fa-gavel oficial (FontAwesome v5) - SVG inline para look estable
-// cross-OS (los emojis ⚖️/🔨 renderizan distinto por sistema).
+// cross-OS (los emojis renderizan distinto por sistema).
 function IconoMartillo({ size = 16, color = COLOR_BORDO }) {
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" fill={color} style={{ verticalAlign: 'baseline', marginRight: 6, flexShrink: 0 }}>
@@ -38,7 +46,6 @@ function limpiarDecoracion(s) {
 function fmtFechaSLI(s) {
   if (!s) return ''
   const meses = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
-  // Acepta '2026-05-12 16:09:00' o '2026-05-12'.
   const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/)
   if (!m) return s
   const [, y, mo, d, hh, mm] = m
@@ -53,7 +60,7 @@ function fmtFechaSLI(s) {
   return resultado
 }
 
-// ¿La fecha de cierre es hoy o futura? (urgente, mostrar en bordó).
+// Fecha de cierre hoy o futura -> mostrar urgente en bordó.
 function esFechaUrgente(s) {
   if (!s) return false
   const m = String(s).match(/^(\d{4})-(\d{2})-(\d{2})/)
@@ -93,7 +100,7 @@ function Fila({ label, children }) {
   return (
     <tr>
       <td style={cellLabel}>{label}</td>
-      <td style={cellValue} colSpan={3}>{children || ' '}</td>
+      <td style={cellValue}>{children || ' '}</td>
     </tr>
   )
 }
@@ -116,6 +123,7 @@ export default function PanelLicitacionACP({ lic }) {
   const email = limpiarDecoracion(lic.comprador_email)
   const telefono = limpiarDecoracion(lic.comprador_telefono)
   const cierreUrgente = esFechaUrgente(lic.fecha_cierre)
+  const estadoMostrado = ESTADO_ACP_LABEL[lic.estado] || lic.estado || ''
 
   return (
     <div style={{ background: 'white', padding: '20px 24px', overflow: 'auto', height: '100%', fontFamily: 'Arial, sans-serif' }}>
@@ -138,12 +146,12 @@ export default function PanelLicitacionACP({ lic }) {
           <Fila label="Última revisión">{fmtFechaSLI(lic.fecha_revision)}</Fila>
           <tr>
             <td style={cellLabel}>Fecha y hora de cierre</td>
-            <td style={{ ...cellValue, color: cierreUrgente ? COLOR_BORDO : '#111', fontWeight: cierreUrgente ? 700 : 400 }} colSpan={3}>
-              {fmtFechaSLI(lic.fecha_cierre) || ' '}
+            <td style={{ ...cellValue, color: cierreUrgente ? COLOR_BORDO : '#111', fontWeight: cierreUrgente ? 700 : 400 }}>
+              {fmtFechaSLI(lic.fecha_cierre) || ' '}
             </td>
           </tr>
           <Fila label="Enmienda">{lic.numero_enmienda || ''}</Fila>
-          <Fila label="Estatus">{lic.estado}</Fila>
+          <Fila label="Estatus">{estadoMostrado}</Fila>
         </tbody>
       </table>
 
@@ -162,34 +170,25 @@ export default function PanelLicitacionACP({ lic }) {
         </tbody>
       </table>
 
-      {/* Sección Entregas (2 columnas) */}
+      {/* Sección Entregas: 2 sub-tablas paralelas (no una tabla mezclada).
+          Izq: 1 par "Lugar de entrega". Der: 5 pares etiqueta-valor. */}
       <div style={headerSeccion}>Entregas</div>
-      <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 16 }}>
-        <tbody>
-          <tr>
-            <td style={cellLabel}>Lugar de entrega de la mercancía o servicio</td>
-            <td style={{ ...cellValue, width: '40%' }} rowSpan={5}>{lic.direccion || ' '}</td>
-            <td style={cellLabel}>Vía alterna a responder</td>
-            <td style={cellValue}>&nbsp;</td>
-          </tr>
-          <tr>
-            <td style={cellLabel}>Términos de entrega</td>
-            <td style={cellValue}>{lic.forma_entrega_v3 || ' '}</td>
-          </tr>
-          <tr>
-            <td style={cellLabel}>Términos de pago</td>
-            <td style={cellValue}>{lic.forma_pago_v3 || ' '}</td>
-          </tr>
-          <tr>
-            <td style={cellLabel}>Términos de flete</td>
-            <td style={cellValue}>&nbsp;</td>
-          </tr>
-          <tr>
-            <td style={cellLabel}>Vía del embarque</td>
-            <td style={cellValue}>&nbsp;</td>
-          </tr>
-        </tbody>
-      </table>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0, marginBottom: 16 }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tbody>
+            <Fila label="Lugar de entrega de la mercancía o servicio">{lic.direccion}</Fila>
+          </tbody>
+        </table>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <tbody>
+            <Fila label="Vía alterna a responder">{' '}</Fila>
+            <Fila label="Términos de entrega">{lic.forma_entrega_v3}</Fila>
+            <Fila label="Términos de pago">{lic.forma_pago_v3}</Fila>
+            <Fila label="Términos de flete">{' '}</Fila>
+            <Fila label="Vía del embarque">{' '}</Fila>
+          </tbody>
+        </table>
+      </div>
 
       {/* Sección Líneas (items) */}
       <div style={headerSeccion}>Líneas</div>
