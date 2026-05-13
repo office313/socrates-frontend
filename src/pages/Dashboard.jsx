@@ -389,10 +389,10 @@ export default function Dashboard({ usuario }) {
               <tr style={{ background: '#f8f9fa' }}>
                 {[
                   {h: '',             w: '60px'},
-                  {h: 'No. Acto',     w: '14%'},
+                  {h: 'No. Acto',     w: '180px'},
                   {h: 'Institución',  w: '15%'},
                   {h: 'Descripción',  w: 'auto'},
-                  {h: 'Keywords',     w: '12%'},
+                  {h: 'Keywords',     w: '10%'},
                   {h: 'Cierre',       w: '110px'},
                   {h: 'Precio Ref.',  w: '110px'},
                 ].map((col, i) => (
@@ -416,10 +416,10 @@ export default function Dashboard({ usuario }) {
               {licitacionesFiltradas.map((l, i) => {
                 const vista = vistas.has(l.numero_acto)
                 const urgente = esHoy(l.fecha_cierre)
-                const bg = urgente ? '#fff3e0' : i % 2 === 0 ? 'white' : '#fafafa'
+                const bg = i % 2 === 0 ? 'white' : '#fafafa'
                 return (
                   <tr key={l.numero_acto}
-                    style={{ background: bg, borderLeft: urgente ? '3px solid #e65100' : '3px solid transparent', cursor: 'pointer' }}
+                    style={{ background: bg, borderLeft: '3px solid transparent', cursor: 'pointer' }}
                     onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}>
                     <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                       {l.fecha_publicacion &&
@@ -432,14 +432,14 @@ export default function Dashboard({ usuario }) {
                       ) : null}
                     </td>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, opacity: vista ? 0.55 : 1 }}>{l.numero_acto}</td>
-                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 25)}</td>
-                    <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 40)}...</td>
+                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 35)}</td>
+                    <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 70)}...</td>
                     <td style={{ padding: '10px 16px' }}>
                       {(l.keywords || []).slice(0, 3).map(k => (
-                        <span key={k} style={{ background: urgente ? '#ffe0b2' : 'var(--blue-light)', color: urgente ? '#e65100' : 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
+                        <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
                       ))}
                     </td>
-                    <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
+                    <td style={{ padding: '10px 16px', color: urgente ? '#d32f2f' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', opacity: vista ? 0.55 : 1 }}>{fmt(l.presupuesto)}</td>
                   </tr>
                 )
