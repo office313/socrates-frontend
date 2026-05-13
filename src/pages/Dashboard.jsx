@@ -21,7 +21,7 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
-function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist, tieneTrack, onMarcarNoLeida }) {
+function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist, tieneTrack, onToggleVista, vista }) {
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
@@ -30,7 +30,14 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
             <h2 style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: 0 }}>{lic.numero_acto}</h2>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: '2px 0 0' }}>{lic.institucion}</p>
           </div>
-          <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <button onClick={onToggleVista}
+              title={vista ? 'Marcar como NO leída' : 'Marcar como leída'}
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.3)' }}>
+              {vista ? '◯' : '●'} {vista ? 'No leída' : 'Marcada'}
+            </button>
+            <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
+          </div>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', flex: 1, overflow: 'hidden' }}>
           <div style={{ padding: 20, borderRight: '1px solid #e5e7eb', overflow: 'auto' }}>
@@ -100,9 +107,6 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
                   Abrir en PanamaCompra ↗
                 </a>
               )}
-              <button onClick={onMarcarNoLeida} style={{ padding: '8px 16px', background: 'white', color: '#666', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--border)' }}>
-                ◯ Marcar como NO leída
-              </button>
             </div>
           </div>
           <div style={{ overflow: 'hidden' }}>
@@ -158,17 +162,24 @@ export default function Dashboard({ usuario }) {
     axios.post(`/api/vistas/${numeroActo}`)
   }
 
-  const marcarNoLeida = async (numeroActo) => {
-    if (!vistas.has(numeroActo)) return
+  const toggleVista = async (numeroActo) => {
+    const estaVista = vistas.has(numeroActo)
     setVistas(prev => {
       const s = new Set(prev)
-      s.delete(numeroActo)
+      if (estaVista) s.delete(numeroActo)
+      else s.add(numeroActo)
       return s
     })
     try {
-      await axios.delete(`/api/vistas/${numeroActo}`)
+      if (estaVista) await axios.delete(`/api/vistas/${numeroActo}`)
+      else await axios.post(`/api/vistas/${numeroActo}`)
     } catch (e) {
-      setVistas(prev => new Set([...prev, numeroActo]))
+      setVistas(prev => {
+        const s = new Set(prev)
+        if (estaVista) s.add(numeroActo)
+        else s.delete(numeroActo)
+        return s
+      })
     }
   }
 
@@ -285,7 +296,8 @@ export default function Dashboard({ usuario }) {
           onPipeline={() => { anadirPipeline({ stopPropagation: () => {} }, modalDetalle); setModalDetalle(null) }}
           onWatchlist={() => { anadirWatchlist({ stopPropagation: () => {} }, modalDetalle.numero_acto); setModalDetalle(null) }}
           onEstudio={() => { setModalDetalle(null); navigate(`/analytics?keywords=${encodeURIComponent((modalDetalle.keywords || []).join(', '))}&rango=anio&auto=1`) }}
-          onMarcarNoLeida={() => marcarNoLeida(modalDetalle.numero_acto)}
+          vista={vistas.has(modalDetalle.numero_acto)}
+          onToggleVista={() => toggleVista(modalDetalle.numero_acto)}
         />
       )}
 
