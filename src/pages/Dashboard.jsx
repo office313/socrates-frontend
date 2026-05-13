@@ -388,17 +388,17 @@ export default function Dashboard({ usuario }) {
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
                 {[
+                  {h: '',             w: '60px'},
                   {h: 'No. Acto',     w: '14%'},
                   {h: 'Institución',  w: '15%'},
                   {h: 'Descripción',  w: 'auto'},
                   {h: 'Keywords',     w: '12%'},
                   {h: 'Cierre',       w: '110px'},
                   {h: 'Precio Ref.',  w: '110px'},
-                  {h: '',             w: '170px'},
                 ].map((col, i) => (
                   <th key={i} style={{
                     padding: '10px 16px',
-                    textAlign: i > 4 ? 'right' : 'left',
+                    textAlign: i > 5 ? 'right' : 'left',
                     fontWeight: 600,
                     color: 'var(--text-muted)',
                     borderBottom: '1px solid var(--border)',
@@ -421,6 +421,16 @@ export default function Dashboard({ usuario }) {
                   <tr key={l.numero_acto}
                     style={{ background: bg, borderLeft: urgente ? '3px solid #e65100' : '3px solid transparent', cursor: 'pointer' }}
                     onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}>
+                    <td style={{ padding: '10px 8px', textAlign: 'center' }}>
+                      {l.fecha_publicacion &&
+                       (l.fecha_publicacion || '').substring(0, 10) ===
+                       (l.fecha_cierre || '').substring(0, 10) ? (
+                        <span title="Publicada y cierra el mismo día"
+                          style={{ display: 'inline-block', padding: '2px 6px', background: 'var(--red, #d32f2f)', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
+                          ⚡
+                        </span>
+                      ) : null}
+                    </td>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, opacity: vista ? 0.55 : 1 }}>{l.numero_acto}</td>
                     <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 25)}</td>
                     <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 40)}...</td>
@@ -431,20 +441,6 @@ export default function Dashboard({ usuario }) {
                     </td>
                     <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', opacity: vista ? 0.55 : 1 }}>{fmt(l.presupuesto)}</td>
-                    <td style={{ padding: '8px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
-                      {!numerosWatchlist.has(l.numero_acto) && !numerosPipeline.has(l.numero_acto) && (
-                        <button onClick={(e) => anadirWatchlist(e, l.numero_acto)}
-                          style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none', marginRight: 4 }}>
-                          + Watch
-                        </button>
-                      )}
-                      {tieneTrack && !numerosPipeline.has(l.numero_acto) && (
-                        <button onClick={(e) => anadirPipeline(e, l)}
-                          style={{ padding: '4px 10px', background: 'var(--blue)', color: 'white', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
-                          + Track
-                        </button>
-                      )}
-                    </td>
                   </tr>
                 )
               })}
