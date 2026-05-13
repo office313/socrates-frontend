@@ -423,9 +423,10 @@ export default function Dashboard({ usuario }) {
                     onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}>
                     <td style={{ padding: '10px 8px', textAlign: 'center' }}>
                       {l.fecha_publicacion &&
+                       !vista &&
                        (l.fecha_publicacion || '').substring(0, 10) ===
                        (l.fecha_cierre || '').substring(0, 10) ? (
-                        <span title="Publicada y cierra el mismo día"
+                        <span title="Publicada y cierra hoy (no abierta)"
                           style={{ display: 'inline-block', padding: '2px 6px', background: 'var(--red, #d32f2f)', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
                           ⚡
                         </span>
