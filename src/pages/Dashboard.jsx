@@ -431,16 +431,16 @@ export default function Dashboard({ usuario }) {
                         </span>
                       ) : null}
                     </td>
-                    <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, opacity: vista ? 0.55 : 1 }}>{l.numero_acto}</td>
-                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, opacity: vista ? 0.55 : 1 }}>{(l.institucion || '-').substring(0, 45)}</td>
-                    <td style={{ padding: '10px 16px', color: '#666', opacity: vista ? 0.55 : 1 }}>{(l.descripcion || '-').substring(0, 90)}...</td>
+                    <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700 }}>{l.numero_acto}</td>
+                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600 }}>{(l.institucion || '-').substring(0, 45)}</td>
+                    <td style={{ padding: '10px 16px', color: '#666' }}>{(l.descripcion || '-').substring(0, 90)}...</td>
                     <td style={{ padding: '10px 16px' }}>
                       {(l.keywords || []).slice(0, 3).map(k => (
                         <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
                       ))}
                     </td>
-                    <td style={{ padding: '10px 16px', color: urgente ? '#d32f2f' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, opacity: vista ? 0.55 : 1, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right', opacity: vista ? 0.55 : 1 }}>{fmt(l.presupuesto)}</td>
+                    <td style={{ padding: '10px 16px', color: urgente ? '#d32f2f' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>{fmt(l.presupuesto)}</td>
                   </tr>
                 )
               })}
