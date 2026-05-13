@@ -32,9 +32,9 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <button onClick={onToggleVista}
-              title={vista ? 'Marcar como NO leída' : 'Marcar como leída'}
+              title={vista ? 'Marcar como NO leída' : 'Quitar marca de no leída'}
               style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.3)' }}>
-              {vista ? '◯' : '●'} {vista ? 'No leída' : 'Marcada'}
+              {vista ? '◯' : '●'} No leída
             </button>
             <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
           </div>
