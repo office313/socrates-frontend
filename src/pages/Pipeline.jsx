@@ -139,6 +139,7 @@ function Modal({ item, onClose, onSave, onDelete, onPrev, onNext, hasPrev, hasNe
   const [form, setForm] = useState(item || {})
   const [llamadas, setLlamadas] = useState([])
   const [nuevaLlamada, setNuevaLlamada] = useState({ fecha: '', hora: '', observaciones: '' })
+  const [focusedField, setFocusedField] = useState(null)
 
   // Vinculación CL → SCM/CM/SCA
   const [numDerivadoInput, setNumDerivadoInput] = useState('')
@@ -288,7 +289,14 @@ function Modal({ item, onClose, onSave, onDelete, onPrev, onNext, hasPrev, hasNe
       ) : type === 'currency' ? (
         <div style={{ position: 'relative' }}>
           <span style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', fontSize: 13, color: '#666', fontWeight: 600 }}>US$</span>
-          <input type="text" value={formatCurrency(form[key])}
+          <input
+            type="text"
+            inputMode="decimal"
+            value={focusedField === key
+              ? (form[key] ?? '')
+              : formatCurrency(form[key])}
+            onFocus={() => setFocusedField(key)}
+            onBlur={() => setFocusedField(null)}
             onChange={e => set(key, parseCurrency(e.target.value))}
             style={{ width: '100%', padding: '8px 10px 8px 40px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, textAlign: 'right' }} />
         </div>
