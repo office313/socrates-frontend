@@ -507,7 +507,7 @@ export default function Settings({ usuario }) {
         <div onClick={() => setModalKeywords(false)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: 'white', borderRadius: 12, width: '95%', maxWidth: 1200, maxHeight: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            style={{ background: 'white', borderRadius: 12, width: '95%', maxWidth: 1600, height: '92vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             <div style={{ padding: '16px 24px', background: 'var(--blue)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <h2 style={{ color: 'white', fontSize: 16, fontWeight: 600, margin: 0 }}>Gestión de Keywords</h2>
               <button onClick={() => setModalKeywords(false)}

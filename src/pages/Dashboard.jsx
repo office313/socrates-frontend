@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import RadarSync from '../components/RadarSync'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
+import ModalEstudioMercado from '../components/ModalEstudioMercado'
+import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import { useTrack } from '../hooks/useTrack'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
@@ -22,26 +24,29 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
-function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist, tieneTrack, onToggleVista, vista }) {
+function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist, tieneTrack, onNoLeida }) {
+  const resumenIA = useResumenIA(lic.id)
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'white', borderRadius: 16, width: '95%', maxWidth: 1600, height: '92vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '14px 20px', background: 'var(--blue)', borderRadius: '16px 16px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
             <h2 style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: 0 }}>{lic.numero_acto}</h2>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: '2px 0 0' }}>{lic.institucion}</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={onToggleVista}
-              title={vista ? 'Marcar como NO leída' : 'Quitar marca de no leída'}
-              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.3)' }}>
-              {vista ? '◯' : '●'} No leída
+            <button onClick={onNoLeida}
+              title="Marcar como NO leída y cerrar"
+              style={{ padding: '6px 12px', background: 'rgba(255,255,255,0.15)', color: 'white', borderRadius: 12, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid rgba(255,255,255,0.3)' }}>
+              No leída
             </button>
             <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
           </div>
         </div>
+        <PanelResumenIA estado={resumenIA.estado} onCerrar={resumenIA.cerrar} />
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', flex: 1, overflow: 'hidden' }}>
           <div style={{ padding: 20, borderRight: '1px solid #e5e7eb', overflow: 'auto' }}>
+            <BotonResumenIA onClick={resumenIA.pedir} loading={resumenIA.estado.loading} />
             <p style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.5 }}
               dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.descripcion, lic.keywords) }} />
             <div style={{ marginBottom: 16 }}>
@@ -98,11 +103,9 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
                   + Añadir al Watchlist
                 </button>
               )}
-              {(lic.keywords || []).length > 0 && (
-                <button onClick={onEstudio} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
-                  Estudio de Mercado
-                </button>
-              )}
+              <button onClick={onEstudio} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
+                📊 Estudio de Mercado
+              </button>
               {lic.url_fuente && (
                 <a href={lic.url_fuente} target="_blank" rel="noreferrer" style={{ padding: '8px 16px', background: '#f5f5f5', color: '#444', borderRadius: 8, fontSize: 12, fontWeight: 600, textAlign: 'center', textDecoration: 'none' }}>
                   Abrir fuente ↗
@@ -127,6 +130,11 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
 export default function Dashboard({ usuario }) {
   const navigate = useNavigate()
   const tieneTrack = useTrack()
+  const hora = new Date().getHours()
+  const saludo =
+    hora >= 5 && hora < 12  ? 'Buenos días' :
+    hora >= 12 && hora < 20 ? 'Buenas tardes' :
+                              'Buenas noches'
   const [stats, setStats] = useState({ vigentes: 0, cierranHoy: 0, pipeline: 0, watchlist: 0 })
   const [licitaciones, setLicitaciones] = useState([])
   const [pipelineItems, setPipelineItems] = useState([])
@@ -134,9 +142,11 @@ export default function Dashboard({ usuario }) {
   const [ultimaSync, setUltimaSync] = useState('')
   const [vistas, setVistas] = useState(new Set())
   const [filtro, setFiltro] = useState('todas')
+  const [categoriasFiltro, setCategoriasFiltro] = useState([])
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   const [modalDetalle, setModalDetalle] = useState(null)
+  const [modalEstudio, setModalEstudio] = useState(null)
   const [sincronizando, setSincronizando] = useState(false)
   const [progreso, setProgreso] = useState(null)
   const intervaloRef = useRef(null)
@@ -165,24 +175,19 @@ export default function Dashboard({ usuario }) {
     axios.post(`/api/vistas/${numeroActo}`)
   }
 
-  const toggleVista = async (numeroActo) => {
-    const estaVista = vistas.has(numeroActo)
+  // Marca la licitación como NO leída (revierte el marcado automático que
+  // hace marcarVista al abrir el modal). Optimista: actualiza el estado
+  // local ya y revierte si el DELETE falla.
+  const marcarNoLeida = async (numeroActo) => {
     setVistas(prev => {
       const s = new Set(prev)
-      if (estaVista) s.delete(numeroActo)
-      else s.add(numeroActo)
+      s.delete(numeroActo)
       return s
     })
     try {
-      if (estaVista) await axios.delete(`/api/vistas/${numeroActo}`)
-      else await axios.post(`/api/vistas/${numeroActo}`)
+      await axios.delete(`/api/vistas/${numeroActo}`)
     } catch (e) {
-      setVistas(prev => {
-        const s = new Set(prev)
-        if (estaVista) s.add(numeroActo)
-        else s.delete(numeroActo)
-        return s
-      })
+      setVistas(prev => new Set([...prev, numeroActo]))
     }
   }
 
@@ -260,13 +265,20 @@ export default function Dashboard({ usuario }) {
 
   const esHoy = (f) => f && f.substring(0, 10) === hoy
 
-  const licitacionesFiltradas = filtro === 'pipeline'
+  const baseFiltrada = filtro === 'pipeline'
     ? licitaciones.filter(l => numerosPipeline.has(l.numero_acto))
     : filtro === 'watchlist'
     ? licitaciones.filter(l => numerosWatchlist.has(l.numero_acto))
     : filtro === 'noleidas'
     ? licitaciones.filter(l => !vistas.has(l.numero_acto))
     : licitaciones.filter(l => filtro === 'hoy' ? esHoy(l.fecha_cierre) : true)
+
+  // Filtro adicional por categoría IA (multi-select). Vacío = todas.
+  const licitacionesFiltradas = categoriasFiltro.length === 0
+    ? baseFiltrada
+    : baseFiltrada.filter(l => categoriasFiltro.includes(l.categoria_ia))
+
+  const categoriasDisponibles = [...new Set(licitaciones.map(l => l.categoria_ia).filter(Boolean))].sort()
 
   const noLeidasCount = licitaciones.filter(l => !vistas.has(l.numero_acto)).length
 
@@ -289,6 +301,13 @@ export default function Dashboard({ usuario }) {
 
   return (
     <div style={{ padding: 24 }}>
+      {modalEstudio && (
+        <ModalEstudioMercado
+          keywords={modalEstudio.keywords}
+          numeroActo={modalEstudio.numeroActo}
+          onClose={() => setModalEstudio(null)}
+        />
+      )}
       {modalDetalle && (
         <ModalDetalle
           lic={modalDetalle}
@@ -298,9 +317,11 @@ export default function Dashboard({ usuario }) {
           onClose={() => setModalDetalle(null)}
           onPipeline={() => { anadirPipeline({ stopPropagation: () => {} }, modalDetalle); setModalDetalle(null) }}
           onWatchlist={() => { anadirWatchlist({ stopPropagation: () => {} }, modalDetalle.numero_acto); setModalDetalle(null) }}
-          onEstudio={() => { setModalDetalle(null); navigate(`/analytics?keywords=${encodeURIComponent((modalDetalle.keywords || []).join(', '))}&rango=anio&auto=1`) }}
-          vista={vistas.has(modalDetalle.numero_acto)}
-          onToggleVista={() => toggleVista(modalDetalle.numero_acto)}
+          onEstudio={() => setModalEstudio({ keywords: modalDetalle.keywords || [], numeroActo: modalDetalle.numero_acto })}
+          onNoLeida={async () => {
+            await marcarNoLeida(modalDetalle.numero_acto)
+            setModalDetalle(null)
+          }}
         />
       )}
 
@@ -311,7 +332,7 @@ export default function Dashboard({ usuario }) {
               {new Date().toLocaleDateString('es-PA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
             <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '4px 0 0' }}>
-              Buenos dias, {usuario?.nombre?.split(' ')[0]}
+              {saludo}, {usuario?.nombre?.split(' ')[0]}
             </h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -384,6 +405,32 @@ export default function Dashboard({ usuario }) {
             )}
           </span>
         </div>
+        {categoriasDisponibles.length > 0 && (
+          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>CATEGORÍA:</span>
+            {categoriasDisponibles.map(cat => {
+              const activa = categoriasFiltro.includes(cat)
+              return (
+                <button key={cat}
+                  onClick={() => setCategoriasFiltro(prev => activa ? prev.filter(c => c !== cat) : [...prev, cat])}
+                  style={{
+                    padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 500, cursor: 'pointer',
+                    background: activa ? 'var(--blue)' : '#f0f2f5',
+                    color: activa ? 'white' : '#555',
+                    border: '1px solid ' + (activa ? 'var(--blue)' : '#e5e7eb'),
+                  }}>
+                  {cat}
+                </button>
+              )
+            })}
+            {categoriasFiltro.length > 0 && (
+              <button onClick={() => setCategoriasFiltro([])}
+                style={{ padding: '3px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer', background: 'none', color: 'var(--blue)', border: 'none', textDecoration: 'underline' }}>
+                limpiar
+              </button>
+            )}
+          </div>
+        )}
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
         ) : (
@@ -416,7 +463,20 @@ export default function Dashboard({ usuario }) {
               </tr>
             </thead>
             <tbody>
-              {licitacionesFiltradas.map((l, i) => {
+              {licitacionesFiltradas.length === 0 && filtro === 'watchlist' ? (
+                <tr>
+                  <td colSpan={7} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                      <span style={{ fontSize: 14, color: 'var(--text)' }}>No tienes licitaciones del Radar en tu Watchlist todavía.</span>
+                      <span style={{ fontSize: 12 }}>Márcalas con la estrella desde el listado completo para verlas aquí.</span>
+                      <button onClick={() => setFiltro('todas')}
+                        style={{ marginTop: 4, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        Ver listado completo
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : licitacionesFiltradas.map((l, i) => {
                 const vista = vistas.has(l.numero_acto)
                 const urgente = esHoy(l.fecha_cierre)
                 const bg = i % 2 === 0 ? 'white' : '#fafafa'
@@ -436,7 +496,14 @@ export default function Dashboard({ usuario }) {
                     </td>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700 }}>{l.numero_acto}</td>
                     <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600 }}>{(l.institucion || '-').substring(0, 45)}</td>
-                    <td style={{ padding: '10px 16px', color: '#666' }}>{(l.descripcion || '-').substring(0, 90)}...</td>
+                    <td style={{ padding: '10px 16px', color: '#666' }}>
+                      {l.categoria_ia && (
+                        <span style={{ display: 'inline-block', marginRight: 6, padding: '1px 7px', background: '#eef1f5', color: 'var(--blue)', borderRadius: 8, fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          {l.categoria_ia}
+                        </span>
+                      )}
+                      {(l.descripcion || '-').substring(0, 90)}...
+                    </td>
                     <td style={{ padding: '10px 16px' }}>
                       {(l.keywords || []).slice(0, 3).map(k => (
                         <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>

@@ -1,0 +1,141 @@
+/* Lenguaje visual "IA" de Sócrates: orb Siri sin contenedor. Contraste
+   dramático reposo↔pensando en 3 propiedades simultáneas: tamaño (22↔32px),
+   velocidad (15-18s ↔ 2-2.3s) y blur (12px ↔ 4px). */
+
+/* === CONTENEDOR DEL ORB === */
+.socrates-orb {
+  position: relative;
+  display: inline-block;
+  flex-shrink: 0;
+  transition: width 0.4s ease-in-out, height 0.4s ease-in-out;
+}
+
+.socrates-orb.reposo   { width: 16px; height: 16px; }
+.socrates-orb.pensando { width: 32px; height: 32px; }
+
+/* === BLOBS === */
+.orb-blob {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 75%;
+  height: 75%;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  mix-blend-mode: screen;
+  will-change: transform, filter;
+  transition: filter 0.4s ease;
+}
+
+.orb-blob-1 { background: #ff5fa6; }
+.orb-blob-2 { background: #9d4edd; }
+.orb-blob-3 { background: #4361ee; }
+.orb-blob-4 { background: #06d6e0; }
+
+/* === ESTADO REPOSO: idéntico al pensando, escala 50% ===
+   Reutiliza las keyframes blob-pensando-1..4; solo cambian el tamaño del
+   orb (16px vs 32px) y la duración (×2 más lento). Mismo aspecto visual. */
+.socrates-orb.reposo .orb-blob {
+  filter: blur(4px);
+}
+
+.socrates-orb.reposo .orb-blob-1 { animation: blob-pensando-1 4s ease-in-out infinite; }
+.socrates-orb.reposo .orb-blob-2 { animation: blob-pensando-2 4.6s ease-in-out infinite; animation-delay: -1.2s; }
+.socrates-orb.reposo .orb-blob-3 { animation: blob-pensando-3 3.8s ease-in-out infinite; animation-delay: -0.6s; }
+.socrates-orb.reposo .orb-blob-4 { animation: blob-pensando-4 4.4s ease-in-out infinite; animation-delay: -2.2s; }
+
+/* === ESTADO PENSANDO: rápido, definido, movimiento amplio === */
+.socrates-orb.pensando .orb-blob { filter: blur(4px); }
+
+.socrates-orb.pensando .orb-blob-1 { animation: blob-pensando-1 2s ease-in-out infinite; }
+.socrates-orb.pensando .orb-blob-2 { animation: blob-pensando-2 2.3s ease-in-out infinite; animation-delay: -0.6s; }
+.socrates-orb.pensando .orb-blob-3 { animation: blob-pensando-3 1.9s ease-in-out infinite; animation-delay: -0.3s; }
+.socrates-orb.pensando .orb-blob-4 { animation: blob-pensando-4 2.2s ease-in-out infinite; animation-delay: -1.1s; }
+
+@keyframes blob-pensando-1 {
+  0%, 100% { transform: translate(-70%, -70%) scale(1); }
+  33%      { transform: translate(-15%, -45%) scale(1.3); }
+  66%      { transform: translate(-55%, -10%) scale(0.8); }
+}
+@keyframes blob-pensando-2 {
+  0%, 100% { transform: translate(-30%, -70%) scale(1); }
+  25%      { transform: translate(-75%, -50%) scale(1.2); }
+  50%      { transform: translate(-70%, -15%) scale(0.85); }
+  75%      { transform: translate(-40%, -40%) scale(1.15); }
+}
+@keyframes blob-pensando-3 {
+  0%, 100% { transform: translate(-70%, -30%) scale(1); }
+  40%      { transform: translate(-25%, -75%) scale(1.3); }
+  70%      { transform: translate(-10%, -55%) scale(0.9); }
+}
+@keyframes blob-pensando-4 {
+  0%, 100% { transform: translate(-30%, -30%) scale(1); }
+  30%      { transform: translate(-75%, -65%) scale(0.9); }
+  60%      { transform: translate(-80%, -20%) scale(1.25); }
+}
+
+/* === BOTÓN === */
+.btn-socrates {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 16px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  background: #0f2d57;
+  border: 1px solid #1a4a8a;
+  color: #ffffff;
+  font-weight: 600;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(15, 45, 87, 0.2);
+  min-height: 48px;
+  box-sizing: border-box;
+}
+
+.btn-socrates:hover {
+  background: #163d6e;
+  border-color: #2563a8;
+  box-shadow: 0 2px 6px rgba(15, 45, 87, 0.3);
+}
+
+.btn-socrates:disabled {
+  cursor: wait;
+  opacity: 0.85;
+}
+
+.btn-socrates-text { line-height: 1; }
+
+/* === CABECERA DEL PANEL === */
+.panel-socrates-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 18px;
+  background: #f0ebff;
+  border-bottom: 1px solid rgba(91, 63, 191, 0.12);
+}
+
+/* === SÓCRATES EN EL MODAL DE TRACK (tab General) === */
+.seccion-socrates-pipeline {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;  /* separador sutil con Observaciones */
+}
+
+.aviso-sin-datos-socrates {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid #e5e7eb;
+  color: #6b7280;
+  font-size: 13px;
+  font-style: italic;
+}
+
+/* === ACCESIBILIDAD === */
+@media (prefers-reduced-motion: reduce) {
+  .orb-blob { animation: none !important; }
+  .socrates-orb { transition: none !important; }
+}

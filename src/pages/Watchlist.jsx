@@ -1,7 +1,32 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
+import PanelAdjudicacionACP from '../components/PanelAdjudicacionACP'
+import ModalEstudioMercado from '../components/ModalEstudioMercado'
+import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
+import CuadroCotizaciones from '../components/CuadroCotizaciones'
 import { useTrack } from '../hooks/useTrack'
+
+function ClaseBadge({ clase }) {
+  const esAdj = clase === 'adjudicada'
+  return (
+    <span style={{
+      display: 'inline-block',
+      padding: '2px 8px',
+      borderRadius: 10,
+      fontSize: 10,
+      fontWeight: 600,
+      letterSpacing: 0.2,
+      textTransform: 'uppercase',
+      background: esAdj ? '#ede7f6' : '#e8f5e9',
+      color: esAdj ? '#5e35b1' : '#2e7d32',
+      border: `1px solid ${esAdj ? '#d1c4e9' : '#c8e6c9'}`,
+      whiteSpace: 'nowrap',
+    }}>
+      {esAdj ? 'Adjudicada' : 'Vigente'}
+    </span>
+  )
+}
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
@@ -20,29 +45,49 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
-function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline, tieneTrack }) {
+function ModalDetalle({ lic, onClose, onPipeline, onEliminar, onEstudio, enPipeline, tieneTrack }) {
+  const esAdjudicada = lic.clase === 'adjudicada'
+  // El orb Sócrates usa el endpoint vigente o adjudicada según la clase.
+  const resumenIA = useResumenIA(lic.id, esAdjudicada ? 'adjudicada' : 'vigente')
+  const [cuadro, setCuadro] = useState(null)
+  useEffect(() => {
+    setCuadro(null)
+    if (esAdjudicada && lic.id) {
+      axios.get(`/api/adjudicacion/${lic.id}/cuadro`)
+        .then(r => setCuadro(r.data))
+        .catch(() => setCuadro({ disponible: false, motivo: 'Error al cargar el cuadro' }))
+    }
+  }, [lic.id, esAdjudicada])
   return (
     <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <div style={{ background: 'white', borderRadius: 16, width: '90%', maxWidth: 1000, maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
+      <div style={{ background: 'white', borderRadius: 16, width: '95%', maxWidth: 1600, height: '92vh', display: 'flex', flexDirection: 'column' }}>
         <div style={{ padding: '14px 20px', background: 'var(--blue)', borderRadius: '16px 16px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <h2 style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: 0 }}>{lic.numero_acto}</h2>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <h2 style={{ color: 'white', fontSize: 14, fontWeight: 600, margin: 0 }}>{lic.numero_acto}</h2>
+              <ClaseBadge clase={lic.clase} />
+            </div>
             <p style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, margin: '2px 0 0' }}>{lic.institucion}</p>
           </div>
           <button onClick={onClose} style={{ color: 'white', background: 'none', border: 'none', fontSize: 22, cursor: 'pointer' }}>×</button>
         </div>
+        {lic.id && <PanelResumenIA estado={resumenIA.estado} onCerrar={resumenIA.cerrar} />}
         <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', flex: 1, overflow: 'hidden' }}>
           <div style={{ padding: 20, borderRight: '1px solid #e5e7eb', overflow: 'auto' }}>
+            {lic.id && <BotonResumenIA onClick={resumenIA.pedir} loading={resumenIA.estado.loading} />}
+            {esAdjudicada && <CuadroCotizaciones cuadro={cuadro} />}
             <p style={{ fontSize: 12, color: '#666', marginBottom: 12, lineHeight: 1.5 }}
               dangerouslySetInnerHTML={{ __html: resaltarKeywords(lic.descripcion, lic.keywords) }} />
-            <div style={{ marginBottom: 16 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>KEYWORDS</p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {(lic.keywords || []).map(k => (
-                  <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 500 }}>{k}</span>
-                ))}
+            {(lic.keywords || []).length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>KEYWORDS</p>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {(lic.keywords || []).map(k => (
+                    <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 500 }}>{k}</span>
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
             {lic.items_texto && (
               <div style={{ marginBottom: 16 }}>
                 <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>RENGLONES</p>
@@ -53,20 +98,44 @@ function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline, tieneT
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>DETALLES</p>
               <div style={{ fontSize: 12, color: '#444', lineHeight: 2 }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#888' }}>Cierre</span>
-                  <span style={{ fontWeight: 600 }}>{fmtFecha(lic.fecha_cierre)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ color: '#888' }}>Precio Ref.</span>
-                  <span style={{ fontWeight: 600 }}>{fmt(lic.presupuesto)}</span>
-                </div>
+                {esAdjudicada ? (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#888' }}>Fecha Adj.</span>
+                      <span style={{ fontWeight: 600 }}>{fmtFecha(lic.fecha_adjudicacion)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                      <span style={{ color: '#888' }}>Adjudicatario</span>
+                      <span style={{ fontWeight: 600, textAlign: 'right' }}>{lic.adjudicatario || '-'}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#888' }}>Monto adj.</span>
+                      <span style={{ fontWeight: 600, color: '#2e7d32' }}>{fmt(lic.monto_adjudicado ?? lic.monto)}</span>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#888' }}>Cierre</span>
+                      <span style={{ fontWeight: 600 }}>{fmtFecha(lic.fecha_cierre)}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span style={{ color: '#888' }}>Precio Ref.</span>
+                      <span style={{ fontWeight: 600 }}>{fmt(lic.presupuesto)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              {tieneTrack && !enPipeline && (
+              {!esAdjudicada && tieneTrack && !enPipeline && (
                 <button onClick={onPipeline} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
                   → Mover a Track
+                </button>
+              )}
+              {!esAdjudicada && (
+                <button onClick={onEstudio} style={{ padding: '8px 16px', background: '#f0f4ff', color: 'var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
+                  📊 Estudio de Mercado
                 </button>
               )}
               <button onClick={onEliminar} style={{ padding: '8px 16px', background: '#ffebee', color: '#c62828', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
@@ -80,12 +149,19 @@ function ModalDetalle({ lic, onClose, onPipeline, onEliminar, enPipeline, tieneT
             </div>
           </div>
           <div style={{ overflow: 'hidden' }}>
-            {esFuenteACP(lic)
-              ? <PanelLicitacionACP lic={lic} />
-              : lic.url_fuente
-                ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
-                : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
-            }
+            {esAdjudicada ? (
+              esFuenteACP(lic)
+                ? <PanelAdjudicacionACP adj={lic} />
+                : lic.url_fuente
+                  ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                  : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
+            ) : (
+              esFuenteACP(lic)
+                ? <PanelLicitacionACP lic={lic} />
+                : lic.url_fuente
+                  ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                  : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
+            )}
           </div>
         </div>
       </div>
@@ -98,6 +174,7 @@ export default function Watchlist() {
   const [licitaciones, setLicitaciones] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalDetalle, setModalDetalle] = useState(null)
+  const [modalEstudio, setModalEstudio] = useState(null)
   const [pipeline, setPipeline] = useState(new Set())
 
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' })
@@ -145,6 +222,13 @@ export default function Watchlist() {
 
   return (
     <div style={{ padding: 24 }}>
+      {modalEstudio && (
+        <ModalEstudioMercado
+          keywords={modalEstudio.keywords}
+          numeroActo={modalEstudio.numeroActo}
+          onClose={() => setModalEstudio(null)}
+        />
+      )}
       {modalDetalle && (
         <ModalDetalle
           lic={modalDetalle}
@@ -153,12 +237,13 @@ export default function Watchlist() {
           onClose={() => setModalDetalle(null)}
           onPipeline={() => moverPipeline(modalDetalle)}
           onEliminar={() => eliminar(modalDetalle.numero_acto)}
+          onEstudio={() => setModalEstudio({ keywords: modalDetalle.keywords || [], numeroActo: modalDetalle.numero_acto })}
         />
       )}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Watchlist</h1>
-        <span style={{ fontSize: 13, color: '#888' }}>{licitaciones.length} licitaciones</span>
+        <span style={{ fontSize: 13, color: '#888' }}>{licitaciones.length} items</span>
       </div>
 
       {loading ? (
@@ -173,19 +258,23 @@ export default function Watchlist() {
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr style={{ background: '#f8f9fa' }}>
-                {['No. Acto', 'Institución', 'Descripción', 'Keywords', 'Cierre', 'Precio Ref.'].map((h, i) => (
-                  <th key={i} style={{ padding: '10px 16px', textAlign: i > 4 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 11 }}>{h}</th>
+                {['No. Acto', 'Estado', 'Institución', 'Descripción', 'Keywords', 'Cierre / Adj.', 'Monto'].map((h, i) => (
+                  <th key={i} style={{ padding: '10px 16px', textAlign: i > 5 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 11 }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {licitaciones.map((l, i) => {
-                const urgente = esHoy(l.fecha_cierre)
+                const esAdj = l.clase === 'adjudicada'
+                const urgente = !esAdj && esHoy(l.fecha_cierre)
+                const fechaCol = esAdj ? l.fecha_adjudicacion : l.fecha_cierre
+                const montoCol = esAdj ? (l.monto_adjudicado ?? l.monto) : l.presupuesto
                 return (
                   <tr key={l.numero_acto}
                     style={{ background: urgente ? '#fff3e0' : i % 2 === 0 ? 'white' : '#fafafa', borderLeft: urgente ? '3px solid #e65100' : '3px solid transparent', cursor: 'pointer' }}
                     onClick={() => setModalDetalle(l)}>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 600 }}>{l.numero_acto}</td>
+                    <td style={{ padding: '10px 16px' }}><ClaseBadge clase={l.clase} /></td>
                     <td style={{ padding: '10px 16px' }}>{(l.institucion || '-').substring(0, 25)}</td>
                     <td style={{ padding: '10px 16px', color: '#666' }}>{(l.descripcion || '-').substring(0, 40)}...</td>
                     <td style={{ padding: '10px 16px' }}>
@@ -193,8 +282,8 @@ export default function Watchlist() {
                         <span key={k} style={{ background: urgente ? '#ffe0b2' : 'var(--blue-light)', color: urgente ? '#e65100' : 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
                       ))}
                     </td>
-                    <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : 400 }}>{fmtFecha(l.fecha_cierre)}</td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>{fmt(l.presupuesto)}</td>
+                    <td style={{ padding: '10px 16px', color: urgente ? '#e65100' : 'var(--text)', fontWeight: urgente ? 700 : 400 }}>{fmtFecha(fechaCol)}</td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right', color: esAdj ? '#2e7d32' : 'var(--text)', fontWeight: esAdj ? 600 : 400 }}>{fmt(montoCol)}</td>
                   </tr>
                 )
               })}
