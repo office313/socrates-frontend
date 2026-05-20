@@ -361,32 +361,84 @@ export default function Dashboard({ usuario }) {
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: tieneTrack ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', gap: 12 }}>
-          <div onClick={() => setFiltro('todas')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'todas' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Licitaciones vigentes</p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{stats.vigentes}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>con tus keywords</p>
+          {/* Card neutral azul: Vigentes */}
+          <div onClick={() => setFiltro('todas')} style={{
+            textAlign: 'center',
+            background: filtro === 'todas' ? '#f5f9ff' : 'white',
+            border: `1px solid ${filtro === 'todas' ? '#0f2d57' : '#e0e0e0'}`,
+            boxShadow: filtro === 'todas' ? '0 0 0 1px #0f2d57' : 'none',
+            borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}>
+            <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>Licitaciones vigentes</div>
+            <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.vigentes}</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>con tus keywords</div>
           </div>
-          <div onClick={() => setFiltro(filtro === 'hoy' ? 'todas' : 'hoy')} style={{ background: stats.cierranHoy > 0 ? '#fff3e0' : 'white', borderRadius: 12, padding: 16, border: filtro === 'hoy' ? '2px solid #e65100' : '1px solid ' + (stats.cierranHoy > 0 ? '#e65100' : 'var(--border)'), cursor: 'pointer' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text-muted)', fontWeight: 500 }}>Cierran hoy</p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: stats.cierranHoy > 0 ? '#e65100' : 'var(--text)' }}>{stats.cierranHoy}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>requieren atención</p>
-          </div>
+
+          {/* Card naranja (urgencia real): Cierran hoy si >0; cae a neutral si =0 */}
+          {(() => {
+            const urgente = stats.cierranHoy > 0
+            const sel = filtro === 'hoy'
+            const accent = urgente ? '#e65100' : '#0f2d57'
+            const accentBg = urgente ? '#fff3e0' : '#f5f9ff'
+            return (
+              <div onClick={() => setFiltro(sel ? 'todas' : 'hoy')} style={{
+                textAlign: 'center',
+                background: urgente ? accentBg : (sel ? accentBg : 'white'),
+                border: `1px solid ${urgente || sel ? accent : '#e0e0e0'}`,
+                boxShadow: sel ? `0 0 0 1px ${accent}` : 'none',
+                borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+                transition: 'all 0.15s',
+              }}>
+                <div style={{ fontSize: 14, color: urgente ? accent : '#455a64', marginBottom: 12, fontWeight: 500 }}>Cierran hoy</div>
+                <div style={{ fontSize: 36, fontWeight: 600, color: urgente ? accent : '#0f2d57', lineHeight: 1 }}>{stats.cierranHoy}</div>
+                <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>requieren atención</div>
+              </div>
+            )
+          })()}
+
+          {/* Card neutral azul: En Track (solo si tieneTrack) */}
           {tieneTrack && (
-            <div onClick={() => setFiltro(filtro === 'pipeline' ? 'todas' : 'pipeline')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'pipeline' ? '2px solid #2e7d32' : '1px solid var(--border)', cursor: 'pointer' }}>
-              <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>En Track</p>
-              <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: '#2e7d32' }}>{stats.pipeline}</p>
-              <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>licitaciones activas</p>
+            <div onClick={() => setFiltro(filtro === 'pipeline' ? 'todas' : 'pipeline')} style={{
+              textAlign: 'center',
+              background: filtro === 'pipeline' ? '#f5f9ff' : 'white',
+              border: `1px solid ${filtro === 'pipeline' ? '#0f2d57' : '#e0e0e0'}`,
+              boxShadow: filtro === 'pipeline' ? '0 0 0 1px #0f2d57' : 'none',
+              borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}>
+              <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>En Track</div>
+              <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.pipeline}</div>
+              <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>licitaciones activas</div>
             </div>
           )}
-          <div onClick={() => setFiltro(filtro === 'noleidas' ? 'todas' : 'noleidas')} style={{ background: noLeidasCount > 0 ? '#fff8e1' : 'white', borderRadius: 12, padding: 16, border: filtro === 'noleidas' ? '2px solid #ef6c00' : '1px solid ' + (noLeidasCount > 0 ? '#ef6c00' : 'var(--border)'), cursor: 'pointer' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, color: noLeidasCount > 0 ? '#ef6c00' : 'var(--text-muted)', fontWeight: 500 }}>No leídas</p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: noLeidasCount > 0 ? '#ef6c00' : 'var(--text-muted)' }}>{noLeidasCount}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>sin abrir</p>
+
+          {/* Card neutral azul: No leídas */}
+          <div onClick={() => setFiltro(filtro === 'noleidas' ? 'todas' : 'noleidas')} style={{
+            textAlign: 'center',
+            background: filtro === 'noleidas' ? '#f5f9ff' : 'white',
+            border: `1px solid ${filtro === 'noleidas' ? '#0f2d57' : '#e0e0e0'}`,
+            boxShadow: filtro === 'noleidas' ? '0 0 0 1px #0f2d57' : 'none',
+            borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}>
+            <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>No leídas</div>
+            <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{noLeidasCount}</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>sin abrir</div>
           </div>
-          <div onClick={() => setFiltro(filtro === 'watchlist' ? 'todas' : 'watchlist')} style={{ background: 'white', borderRadius: 12, padding: 16, border: filtro === 'watchlist' ? '2px solid var(--blue)' : '1px solid var(--border)', cursor: 'pointer' }}>
-            <p style={{ margin: '0 0 4px', fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>Watchlist</p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 700, color: 'var(--blue)' }}>{stats.watchlist}</p>
-            <p style={{ margin: '2px 0 0', fontSize: 10, color: 'var(--text-muted)' }}>en observación</p>
+
+          {/* Card neutral azul: Watchlist */}
+          <div onClick={() => setFiltro(filtro === 'watchlist' ? 'todas' : 'watchlist')} style={{
+            textAlign: 'center',
+            background: filtro === 'watchlist' ? '#f5f9ff' : 'white',
+            border: `1px solid ${filtro === 'watchlist' ? '#0f2d57' : '#e0e0e0'}`,
+            boxShadow: filtro === 'watchlist' ? '0 0 0 1px #0f2d57' : 'none',
+            borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}>
+            <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>Watchlist</div>
+            <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.watchlist}</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>en observación</div>
           </div>
         </div>
       </div>

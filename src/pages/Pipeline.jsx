@@ -12,11 +12,13 @@ const fmtFecha = (s) => {
   return m ? `${m[3]}-${m[2]}-${m[1]}` : s
 }
 
-// 12 estados asignables. Orden: 7 activos primero, 5 no activos después.
+// 14 estados asignables. Orden: 9 activos primero, 5 no activos después.
 const ESTADOS = [
   // Activas
   'En Preparación', 'Presentada', 'Mejor Oferta', 'No Mejor Oferta',
-  'Adjudicada', 'Pte. Entrega Material', 'En Litigio',
+  'Adjudicada', 'Pte. Entrega Material',
+  'Entregado parcialmente', 'Entregado en espera de Acta',
+  'En Litigio',
   // No activas
   'No Adjudicada', 'Entregado Material OK', 'Cancelada', 'Desierta', 'Limbo',
 ]
@@ -25,13 +27,16 @@ const ESTADOS = [
 // del Track muestra solo licitaciones en uno de estos estados.
 const ESTADOS_ACTIVOS = [
   'En Preparación', 'Presentada', 'Mejor Oferta', 'No Mejor Oferta',
-  'Adjudicada', 'Pte. Entrega Material', 'En Litigio',
+  'Adjudicada', 'Pte. Entrega Material',
+  'Entregado parcialmente', 'Entregado en espera de Acta',
+  'En Litigio',
 ]
 
-// Las 5 cards grandes del Track: estados de alta frecuencia. Fijas en
+// Las 7 cards grandes del Track: estados de alta frecuencia. Fijas en
 // ambos modos del toggle (Activas/Todas).
 const ESTADOS_CARDS = [
-  'En Preparación', 'Presentada', 'Mejor Oferta', 'Adjudicada', 'Pte. Entrega Material',
+  'En Preparación', 'Presentada', 'Mejor Oferta', 'Adjudicada',
+  'Pte. Entrega Material', 'Entregado parcialmente', 'Entregado en espera de Acta',
 ]
 
 // Estados restantes, accesibles vía el dropdown "Otros estados".
@@ -46,19 +51,18 @@ const COLORES = {
   'No Adjudicada': { bg: '#ffebee', color: '#c62828' },
   'En Litigio': { bg: '#ff6f00', color: 'white' },
   'Pte. Entrega Material': { bg: '#e0f7fa', color: '#006064' },
+  'Entregado parcialmente': { bg: '#b2dfdb', color: '#00695c' },
+  'Entregado en espera de Acta': { bg: '#4db6ac', color: 'white' },
   'Entregado Material OK': { bg: '#00695c', color: 'white' },
   'Cancelada': { bg: '#eceff1', color: '#455a64' },
   'Desierta': { bg: '#eceff1', color: '#37474f' },
   'Limbo': { bg: '#607d8b', color: 'white' },
 }
 
-// Monto compacto con prefijo $. <1K exacto, 1K-999K en K sin decimales,
-// >=1M con un decimal. Vacío/0 → '$0'.
+// Monto entero con separadores de miles ($35,000, $1,200,000). Vacío/0 → '$0'.
 function formatearMonto(valor) {
   if (!valor || valor === 0) return '$0'
-  if (valor < 1000) return `$${Math.round(valor)}`
-  if (valor < 1000000) return `$${Math.round(valor / 1000)}K`
-  return `$${(valor / 1000000).toFixed(1)}M`
+  return `$${Math.round(valor).toLocaleString('en-US')}`
 }
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
@@ -103,7 +107,7 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
       }}>
       <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>{estado}</div>
       <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
-      <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>{formatearMonto(monto)}</div>
+      <div style={{ fontSize: 14, color: '#78909c', marginTop: 6 }}>{formatearMonto(monto)}</div>
     </div>
   )
 }
@@ -939,12 +943,43 @@ export default function Pipeline() {
         <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} />
       )}
 
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
-        <button onClick={() => setModalManual(true)}
-          style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-          + Añadir a Track
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <select
+            value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
+            onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
+            style={{
+              padding: '8px 12px', border: '1px solid #e0e0e0',
+              borderRadius: 8, background: 'white', fontSize: 13, color: '#37474f', cursor: 'pointer',
+            }}>
+            <option value="">Otros estados</option>
+            {ESTADOS_DROPDOWN.map(estado => (
+              <option key={estado} value={estado}>
+                {estado} ({items.filter(it => it.estado === estado).length})
+              </option>
+            ))}
+          </select>
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
+            {[['activas', 'Activas'], ['todas', 'Todas']].map(([val, label]) => (
+              <span key={val} onClick={() => cambiarAlcance(val)}
+                style={{
+                  padding: '5px 16px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
+                  fontWeight: alcance === val ? 600 : 400,
+                  color: alcance === val ? '#0f2d57' : '#78909c',
+                  background: alcance === val ? 'white' : 'transparent',
+                  boxShadow: alcance === val ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s', userSelect: 'none',
+                }}>
+                {label}
+              </span>
+            ))}
+          </div>
+          <button onClick={() => setModalManual(true)}
+            style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            + Añadir a Track
+          </button>
+        </div>
       </div>
 
       <div style={{ marginBottom: 16, position: 'relative' }}>
@@ -989,66 +1024,23 @@ export default function Pipeline() {
           }}>Buscar</button>
       </div>
 
-      <div style={{ marginBottom: 20 }}>
-        {/* Toggle de alcance — píldora segmentada, arriba a la derecha */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
-            {[['activas', 'Activas'], ['todas', 'Todas']].map(([val, label]) => (
-              <span key={val} onClick={() => cambiarAlcance(val)}
-                style={{
-                  padding: '5px 16px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
-                  fontWeight: alcance === val ? 600 : 400,
-                  color: alcance === val ? '#0f2d57' : '#78909c',
-                  background: alcance === val ? 'white' : 'transparent',
-                  boxShadow: alcance === val ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s', userSelect: 'none',
-                }}>
-                {label}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        {/* 5 cards grandes — conteo y monto sobre todo el pipeline */}
-        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-          {ESTADOS_CARDS.map(estado => {
-            const delEstado = items.filter(it => it.estado === estado)
-            return (
-              <CardEstado key={estado}
-                estado={estado}
-                count={delEstado.length}
-                monto={sumarOfertado(delEstado)}
-                seleccionada={!appliedQuery && filtro === estado}
-                onClick={() => cambiarFiltroEstado(estado)}
-              />
-            )
-          })}
-        </div>
-
-        {/* Dropdown "Otros estados" — los 7 estados restantes */}
-        <select
-          value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
-          onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
-          style={{
-            marginTop: 12, padding: '8px 12px', border: '1px solid #e0e0e0',
-            borderRadius: 8, background: 'white', fontSize: 13, color: '#37474f', cursor: 'pointer',
-          }}>
-          <option value="">Otros estados</option>
-          {ESTADOS_DROPDOWN.map(estado => (
-            <option key={estado} value={estado}>
-              {estado} ({items.filter(it => it.estado === estado).length})
-            </option>
-          ))}
-        </select>
+      {/* 7 cards grandes — conteo y monto sobre todo el pipeline */}
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+        {ESTADOS_CARDS.map(estado => {
+          const delEstado = items.filter(it => it.estado === estado)
+          return (
+            <CardEstado key={estado}
+              estado={estado}
+              count={delEstado.length}
+              monto={sumarOfertado(delEstado)}
+              seleccionada={!appliedQuery && filtro === estado}
+              onClick={() => cambiarFiltroEstado(estado)}
+            />
+          )
+        })}
       </div>
 
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <span style={{ fontSize: 13, color: '#666' }}>
-            {filtrados.length} licitaciones
-            {appliedQuery ? ` para "${appliedQuery}"` : (filtro ? ` con estado "${filtro}"` : '')}
-          </span>
-        </div>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
             <tr style={{ background: '#f8f9fa' }}>
