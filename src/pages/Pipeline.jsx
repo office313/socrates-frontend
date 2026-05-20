@@ -105,7 +105,11 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
         borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
         transition: 'all 0.15s',
       }}>
-      <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>{estado}</div>
+      <div style={{
+        fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500,
+        lineHeight: 1.3, minHeight: '2.6em',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+      }}>{estado}</div>
       <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
       <div style={{ fontSize: 14, color: '#78909c', marginTop: 6 }}>{formatearMonto(monto)}</div>
     </div>
@@ -943,6 +947,9 @@ export default function Pipeline() {
         <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} />
       )}
 
+      {/* Zona superior fija al hacer scroll: header + buscador + cards.
+          Solo la tabla scrollea. Mismo patrón que Dashboard.jsx. */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)', paddingBottom: 16 }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1025,7 +1032,7 @@ export default function Pipeline() {
       </div>
 
       {/* 7 cards grandes — conteo y monto sobre todo el pipeline */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         {ESTADOS_CARDS.map(estado => {
           const delEstado = items.filter(it => it.estado === estado)
           return (
@@ -1038,6 +1045,8 @@ export default function Pipeline() {
             />
           )
         })}
+      </div>
+
       </div>
 
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
