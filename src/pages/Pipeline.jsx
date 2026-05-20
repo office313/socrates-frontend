@@ -271,8 +271,18 @@ function Modal({ item, onClose, onSave, onDelete, onPrev, onNext, hasPrev, hasNe
   }
   const parseCurrency = (str) => {
     if (!str) return ''
-    const cleaned = String(str).replace(/[^0-9.-]/g, '')
-    return cleaned === '' ? '' : Number(cleaned)
+    // Normalizar coma a punto (teclados en español usan coma)
+    // y eliminar cualquier carácter que no sea dígito, punto o guion.
+    // Devolvemos STRING para preservar punto decimal mientras se escribe
+    // (Number('1234.') colapsa a 1234 y rompe la edición).
+    // El backend convierte string→numeric transparentemente.
+    let cleaned = String(str).replace(/,/g, '.').replace(/[^0-9.-]/g, '')
+    // Evitar múltiples puntos: solo el primero cuenta
+    const firstDot = cleaned.indexOf('.')
+    if (firstDot !== -1) {
+      cleaned = cleaned.slice(0, firstDot + 1) + cleaned.slice(firstDot + 1).replace(/\./g, '')
+    }
+    return cleaned
   }
 
   const input = (label, key, type = 'text', opts = {}) => (
