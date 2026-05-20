@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useLayoutEffect } from 'react'
 import axios from 'axios'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 import ModalEstudioMercado from '../components/ModalEstudioMercado'
@@ -814,12 +814,27 @@ export default function Pipeline() {
   const [query, setQuery] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [inputFocus, setInputFocus] = useState(false)
+  const upperRef = useRef(null)
+  const [upperH, setUpperH] = useState(0)
 
   const cargar = () => {
     axios.get('/api/pipeline').then(r => setItems(r.data.resultados || []))
   }
 
   useEffect(() => { cargar() }, [])
+
+  // Mide la altura real de la zona superior sticky para anclar el thead
+  // justo debajo. Dinámico vía ResizeObserver: adapta al wrap de las cards,
+  // resize del viewport, o cambios en el dropdown. Más robusto que el
+  // hardcoded top: 176 que usa Dashboard.jsx.
+  useLayoutEffect(() => {
+    if (!upperRef.current) return
+    const measure = () => setUpperH(upperRef.current?.offsetHeight || 0)
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(upperRef.current)
+    return () => ro.disconnect()
+  }, [])
 
   const aplicarBusqueda = () => {
     const q = query.trim()
@@ -949,7 +964,7 @@ export default function Pipeline() {
 
       {/* Zona superior fija al hacer scroll: header + buscador + cards.
           Solo la tabla scrollea. Mismo patrón que Dashboard.jsx. */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)', paddingBottom: 16 }}>
+      <div ref={upperRef} style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)', paddingBottom: 16 }}>
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -1064,7 +1079,7 @@ export default function Pipeline() {
                 { label: 'P. Ofertado', campo: 'precio_ofertado' },
               ].map((col, i) => (
                 <th key={col.campo} onClick={() => cambiarOrden(col.campo)}
-                  style={{ padding: '10px 16px', textAlign: i > 5 ? 'right' : 'left', fontWeight: 600, color: orden.campo === col.campo ? 'var(--blue)' : '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12, cursor: 'pointer', userSelect: 'none' }}>
+                  style={{ padding: '10px 16px', textAlign: i > 5 ? 'right' : 'left', fontWeight: 600, color: orden.campo === col.campo ? 'var(--blue)' : '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12, cursor: 'pointer', userSelect: 'none', position: 'sticky', top: upperH, background: '#f8f9fa', zIndex: 5 }}>
                   {col.label}
                   {orden.campo === col.campo && <span style={{ marginLeft: 4 }}>{orden.dir === 'asc' ? '↑' : '↓'}</span>}
                 </th>
