@@ -483,6 +483,16 @@ export default function Dashboard({ usuario }) {
             )}
           </div>
         )}
+        {/* Scroll container dedicado para la tabla: el thead se queda
+            pegado arriba (sticky top: 0 relativo a este container, no
+            al viewport). Mismo enfoque que Track tras 8e29d48 — más
+            robusto que el hardcoded top: 176 que había antes. */}
+        <div style={{
+          overflowX: 'hidden',
+          overflowY: 'auto',
+          maxHeight: 'calc(100vh - 380px)',
+          minHeight: 400,
+        }}>
         {loading ? (
           <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
         ) : (
@@ -507,7 +517,7 @@ export default function Dashboard({ usuario }) {
                     fontSize: 11,
                     width: col.w,
                     position: 'sticky',
-                    top: 176,
+                    top: 0,
                     background: '#f8f9fa',
                     zIndex: 2,
                   }}>{col.h}</th>
@@ -569,6 +579,7 @@ export default function Dashboard({ usuario }) {
             </tbody>
           </table>
         )}
+        </div>
       </div>
     </div>
   )
