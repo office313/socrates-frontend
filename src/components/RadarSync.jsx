@@ -88,7 +88,7 @@ export default function RadarSync({ progreso }) {
       <canvas ref={canvasRef} width={180} height={180} style={{ flexShrink: 0 }} />
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, fontWeight: 600, color: '#888', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>
-          <span>{pct < 20 ? 'Inicializando sistema...' : pct < 50 ? 'Escaneando licitaciones...' : pct < 80 ? 'Analizando coincidencias...' : pct < 100 ? 'Indexando resultados...' : '✓ Completado'}</span>
+          <span>{progreso?.mensaje || ''}</span>
           <span style={{ color: '#1a4a8a' }}>{Math.floor(pct)}%</span>
         </div>
         <div style={{ height: 3, background: '#f0f0f0', borderRadius: 2, overflow: 'hidden', marginBottom: 12 }}>

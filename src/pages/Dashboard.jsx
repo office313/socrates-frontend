@@ -147,27 +147,16 @@ export default function Dashboard({ usuario }) {
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   const [modalDetalle, setModalDetalle] = useState(null)
   const [modalEstudio, setModalEstudio] = useState(null)
-  const [sincronizando, setSincronizando] = useState(false)
   const [progreso, setProgreso] = useState(null)
-  const intervaloRef = useRef(null)
+  // Trigger para re-cargar datos (incrementar = re-run del useEffect de carga).
+  const [reloadTrigger, setReloadTrigger] = useState(0)
+  // Estado del último poll de progreso, para detectar transición activo→completo.
+  const prevEstadoRef = useRef(null)
+  // Trackea si hay modal abierto y si hay refresh pendiente al cierre.
+  const modalAbiertoRef = useRef(false)
+  const refrescoPendienteRef = useRef(false)
 
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' })
-
-  const buscarAhora = () => {
-    setSincronizando(true)
-    setProgreso({ porcentaje: 0, licitaciones: 0, estado: 'sincronizando' })
-    axios.post('/api/keywords/buscar-ahora')
-    intervaloRef.current = setInterval(() => {
-      axios.get('/api/keywords/progreso').then(r => {
-        setProgreso(r.data)
-        if (r.data.estado === 'completo') {
-          setSincronizando(false)
-          clearInterval(intervaloRef.current)
-          setTimeout(() => { setProgreso(null); window.location.reload() }, 3000)
-        }
-      })
-    }, 2000)
-  }
 
   const marcarVista = (numeroActo) => {
     if (vistas.has(numeroActo)) return
@@ -261,7 +250,47 @@ export default function Dashboard({ usuario }) {
         console.warn('/api/pipeline rejected:', pipeResult.reason?.response?.status)
       }
     }).finally(() => setLoading(false))
+  }, [reloadTrigger])
+
+  // Polling permanente del progreso del cron (cada 30s). Detecta transición
+  // activo → "completo" para refrescar la lista una sola vez. Estados:
+  //   descargando|sincronizando = en curso (mostramos animación)
+  //   completo|idle             = sin actividad (sin animación)
+  // Una "completo" pegada de una corrida vieja NO dispara refresh: solo
+  // la transición desde un estado activo cuenta (prevEstadoRef arranca null).
+  useEffect(() => {
+    const poll = async () => {
+      try {
+        const r = await axios.get('/api/keywords/progreso')
+        setProgreso(r.data)
+        const estadoPrev = prevEstadoRef.current
+        const eraActivo = estadoPrev === 'descargando' || estadoPrev === 'sincronizando'
+        if (eraActivo && r.data.estado === 'completo') {
+          if (modalAbiertoRef.current) {
+            refrescoPendienteRef.current = true
+          } else {
+            setReloadTrigger(k => k + 1)
+          }
+        }
+        prevEstadoRef.current = r.data.estado
+      } catch {
+        // ignora errores temporales (red, 401 al expirar sesión)
+      }
+    }
+    poll()
+    const id = setInterval(poll, 30000)
+    return () => clearInterval(id)
   }, [])
+
+  // Sincroniza modalAbiertoRef y flushea cualquier refresh pendiente cuando
+  // el usuario cierra un modal.
+  useEffect(() => {
+    modalAbiertoRef.current = !!modalDetalle || !!modalEstudio
+    if (!modalAbiertoRef.current && refrescoPendienteRef.current) {
+      refrescoPendienteRef.current = false
+      setReloadTrigger(k => k + 1)
+    }
+  }, [modalDetalle, modalEstudio])
 
   const esHoy = (f) => f && f.substring(0, 10) === hoy
 
@@ -350,13 +379,6 @@ export default function Dashboard({ usuario }) {
             }}>
               ✓ Marcar como leídas
             </button>
-            <button onClick={buscarAhora} disabled={sincronizando} style={{
-              padding: '6px 14px', background: sincronizando ? '#ccc' : 'var(--red)',
-              color: 'white', borderRadius: 20, fontSize: 12, fontWeight: 600,
-              cursor: sincronizando ? 'default' : 'pointer', border: 'none'
-            }}>
-              {sincronizando ? 'Sincronizando...' : '⟳ Sincronizar'}
-            </button>
           </div>
         </div>
 
@@ -443,7 +465,7 @@ export default function Dashboard({ usuario }) {
         </div>
       </div>
 
-      {sincronizando && <RadarSync progreso={progreso} />}
+      {(progreso?.estado === 'descargando' || progreso?.estado === 'sincronizando') && <RadarSync progreso={progreso} />}
 
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
