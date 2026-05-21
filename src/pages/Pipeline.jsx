@@ -42,6 +42,20 @@ const ESTADOS_CARDS = [
 // Estados restantes, accesibles vía el dropdown "Otros estados".
 const ESTADOS_DROPDOWN = ESTADOS.filter(e => !ESTADOS_CARDS.includes(e))
 
+// Ranking del orden POR DEFECTO de Track: trabajo activo arriba, cerradas
+// abajo. Índice = prioridad. Los estados no listados (No Mejor Oferta,
+// En Litigio, No Adjudicada, Cancelada, Desierta, Limbo) reciben 99 → al fondo.
+const PRIORIDAD_ORDEN = {
+  'En Preparación': 0,
+  'Presentada': 1,
+  'Mejor Oferta': 2,
+  'Adjudicada': 3,
+  'Pte. Entrega Material': 4,
+  'Entregado parcialmente': 5,
+  'Entregado en espera de Acta': 6,
+  'Entregado Material OK': 7,
+}
+
 const COLORES = {
   'En Preparación': { bg: '#e3f2fd', color: '#1565c0' },
   'Presentada': { bg: '#fff3e0', color: '#e65100' },
@@ -806,8 +820,10 @@ const searchableText = (item) => {
 export default function Pipeline() {
   const [items, setItems] = useState([])
   const [alcance, setAlcance] = useState('activas')  // 'activas' | 'todas'
-  const [filtro, setFiltro] = useState('En Preparación')  // estado fino inicial ('' = ninguno)
-  const [orden, setOrden] = useState({ campo: 'fecha_cierre', dir: 'asc' })
+  const [filtro, setFiltro] = useState('')           // estado fino o '' (ninguno)
+  // campo: null = orden por defecto (ranking de estado). Un clic en columna
+  // fija un campo concreto y el ranking deja de aplicarse.
+  const [orden, setOrden] = useState({ campo: null, dir: 'asc' })
   const [modal, setModal] = useState(null)
   const [modalManual, setModalManual] = useState(false)
   const [modalEstudio, setModalEstudio] = useState(null)
@@ -887,10 +903,22 @@ export default function Pipeline() {
       // Sin filtro fino: la lista depende del toggle de alcance.
       lista = itemsAlcance
     }
-    lista = [...lista].sort((a, b) => {
-      const cmp = compararValores(a, b, orden.campo)
-      return orden.dir === 'asc' ? cmp : -cmp
-    })
+    if (orden.campo === null) {
+      // Orden por defecto: ranking de prioridad de estado; desempate por
+      // fecha_cierre ascendente (lo más urgente primero).
+      lista = [...lista].sort((a, b) => {
+        const pa = PRIORIDAD_ORDEN[a.estado] ?? 99
+        const pb = PRIORIDAD_ORDEN[b.estado] ?? 99
+        if (pa !== pb) return pa - pb
+        return compararValores(a, b, 'fecha_cierre')
+      })
+    } else {
+      // El cliente ordenó por una columna: manda su elección.
+      lista = [...lista].sort((a, b) => {
+        const cmp = compararValores(a, b, orden.campo)
+        return orden.dir === 'asc' ? cmp : -cmp
+      })
+    }
     return lista
   })()
 
