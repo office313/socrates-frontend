@@ -18,7 +18,7 @@ const LILA_OSCURO = '#5b3fbf'
 // Orb Siri sin contenedor: 4 blobs policromáticos flotando libres con
 // mix-blend. El tamaño lo dicta la clase reposo (22px) / pensando (32px)
 // — contraste dramático en tamaño + velocidad + blur entre ambos estados.
-function SocratesOrb({ className = '', pensando = false }) {
+export function SocratesOrb({ className = '', pensando = false }) {
   return (
     <span
       className={`socrates-orb ${pensando ? 'pensando' : 'reposo'} ${className}`}

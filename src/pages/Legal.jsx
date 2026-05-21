@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { Download, ArrowRight } from 'lucide-react'
+import { SocratesOrb } from '../components/ResumenIA'
 import '../styles/socrates.css'
 
 const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio',
@@ -21,18 +22,6 @@ const SUGERIDAS = [
   '¿Cuál es el plazo para presentar reclamos?',
   '¿Qué requisitos debe cumplir un oferente?',
 ]
-
-// Orb policromático de Sócrates (mismo lenguaje visual que ResumenIA).
-function SocratesOrb({ pensando = false }) {
-  return (
-    <span className={`socrates-orb ${pensando ? 'pensando' : 'reposo'}`} aria-hidden="true">
-      <span className="orb-blob orb-blob-1" />
-      <span className="orb-blob orb-blob-2" />
-      <span className="orb-blob orb-blob-3" />
-      <span className="orb-blob orb-blob-4" />
-    </span>
-  )
-}
 
 // Render legible de la respuesta de Sócrates: quita los marcadores **,
 // trata las líneas '---' como separador sutil y respeta los párrafos.
@@ -62,8 +51,7 @@ export default function Legal() {
   const [consultando, setConsultando] = useState(false)
   const [respuesta, setRespuesta] = useState(null)   // { texto, cacheada }
   const [errorConsulta, setErrorConsulta] = useState('')
-  const [limiteAlcanzado, setLimiteAlcanzado] = useState('')
-  const [uso, setUso] = useState(null)               // { consultas_usadas, limite }
+  const [limiteAlcanzado, setLimiteAlcanzado] = useState(false)
 
   useEffect(() => {
     // Un solo fetch: .catch evita pantalla en blanco si el endpoint falla.
@@ -71,9 +59,6 @@ export default function Legal() {
       .then(r => setDocumentos(r.data.documentos || []))
       .catch(() => setError(true))
       .finally(() => setLoading(false))
-    axios.get('/api/legal/uso')
-      .then(r => setUso(r.data))
-      .catch(() => {})
   }, [])
 
   const enviarConsulta = () => {
@@ -82,15 +67,14 @@ export default function Legal() {
     setConsultando(true)
     setRespuesta(null)
     setErrorConsulta('')
-    setLimiteAlcanzado('')
+    setLimiteAlcanzado(false)
     axios.post('/api/legal/consulta', { pregunta: q })
       .then(r => {
         const d = r.data || {}
-        if (d.consultas_usadas != null) {
-          setUso({ consultas_usadas: d.consultas_usadas, limite: d.limite })
-        }
+        // El límite mensual sigue activo en el backend, pero el cliente no ve
+        // ningún contador: solo este aviso cuando efectivamente se alcanza.
         if (d.limite_alcanzado) {
-          setLimiteAlcanzado(d.respuesta || 'Se alcanzó el límite mensual de consultas.')
+          setLimiteAlcanzado(true)
         } else {
           setRespuesta({ texto: d.respuesta || '', cacheada: !!d.cacheada })
         }
@@ -166,7 +150,16 @@ export default function Legal() {
           visual entre el repositorio (arriba) y la consulta (abajo). === */}
       <div style={{ marginTop: 56 }}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: 22 }}>
-          <SocratesOrb pensando={consultando} />
+          {/* Ancla visual de la zona: el orb policromático se pinta con
+              mix-blend screen, así que necesita fondo oscuro — el mismo azul
+              corporativo del botón de Sócrates en Radar/Watchlist. Pasa a
+              "pensando" (32px, ciclos 2s) mientras la consulta carga. */}
+          <div style={{
+            width: 48, height: 48, borderRadius: '50%', background: '#0f2d57',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <SocratesOrb pensando={consultando} />
+          </div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '12px 0 0' }}>
             Hazle una consulta legal a Sócrates
           </h2>
@@ -206,10 +199,7 @@ export default function Legal() {
             }}
           />
 
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginTop: 12 }}>
-            <span style={{ fontSize: 12, color: '#9aa5b1' }}>
-              {uso && `Consultas este mes: ${uso.consultas_usadas} / ${uso.limite}`}
-            </span>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 12, marginTop: 12 }}>
             <button onClick={enviarConsulta} disabled={consultando || !pregunta.trim()}
               style={{
                 display: 'inline-flex', alignItems: 'center', gap: 8,
@@ -236,7 +226,7 @@ export default function Legal() {
               marginTop: 18, padding: '14px 16px', borderRadius: 10,
               background: '#fbf7ec', border: '1px solid #ece0c3', color: '#8a6d2f', fontSize: 13,
             }}>
-              {limiteAlcanzado}
+              Tu empresa ha alcanzado el límite de consultas legales de este mes.
             </div>
           )}
 
@@ -252,7 +242,6 @@ export default function Legal() {
               background: '#f7f9fc', border: '1px solid #e5e7eb',
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
-                <SocratesOrb />
                 <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--blue)' }}>Respuesta de Sócrates</span>
                 {respuesta.cacheada && (
                   <span style={{ fontSize: 10, color: '#9aa5b1' }}>· respuesta ya consultada antes</span>
