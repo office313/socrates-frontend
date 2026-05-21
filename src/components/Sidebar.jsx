@@ -1,11 +1,12 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark } from 'lucide-react'
+import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark, Scale } from 'lucide-react'
 
 const getNavItems = (usuario) => {
   const items = [
     { to: '/', icon: Radar, label: 'Radar' },
     { to: '/watchlist', icon: Bookmark, label: 'Watchlist' },
     { to: '/analytics', icon: BookOpen, label: 'Explorer' },
+    { to: '/legal', icon: Scale, label: 'Legal' },
   ]
   if (usuario?.modulos?.track) {
     items.unshift({ to: '/pipeline', icon: GitCommit, label: 'Track' })

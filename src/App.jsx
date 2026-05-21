@@ -9,6 +9,7 @@ import Keywords from './pages/Keywords'
 import Watchlist from './pages/Watchlist'
 import Settings from './pages/Settings'
 import Clientes from './pages/Clientes'
+import Legal from './pages/Legal'
 
 function App() {
   const { usuario, loading } = useAuth()
@@ -23,6 +24,7 @@ function App() {
               <Route path="/" element={<Dashboard usuario={usuario} />} />
               <Route path="/watchlist" element={<Watchlist />} />
               <Route path="/analytics" element={<Analytics usuario={usuario} />} />
+              <Route path="/legal" element={<Legal />} />
               <Route path="/pipeline" element={usuario?.modulos?.track ? <Pipeline /> : <Navigate to="/" replace />} />
               <Route path="/keywords" element={<Keywords />} />
               <Route path="/settings" element={<Settings usuario={usuario} />} />
