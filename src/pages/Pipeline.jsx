@@ -112,7 +112,7 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
-        flex: '1 1 160px', minWidth: 160, textAlign: 'center',
+        minWidth: 0, textAlign: 'center',
         background: seleccionada ? '#f5f9ff' : 'white',
         border: `1px solid ${resaltada ? '#0f2d57' : '#e0e0e0'}`,
         boxShadow: seleccionada ? '0 0 0 1px #0f2d57' : 'none',
@@ -1057,7 +1057,7 @@ export default function Pipeline() {
       </div>
 
       {/* 7 cards grandes — conteo y monto sobre todo el pipeline */}
-      <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12, marginBottom: 20 }}>
         {ESTADOS_CARDS.map(estado => {
           const delEstado = items.filter(it => it.estado === estado)
           return (
