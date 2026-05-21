@@ -806,7 +806,7 @@ const searchableText = (item) => {
 export default function Pipeline() {
   const [items, setItems] = useState([])
   const [alcance, setAlcance] = useState('activas')  // 'activas' | 'todas'
-  const [filtro, setFiltro] = useState('')           // estado fino o '' (ninguno)
+  const [filtro, setFiltro] = useState('En Preparación')  // estado fino inicial ('' = ninguno)
   const [orden, setOrden] = useState({ campo: 'fecha_cierre', dir: 'asc' })
   const [modal, setModal] = useState(null)
   const [modalManual, setModalManual] = useState(false)
