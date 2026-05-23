@@ -3,6 +3,7 @@ import axios from 'axios'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
+import TrackFormulario from '../components/TrackFormulario'
 
 
 // Convierte 'YYYY-MM-DD' a 'DD-MM-YYYY' para mostrar
@@ -830,6 +831,11 @@ export default function Pipeline() {
   const [query, setQuery] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [inputFocus, setInputFocus] = useState(false)
+  // Toggle de vista: listado (tabla actual + modal pequeño al hacer click) o
+  // formulario (vista a pantalla completa con cabecera destacada, 3 pestañas
+  // y flechas para navegar entre las licitaciones de `filtrados`).
+  const [vista, setVista] = useState('listado')      // 'listado' | 'formulario'
+  const [formularioIdx, setFormularioIdx] = useState(0)
 
   const cargar = () => {
     axios.get('/api/pipeline').then(r => setItems(r.data.resultados || []))
@@ -940,6 +946,25 @@ export default function Pipeline() {
     axios.delete(`/api/pipeline/${id}`).then(() => { cargar(); setModal(null) })
   }
 
+  // Versiones para el modo Formulario: no cierran nada, solo recargan.
+  // El índice formularioIdx puede quedar referenciando a otra licitación tras
+  // un cambio de estado/orden — el usuario lo verá reflejado en la cabecera.
+  const guardarFormulario = (form) => {
+    const req = form.id
+      ? axios.put(`/api/pipeline/${form.id}`, form)
+      : axios.post('/api/pipeline', form)
+    req.then(() => cargar())
+  }
+
+  const eliminarFormulario = (id) => {
+    if (!confirm('¿Eliminar esta licitación de Track?')) return
+    axios.delete(`/api/pipeline/${id}`).then(() => {
+      cargar()
+      // Tras borrar, evitar quedar fuera de rango (idx >= length post-borrado).
+      setFormularioIdx(i => Math.max(0, Math.min(i, filtrados.length - 2)))
+    })
+  }
+
   return (
     <div style={{ padding: 24 }}>
       {modal !== undefined && modal !== null && (
@@ -978,6 +1003,26 @@ export default function Pipeline() {
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          {/* Toggle de vista: Listado (tabla actual) vs Formulario (pantalla
+              completa con cabecera destacada y flechas de navegación). */}
+          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
+            {[['listado', 'Listado'], ['formulario', 'Formulario']].map(([val, label]) => (
+              <span key={val} onClick={() => {
+                if (val === 'formulario' && formularioIdx >= filtrados.length) setFormularioIdx(0)
+                setVista(val)
+              }}
+                style={{
+                  padding: '5px 16px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
+                  fontWeight: vista === val ? 600 : 400,
+                  color: vista === val ? '#0f2d57' : '#78909c',
+                  background: vista === val ? 'white' : 'transparent',
+                  boxShadow: vista === val ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+                  transition: 'all 0.15s', userSelect: 'none',
+                }}>
+                {label}
+              </span>
+            ))}
+          </div>
           <select
             value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
             onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
@@ -1014,6 +1059,35 @@ export default function Pipeline() {
         </div>
       </div>
 
+      {/* Vista FORMULARIO: pantalla completa con cabecera destacada y flechas.
+          Se renderiza ANTES del buscador/cards/tabla porque tiene position:fixed
+          y cubre el contenido bajo; no duplicamos la tabla mientras está activo. */}
+      {vista === 'formulario' && filtrados.length > 0 && (
+        <TrackFormulario
+          items={filtrados}
+          currentIdx={Math.min(formularioIdx, filtrados.length - 1)}
+          onIndexChange={setFormularioIdx}
+          onSave={guardarFormulario}
+          onDelete={eliminarFormulario}
+          onReload={cargar}
+          onClose={() => setVista('listado')}
+          onEstudio={(form) => setModalEstudio({
+            keywords: [],
+            numeroActo: form.numero_acto_derivado || form.numero_acto,
+          })}
+        />
+      )}
+      {vista === 'formulario' && filtrados.length === 0 && (
+        <div style={{ padding: 40, textAlign: 'center', background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', color: '#666' }}>
+          No hay licitaciones que mostrar con los filtros actuales.
+          <button onClick={() => setVista('listado')}
+            style={{ display: 'block', margin: '16px auto 0', padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Volver al Listado
+          </button>
+        </div>
+      )}
+
+      {vista === 'listado' && (<>
       <div style={{ marginBottom: 16, position: 'relative' }}>
         <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
           🔍
@@ -1143,6 +1217,7 @@ export default function Pipeline() {
           </tbody>
         </table>
       </div>
+      </>)}
     </div>
   )
 }
