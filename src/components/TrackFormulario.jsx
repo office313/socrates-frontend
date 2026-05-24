@@ -599,6 +599,53 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
             </>
           )}
         </div>
+        {/* Convocatorias anteriores (relanzamientos): se renderiza DENTRO de
+            Identificación, no como Seccion aparte, para que sea visible nada
+            más abrir la licitación junto a los datos clave. Solo si la lista
+            no está vacía. */}
+        {form.convocatorias_anteriores && form.convocatorias_anteriores.length > 0 && (
+          <div style={{ marginTop: 18, paddingTop: 16, borderTop: '1px dashed var(--border)' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.4, textTransform: 'uppercase', marginBottom: 10 }}>
+              Convocatorias anteriores
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {form.convocatorias_anteriores.map((c, i) => (
+                <div key={c.idProcesosContratacionFlujos || i} style={{
+                  display: 'flex', alignItems: 'center', gap: 14,
+                  padding: '9px 14px', background: '#fafbfc',
+                  border: '1px solid var(--border)', borderRadius: 10,
+                  fontSize: 13,
+                }}>
+                  <span style={{
+                    minWidth: 56, padding: '3px 10px', borderRadius: 999,
+                    background: 'var(--blue-light)', color: 'var(--blue-dark)',
+                    fontWeight: 700, textAlign: 'center', fontSize: 12,
+                  }}>
+                    #{c.numeroConvocatoria ?? (i + 1)}
+                  </span>
+                  <span style={{ flex: 1, color: 'var(--text)' }}>
+                    {c.nombre || `Convocatoria #${c.numeroConvocatoria ?? (i + 1)}`}
+                  </span>
+                  <span style={{ color: 'var(--text-muted)', fontSize: 12, minWidth: 140 }}>
+                    {c.fecha || '—'}
+                  </span>
+                  {c.url ? (
+                    <a href={c.url} target="_blank" rel="noreferrer"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 4,
+                        padding: '5px 12px', background: 'white',
+                        color: 'var(--blue)', border: '1px solid var(--blue)',
+                        borderRadius: 8, fontSize: 12, fontWeight: 600,
+                        textDecoration: 'none',
+                      }}>Abrir ↗</a>
+                  ) : (
+                    <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>(sin enlace)</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </Seccion>
 
       <Seccion titulo="Contacto">
@@ -640,56 +687,6 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
           {input('Forma Adjudicación', 'forma_adjudicacion')}
         </div>
       </Seccion>
-
-      {/* Convocatorias anteriores: solo si la licitación fue relanzada (lista
-          no vacía). Cada item lleva número, fecha y enlace al portal. */}
-      {form.convocatorias_anteriores && form.convocatorias_anteriores.length > 0 && (
-        <Seccion titulo="Convocatorias anteriores">
-          <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-            Esta licitación fue relanzada. Convocatorias previas registradas en PanamaCompra:
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {form.convocatorias_anteriores.map((c, i) => (
-              <div key={c.idProcesosContratacionFlujos || i} style={{
-                display: 'flex', alignItems: 'center', gap: 14,
-                padding: '10px 14px', background: '#fafbfc',
-                border: '1px solid var(--border)', borderRadius: 10,
-                fontSize: 13,
-              }}>
-                <span style={{
-                  minWidth: 64, padding: '3px 10px', borderRadius: 999,
-                  background: 'var(--blue-light)', color: 'var(--blue-dark)',
-                  fontWeight: 700, textAlign: 'center', fontSize: 12,
-                }}>
-                  #{c.numeroConvocatoria ?? (i + 1)}
-                </span>
-                <span style={{ flex: 1, color: 'var(--text)' }}>
-                  {c.nombre || `Convocatoria #${c.numeroConvocatoria ?? (i + 1)}`}
-                </span>
-                <span style={{ color: 'var(--text-muted)', fontSize: 12, minWidth: 150 }}>
-                  {c.fecha || '—'}
-                </span>
-                {c.url ? (
-                  <a href={c.url} target="_blank" rel="noreferrer"
-                    style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 4,
-                      padding: '6px 12px', background: 'white',
-                      color: 'var(--blue)', border: '1px solid var(--blue)',
-                      borderRadius: 8, fontSize: 12, fontWeight: 600,
-                      textDecoration: 'none',
-                    }}>
-                    Abrir ↗
-                  </a>
-                ) : (
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                    (sin enlace)
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-        </Seccion>
-      )}
 
       {vinc && (
         <Seccion
