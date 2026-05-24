@@ -384,8 +384,24 @@ export default function TrackFormulario({
             }}>
               <div>
                 <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 6 }}>Nº ACTO</div>
-                <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15, wordBreak: 'break-all' }}>
-                  {numActivo || '—'}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15, wordBreak: 'break-all' }}>
+                    {numActivo || '—'}
+                  </div>
+                  {/* Badge de relanzamiento: solo si hay convocatorias previas
+                      capturadas. Discreto pero visible — color ámbar, icono ⟲. */}
+                  {form.convocatorias_anteriores && form.convocatorias_anteriores.length > 0 && (
+                    <span title="Esta licitación fue relanzada por la institución; hay convocatorias previas"
+                      style={{
+                        display: 'inline-flex', alignItems: 'center', gap: 5,
+                        padding: '4px 11px', background: '#fff7e6',
+                        color: '#b25c00', border: '1px solid #ffd591',
+                        borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: 0.2,
+                      }}>
+                      <span style={{ fontSize: 14, lineHeight: 1 }}>⟲</span>
+                      Relanzamiento · {form.convocatorias_anteriores.length} anterior{form.convocatorias_anteriores.length === 1 ? '' : 'es'}
+                    </span>
+                  )}
                 </div>
                 {form.numero_acto_derivado && form.numero_acto && form.numero_acto !== form.numero_acto_derivado && (
                   <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
@@ -624,6 +640,56 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
           {input('Forma Adjudicación', 'forma_adjudicacion')}
         </div>
       </Seccion>
+
+      {/* Convocatorias anteriores: solo si la licitación fue relanzada (lista
+          no vacía). Cada item lleva número, fecha y enlace al portal. */}
+      {form.convocatorias_anteriores && form.convocatorias_anteriores.length > 0 && (
+        <Seccion titulo="Convocatorias anteriores">
+          <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+            Esta licitación fue relanzada. Convocatorias previas registradas en PanamaCompra:
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {form.convocatorias_anteriores.map((c, i) => (
+              <div key={c.idProcesosContratacionFlujos || i} style={{
+                display: 'flex', alignItems: 'center', gap: 14,
+                padding: '10px 14px', background: '#fafbfc',
+                border: '1px solid var(--border)', borderRadius: 10,
+                fontSize: 13,
+              }}>
+                <span style={{
+                  minWidth: 64, padding: '3px 10px', borderRadius: 999,
+                  background: 'var(--blue-light)', color: 'var(--blue-dark)',
+                  fontWeight: 700, textAlign: 'center', fontSize: 12,
+                }}>
+                  #{c.numeroConvocatoria ?? (i + 1)}
+                </span>
+                <span style={{ flex: 1, color: 'var(--text)' }}>
+                  {c.nombre || `Convocatoria #${c.numeroConvocatoria ?? (i + 1)}`}
+                </span>
+                <span style={{ color: 'var(--text-muted)', fontSize: 12, minWidth: 150 }}>
+                  {c.fecha || '—'}
+                </span>
+                {c.url ? (
+                  <a href={c.url} target="_blank" rel="noreferrer"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                      padding: '6px 12px', background: 'white',
+                      color: 'var(--blue)', border: '1px solid var(--blue)',
+                      borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      textDecoration: 'none',
+                    }}>
+                    Abrir ↗
+                  </a>
+                ) : (
+                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>
+                    (sin enlace)
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+        </Seccion>
+      )}
 
       {vinc && (
         <Seccion
