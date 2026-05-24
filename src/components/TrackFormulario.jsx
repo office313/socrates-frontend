@@ -454,6 +454,41 @@ export default function TrackFormulario({
               )}
             </div>
 
+            {/* ── PANEL SÓCRATES (visible en TODAS las pestañas) ───────── */}
+            {/* El panel se mantiene en la cabecera fija para que la IA sea
+                accesible desde cualquier pestaña (es argumento de venta).
+                max-height + overflow auto en el cuerpo evita inflar la cabecera
+                cuando el análisis es largo. */}
+            <div style={{
+              background: 'white', borderRadius: 12,
+              border: '1px solid var(--border)',
+              marginBottom: 16, padding: '14px 20px',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
+                <span style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 34, height: 34, borderRadius: 999,
+                  background: 'linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%)',
+                  color: 'white', fontSize: 16, fontWeight: 700,
+                  boxShadow: '0 2px 6px rgba(15,45,87,0.18)',
+                }}>✦</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{
+                    fontSize: 12, fontWeight: 700, color: 'var(--blue-dark)',
+                    letterSpacing: 0.6, textTransform: 'uppercase',
+                  }}>
+                    Análisis de Sócrates
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
+                    Asistente IA para esta licitación
+                  </div>
+                </div>
+              </div>
+              <div style={{ maxHeight: 260, overflowY: 'auto' }}>
+                <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
+              </div>
+            </div>
+
             {/* ── PESTAÑAS ───────────────────────────────────────────── */}
             <div style={{
               display: 'inline-flex', gap: 4, padding: 4, background: 'white',
@@ -648,6 +683,18 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
         )}
       </Seccion>
 
+      <Seccion titulo="Precios">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 18px' }}>
+          {input('Precio Referencia', 'precio_referencia', 'currency')}
+          {input('Precio Ofertado', 'precio_ofertado', 'currency', { bold: true })}
+          {input('ITBMS', 'itbms_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
+          {input('Retención', 'retencion_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
+        </div>
+        <div style={{ marginTop: 4 }}>
+          {input('Forma Adjudicación', 'forma_adjudicacion')}
+        </div>
+      </Seccion>
+
       <Seccion titulo="Contacto">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 18px' }}>
           {vinc ? (
@@ -674,18 +721,6 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
         {vinc && (form.derivado?.items_texto || form.items_texto) && (
           viewField('Renglones / Items', form.derivado?.items_texto || form.items_texto)
         )}
-      </Seccion>
-
-      <Seccion titulo="Precios">
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 18px' }}>
-          {input('Precio Referencia', 'precio_referencia', 'currency')}
-          {input('Precio Ofertado', 'precio_ofertado', 'currency', { bold: true })}
-          {input('ITBMS', 'itbms_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
-          {input('Retención', 'retencion_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
-        </div>
-        <div style={{ marginTop: 4 }}>
-          {input('Forma Adjudicación', 'forma_adjudicacion')}
-        </div>
       </Seccion>
 
       {vinc && (
@@ -727,9 +762,7 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
         </Seccion>
       )}
 
-      <Seccion titulo="Sócrates (asistente IA)">
-        <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
-      </Seccion>
+      {/* Sócrates IA movido a la cabecera fija (visible en las 3 pestañas) */}
     </>
   )
 }
@@ -853,8 +886,11 @@ function TabPostAdj({
       </Seccion>
 
       <Seccion titulo="Proveedores (webs de referencia)">
+        {/* 4 webs en grid 2×2 (la 5ª se eliminó por descuadrar el layout;
+            si web5 está en BD para alguna lic, ahora no se edita pero el
+            campo persiste — el guardado solo serializa los campos del form). */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 18px' }}>
-          {[1, 2, 3, 4, 5].map(n => (
+          {[1, 2, 3, 4].map(n => (
             <ProveedorRow key={n} idx={n} value={form[`web${n}`] || ''} onChange={v => set(`web${n}`, v)} />
           ))}
         </div>
