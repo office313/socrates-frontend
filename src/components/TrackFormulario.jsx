@@ -595,6 +595,9 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
               {viewField('Fecha de adjudicación', fmtFecha(form.derivado?.fecha_adjudicacion))}
               {viewField('Institución', form.derivado?.institucion || form.institucion)}
               {viewField('Unidad de Compra', form.derivado?.unidad_compradora || form.unidad_compra)}
+              {/* Modalidad de Adjudicación: capturada del detalle V3 por el
+                  scraper (read-only). Valores típicos: 'Global', 'Renglón'. */}
+              {viewField('Modalidad de Adjudicación', form.modalidad_adjudicacion)}
             </>
           ) : (
             <>
@@ -604,6 +607,7 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
               {input('Agente', 'agente')}
               {input('Institución', 'institucion', 'text', { bold: true })}
               {input('Unidad de Compra', 'unidad_compra', 'text', { bold: true })}
+              {viewField('Modalidad de Adjudicación', form.modalidad_adjudicacion)}
             </>
           )}
         </div>
