@@ -667,9 +667,10 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
           {input('ITBMS', 'itbms_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
           {input('Retención', 'retencion_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
         </div>
-        <div style={{ marginTop: 4 }}>
-          {input('Forma Adjudicación', 'forma_adjudicacion')}
-        </div>
+        {/* "Forma Adjudicación" (pipeline.forma_adjudicacion) eliminado para
+            no duplicar la "Modalidad de Adjudicación" de Identificación, que
+            es la fuente fiable (read-only desde licitaciones.modalidad_adjudicacion
+            actualizada por el scraper en cada cron). */}
       </Seccion>
 
       <Seccion titulo="Contacto">
