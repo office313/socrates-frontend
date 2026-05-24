@@ -455,38 +455,11 @@ export default function TrackFormulario({
             </div>
 
             {/* ── PANEL SÓCRATES (visible en TODAS las pestañas) ───────── */}
-            {/* El panel se mantiene en la cabecera fija para que la IA sea
-                accesible desde cualquier pestaña (es argumento de venta).
-                max-height + overflow auto en el cuerpo evita inflar la cabecera
-                cuando el análisis es largo. */}
-            <div style={{
-              background: 'white', borderRadius: 12,
-              border: '1px solid var(--border)',
-              marginBottom: 16, padding: '14px 20px',
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 10 }}>
-                <span style={{
-                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
-                  width: 34, height: 34, borderRadius: 999,
-                  background: 'linear-gradient(135deg, var(--blue-dark) 0%, var(--blue) 100%)',
-                  color: 'white', fontSize: 16, fontWeight: 700,
-                  boxShadow: '0 2px 6px rgba(15,45,87,0.18)',
-                }}>✦</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{
-                    fontSize: 12, fontWeight: 700, color: 'var(--blue-dark)',
-                    letterSpacing: 0.6, textTransform: 'uppercase',
-                  }}>
-                    Análisis de Sócrates
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 1 }}>
-                    Asistente IA para esta licitación
-                  </div>
-                </div>
-              </div>
-              <div style={{ maxHeight: 260, overflowY: 'auto' }}>
-                <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
-              </div>
+            {/* SocratesBloque ya trae su propio orb dinámico + título — no
+                añadimos wrapper con cabecera para evitar duplicación. Solo
+                scroll interno para que un análisis largo no infle la cabecera. */}
+            <div style={{ maxHeight: 260, overflowY: 'auto', marginBottom: 16 }}>
+              <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
             </div>
 
             {/* ── PESTAÑAS ───────────────────────────────────────────── */}
