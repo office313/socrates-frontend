@@ -325,51 +325,55 @@ export default function TrackFormulario({
 
   return (
     <div style={{
-      position: 'fixed', inset: 'var(--sidebar-width, 76px) 0 0 var(--sidebar-width, 76px)',
-      // dejamos espacio para la sidebar si existe; en móvil cae a 0
-      background: '#f5f6fa', zIndex: 100,
-      display: 'flex', flexDirection: 'column',
+      background: 'white', borderRadius: 14, border: '1px solid var(--border)',
+      display: 'flex', flexDirection: 'column', overflow: 'hidden',
     }}>
-      {/* HEADER fino: solo título y cerrar */}
+      {/* HEADER del formulario con navegación PROMINENTE prev/next */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '12px 24px', background: 'white', borderBottom: '1px solid var(--border)',
+        padding: '14px 20px', background: '#fafbfc', borderBottom: '1px solid var(--border)',
+        gap: 16, flexWrap: 'wrap',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700, color: 'var(--blue-dark)' }}>Track</h2>
-          <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>· Formulario</span>
-          <span style={{ color: 'var(--text-muted)', fontSize: 13 }}>· Pos {currentIdx + 1}/{items.length}</span>
+        {/* Izq: prev + posición + next */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <button onClick={irAnterior} disabled={!hasPrev} title="Anterior (←)"
+            style={navBtnStyle(!hasPrev)}>
+            <span style={{ fontSize: 22, lineHeight: 1, marginRight: 2 }}>‹</span> Anterior
+          </button>
+          <div style={{
+            padding: '8px 14px', background: 'white', border: '1px solid var(--border)',
+            borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--blue-dark)',
+            minWidth: 86, textAlign: 'center',
+          }}>
+            {currentIdx + 1} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>de {items.length}</span>
+          </div>
+          <button onClick={irSiguiente} disabled={!hasNext} title="Siguiente (→)"
+            style={navBtnStyle(!hasNext)}>
+            Siguiente <span style={{ fontSize: 22, lineHeight: 1, marginLeft: 2 }}>›</span>
+          </button>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+
+        {/* Dch: dirty indicator */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           {dirty && (
             <span style={{
               fontSize: 12, fontWeight: 600, color: '#e65100',
-              padding: '4px 10px', background: '#fff3e0', borderRadius: 999,
+              padding: '6px 12px', background: '#fff3e0', borderRadius: 999,
               display: 'inline-flex', alignItems: 'center', gap: 6,
             }}>
               <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#e65100' }} />
               Cambios sin guardar
             </span>
           )}
-          <button onClick={cerrar} title="Volver al Listado (Esc)" style={{
-            padding: '7px 14px', background: 'white', color: 'var(--text-muted)',
-            border: '1px solid var(--border)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}>← Listado</button>
+          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+            Tip: ← → para navegar · Esc para volver al Listado
+          </span>
         </div>
       </div>
 
-      {/* BODY con flechas sticky a los bordes verticales */}
-      <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-        <FlechaNav
-          dir="prev" disabled={!hasPrev} onClick={irAnterior}
-        />
-        <FlechaNav
-          dir="next" disabled={!hasNext} onClick={irSiguiente}
-        />
-
-        {/* Contenedor scrollable centrado */}
-        <div style={{ height: '100%', overflowY: 'auto', padding: '24px 90px' }}>
-          <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+      {/* BODY scrollable, sin position: fixed */}
+      <div style={{ padding: '20px 28px' }}>
+        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
 
             {/* ── CABECERA DESTACADA ───────────────────────────────────── */}
             <div style={{
@@ -477,18 +481,14 @@ export default function TrackFormulario({
               <TabPliego form={form} />
             )}
 
-          </div>
         </div>
       </div>
 
       {/* FOOTER */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
         padding: '14px 24px', background: 'white', borderTop: '1px solid var(--border)',
       }}>
-        <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-          Tip: usa ← → para navegar, Esc para cerrar
-        </div>
         <div style={{ display: 'flex', gap: 8 }}>
           {item?.id && onEstudio && (
             <button onClick={() => onEstudio(form)} style={{
@@ -527,31 +527,18 @@ export default function TrackFormulario({
 
 // ─── Componentes auxiliares ──────────────────────────────────────────────
 
-function FlechaNav({ dir, disabled, onClick }) {
-  const [hover, setHover] = useState(false)
-  const pos = dir === 'prev' ? { left: 16 } : { right: 16 }
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      disabled={disabled}
-      title={dir === 'prev' ? 'Anterior (←)' : 'Siguiente (→)'}
-      style={{
-        position: 'absolute', top: '50%', transform: 'translateY(-50%)', ...pos,
-        width: 56, height: 80, borderRadius: 12,
-        background: disabled ? '#f0f0f0' : (hover ? 'var(--blue-dark)' : 'white'),
-        color: disabled ? '#bbb' : (hover ? 'white' : 'var(--blue-dark)'),
-        border: '1px solid var(--border)', fontSize: 32, fontWeight: 400,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: hover && !disabled ? '0 4px 14px rgba(15,45,87,0.18)' : '0 1px 3px rgba(0,0,0,0.06)',
-        transition: 'all 0.15s', zIndex: 5, lineHeight: 1,
-      }}>
-      {dir === 'prev' ? '‹' : '›'}
-    </button>
-  )
-}
+// Estilo de los botones grandes prev/next del header de navegación.
+// Visibles y claros: bg blanco, borde azul, hover oscuro, disabled gris.
+const navBtnStyle = (disabled) => ({
+  display: 'inline-flex', alignItems: 'center', gap: 4,
+  padding: '8px 16px',
+  background: disabled ? '#f5f5f5' : 'white',
+  color: disabled ? '#bbb' : 'var(--blue-dark)',
+  border: `1px solid ${disabled ? 'var(--border)' : 'var(--blue-dark)'}`,
+  borderRadius: 10, fontSize: 13.5, fontWeight: 600,
+  cursor: disabled ? 'not-allowed' : 'pointer',
+  transition: 'all 0.15s',
+})
 
 function Seccion({ titulo, children, accion }) {
   return (

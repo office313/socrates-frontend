@@ -831,10 +831,10 @@ export default function Pipeline() {
   const [query, setQuery] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [inputFocus, setInputFocus] = useState(false)
-  // Toggle de vista: listado (tabla actual + modal pequeño al hacer click) o
-  // formulario (vista a pantalla completa con cabecera destacada, 3 pestañas
-  // y flechas para navegar entre las licitaciones de `filtrados`).
-  const [vista, setVista] = useState('listado')      // 'listado' | 'formulario'
+  // Toggle de vista: formulario (default, vista de trabajo con cabecera destacada,
+  // 3 pestañas y navegación prev/next) o listado (tabla con todas las licitaciones,
+  // click abre el modal pequeño antiguo).
+  const [vista, setVista] = useState('formulario')   // 'formulario' | 'listado'
   const [formularioIdx, setFormularioIdx] = useState(0)
 
   const cargar = () => {
@@ -842,6 +842,14 @@ export default function Pipeline() {
   }
 
   useEffect(() => { cargar() }, [])
+
+  // En modo Formulario, cuando el usuario cambia un filtro o aplica búsqueda,
+  // saltar a la primera licitación del resultado (el ítem actual ya no tiene
+  // sentido en el nuevo conjunto). Ignorar `orden`: cambiar el orden no debe
+  // mover al usuario fuera del ítem que está editando.
+  useEffect(() => {
+    setFormularioIdx(0)
+  }, [alcance, filtro, appliedQuery])
 
   const aplicarBusqueda = () => {
     const q = query.trim()
@@ -1001,28 +1009,37 @@ export default function Pipeline() {
       )}
 
       <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          {/* Toggle de vista: Listado (tabla actual) vs Formulario (pantalla
-              completa con cabecera destacada y flechas de navegación). */}
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
-            {[['listado', 'Listado'], ['formulario', 'Formulario']].map(([val, label]) => (
-              <span key={val} onClick={() => {
-                if (val === 'formulario' && formularioIdx >= filtrados.length) setFormularioIdx(0)
-                setVista(val)
-              }}
-                style={{
-                  padding: '5px 16px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
-                  fontWeight: vista === val ? 600 : 400,
-                  color: vista === val ? '#0f2d57' : '#78909c',
-                  background: vista === val ? 'white' : 'transparent',
-                  boxShadow: vista === val ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s', userSelect: 'none',
-                }}>
-                {label}
-              </span>
-            ))}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
+          {/* Toggle de vista PROMINENTE: bordeado en azul corporativo,
+              activo con bg sólido. Separado del resto de filtros para que
+              destaque a primera vista. */}
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 0, padding: 4, borderRadius: 12,
+            background: 'white', border: '1.5px solid var(--blue-dark)',
+            boxShadow: '0 1px 3px rgba(15,45,87,0.08)',
+          }}>
+            {[['listado', 'Listado'], ['formulario', 'Formulario']].map(([val, label]) => {
+              const activo = vista === val
+              return (
+                <span key={val} onClick={() => {
+                  if (val === 'formulario' && formularioIdx >= filtrados.length) setFormularioIdx(0)
+                  setVista(val)
+                }}
+                  style={{
+                    padding: '9px 22px', borderRadius: 8, cursor: 'pointer', fontSize: 14,
+                    fontWeight: 700, letterSpacing: 0.2,
+                    color: activo ? 'white' : 'var(--blue-dark)',
+                    background: activo ? 'var(--blue-dark)' : 'transparent',
+                    transition: 'all 0.15s', userSelect: 'none',
+                  }}>
+                  {label}
+                </span>
+              )
+            })}
           </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <select
             value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
             onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
@@ -1059,35 +1076,8 @@ export default function Pipeline() {
         </div>
       </div>
 
-      {/* Vista FORMULARIO: pantalla completa con cabecera destacada y flechas.
-          Se renderiza ANTES del buscador/cards/tabla porque tiene position:fixed
-          y cubre el contenido bajo; no duplicamos la tabla mientras está activo. */}
-      {vista === 'formulario' && filtrados.length > 0 && (
-        <TrackFormulario
-          items={filtrados}
-          currentIdx={Math.min(formularioIdx, filtrados.length - 1)}
-          onIndexChange={setFormularioIdx}
-          onSave={guardarFormulario}
-          onDelete={eliminarFormulario}
-          onReload={cargar}
-          onClose={() => setVista('listado')}
-          onEstudio={(form) => setModalEstudio({
-            keywords: [],
-            numeroActo: form.numero_acto_derivado || form.numero_acto,
-          })}
-        />
-      )}
-      {vista === 'formulario' && filtrados.length === 0 && (
-        <div style={{ padding: 40, textAlign: 'center', background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', color: '#666' }}>
-          No hay licitaciones que mostrar con los filtros actuales.
-          <button onClick={() => setVista('listado')}
-            style={{ display: 'block', margin: '16px auto 0', padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-            Volver al Listado
-          </button>
-        </div>
-      )}
-
-      {vista === 'listado' && (<>
+      {/* Buscador SIEMPRE visible (en ambas vistas). En modo Formulario,
+          al aplicar búsqueda, formularioIdx se resetea a 0 vía useEffect. */}
       <div style={{ marginBottom: 16, position: 'relative' }}>
         <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
           🔍
@@ -1146,11 +1136,37 @@ export default function Pipeline() {
         })}
       </div>
 
-      {/* Scroll container dedicado: las filas scrollean DENTRO de la caja,
-          el thead se queda pegado arriba de la caja (sticky top: 0 relativo
-          al contenedor, no al viewport). El upper-zone sale de vista al
-          hacer scroll de página — comportamiento aceptado para priorizar
-          ver siempre las columnas. */}
+      {/* Render condicional según la vista activa. Filtros + buscador + cards
+          quedan SIEMPRE arriba; aquí solo cambia el cuerpo. En modo formulario,
+          las flechas prev/next del TrackFormulario navegan SOLO por `filtrados`. */}
+      {vista === 'formulario' ? (
+        filtrados.length > 0 ? (
+          <TrackFormulario
+            items={filtrados}
+            currentIdx={Math.min(formularioIdx, filtrados.length - 1)}
+            onIndexChange={setFormularioIdx}
+            onSave={guardarFormulario}
+            onDelete={eliminarFormulario}
+            onReload={cargar}
+            onClose={() => setVista('listado')}
+            onEstudio={(form) => setModalEstudio({
+              keywords: [],
+              numeroActo: form.numero_acto_derivado || form.numero_acto,
+            })}
+          />
+        ) : (
+          <div style={{ padding: 40, textAlign: 'center', background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', color: '#666' }}>
+            No hay licitaciones que mostrar con los filtros actuales.
+            <button onClick={() => setVista('listado')}
+              style={{ display: 'block', margin: '16px auto 0', padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Volver al Listado
+            </button>
+          </div>
+        )
+      ) : (
+      /* Scroll container dedicado: las filas scrollean DENTRO de la caja,
+         el thead se queda pegado arriba de la caja (sticky top: 0 relativo
+         al contenedor, no al viewport). */
       <div style={{
         background: 'white',
         borderRadius: 12,
@@ -1217,7 +1233,7 @@ export default function Pipeline() {
           </tbody>
         </table>
       </div>
-      </>)}
+      )}
     </div>
   )
 }
