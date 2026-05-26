@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
+import ScraperMonitor from '../components/ScraperMonitor'
 
 const ROLES = ['usuario', 'supervisor']
 
@@ -303,6 +304,9 @@ export default function Clientes() {
           )
         })}
       </div>
+
+      {/* Monitor de crons (solo superadmin — el componente aplica su propio gating). */}
+      <ScraperMonitor />
     </div>
   )
 }
