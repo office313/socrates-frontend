@@ -188,7 +188,7 @@ export default function ScraperMonitor() {
                 detalle.map((l, i) => (
                   <div key={i}>
                     <span style={{ color: '#6b89b3', marginRight: 8 }}>
-                      {fmtFecha(l.creado_en).slice(-5)}
+                      {l.creado_en ? new Date(l.creado_en).toLocaleTimeString('es-PA', { hour: '2-digit', minute: '2-digit', hour12: false }) : ''}
                     </span>
                     {l.linea}
                   </div>
