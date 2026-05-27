@@ -17,19 +17,22 @@ const COLOR_ESTADO = {
 
 function fmtDuracion(iniciado, fin) {
   if (!iniciado) return '—'
-  const ini = new Date(iniciado).getTime()
-  const fi = fin ? new Date(fin).getTime() : Date.now()
+  const ini = new Date(iniciado + 'Z').getTime()
+  const fi = fin ? new Date(fin + 'Z').getTime() : Date.now()
   const s = Math.max(0, Math.floor((fi - ini) / 1000))
   const m = Math.floor(s / 60)
   return `${m}m ${String(s % 60).padStart(2, '0')}s`
 }
 
+// Backend devuelve UTC sin marca de zona (ej. "2026-05-27T14:00:00").
+// Forzamos UTC añadiendo 'Z' y formateamos en zona horaria de Panamá.
 function fmtFecha(iso) {
   if (!iso) return '—'
-  const d = new Date(iso)
+  const d = new Date(iso + 'Z')
   return d.toLocaleString('es-PA', {
     year: '2-digit', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit',
+    timeZone: 'America/Panama',
   })
 }
 
@@ -88,7 +91,7 @@ export default function ScraperMonitor() {
 
   const cardStyle = {
     background: 'white', borderRadius: 12, padding: 20,
-    marginBottom: 16, border: '1px solid #e5e7eb',
+    border: '1px solid #e5e7eb',
   }
   const lblStyle = {
     fontSize: 11, fontWeight: 600, color: '#888',
@@ -97,7 +100,7 @@ export default function ScraperMonitor() {
   const valStyle = { fontSize: 18, fontWeight: 600, color: '#222' }
 
   return (
-    <div style={{ marginTop: 32 }}>
+    <div style={{ maxWidth: 1200 }}>
       <h2 style={{
         fontSize: 16, fontWeight: 600, color: 'var(--blue)',
         margin: '0 0 12px 0',
@@ -110,8 +113,8 @@ export default function ScraperMonitor() {
         }}>{error}</div>
       )}
 
-      {/* === Corrida activa ============================================== */}
-      <div style={cardStyle}>
+      {/* === Proceso activo ============================================== */}
+      <div style={{ ...cardStyle, marginBottom: 16 }}>
         {activa ? (
           <>
             <div style={{
@@ -136,7 +139,7 @@ export default function ScraperMonitor() {
 
             <div style={{
               height: 10, background: '#eef', borderRadius: 5,
-              overflow: 'hidden', marginBottom: 12,
+              overflow: 'hidden', marginBottom: 14,
             }}>
               <div style={{
                 width: `${pct}%`, height: '100%',
@@ -145,60 +148,67 @@ export default function ScraperMonitor() {
             </div>
 
             <div style={{
-              display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)',
-              gap: 12, marginBottom: 14,
+              display: 'grid',
+              gridTemplateColumns: 'minmax(260px, 340px) 1fr',
+              gap: 16, alignItems: 'start',
             }}>
               <div>
-                <div style={lblStyle}>Procesadas</div>
-                <div style={valStyle}>
-                  {completadas}
-                  <span style={{ fontSize: 13, color: '#888', fontWeight: 400 }}>
-                    {' / '}{total || '—'}
-                  </span>
-                </div>
-              </div>
-              <div>
-                <div style={lblStyle}>Guardadas</div>
-                <div style={valStyle}>{activa.guardadas ?? 0}</div>
-              </div>
-              <div>
-                <div style={lblStyle}>Saltadas</div>
-                <div style={valStyle}>{activa.saltadas ?? 0}</div>
-              </div>
-              <div>
-                <div style={lblStyle}>Progreso</div>
-                <div style={valStyle}>{pct}%</div>
-              </div>
-            </div>
-
-            {activa.mensaje && (
-              <div style={{
-                fontSize: 12, color: '#666', marginBottom: 12, fontStyle: 'italic',
-              }}>{activa.mensaje}</div>
-            )}
-
-            <div ref={logRef} style={{
-              background: '#0b1d36', color: '#cfe5ff', borderRadius: 8,
-              padding: 12, fontFamily: '"SF Mono", Menlo, Consolas, monospace',
-              fontSize: 11, lineHeight: 1.6, height: 220, overflowY: 'auto',
-            }}>
-              {detalle.length === 0 ? (
-                <div style={{ color: '#6b89b3' }}>(esperando líneas de detalle…)</div>
-              ) : (
-                detalle.map((l, i) => (
-                  <div key={i}>
-                    <span style={{ color: '#6b89b3', marginRight: 8 }}>
-                      {l.creado_en ? new Date(l.creado_en + 'Z').toLocaleTimeString('es-PA', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Panama' }) : ''}
-                    </span>
-                    {l.linea}
+                <div style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12,
+                }}>
+                  <div>
+                    <div style={lblStyle}>Procesadas</div>
+                    <div style={valStyle}>
+                      {completadas}
+                      <span style={{ fontSize: 13, color: '#888', fontWeight: 400 }}>
+                        {' / '}{total || '—'}
+                      </span>
+                    </div>
                   </div>
-                ))
-              )}
+                  <div>
+                    <div style={lblStyle}>Guardadas</div>
+                    <div style={valStyle}>{activa.guardadas ?? 0}</div>
+                  </div>
+                  <div>
+                    <div style={lblStyle}>Saltadas</div>
+                    <div style={valStyle}>{activa.saltadas ?? 0}</div>
+                  </div>
+                  <div>
+                    <div style={lblStyle}>Progreso</div>
+                    <div style={valStyle}>{pct}%</div>
+                  </div>
+                </div>
+
+                {activa.mensaje && (
+                  <div style={{
+                    fontSize: 12, color: '#666', marginTop: 12, fontStyle: 'italic',
+                  }}>{activa.mensaje}</div>
+                )}
+              </div>
+
+              <div ref={logRef} style={{
+                background: '#0b1d36', color: '#cfe5ff', borderRadius: 8,
+                padding: 12, fontFamily: '"SF Mono", Menlo, Consolas, monospace',
+                fontSize: 11, lineHeight: 1.6, height: 180, overflowY: 'auto',
+              }}>
+                {detalle.length === 0 ? (
+                  <div style={{ color: '#6b89b3' }}>(esperando líneas de detalle…)</div>
+                ) : (
+                  detalle.map((l, i) => (
+                    <div key={i}>
+                      <span style={{ color: '#6b89b3', marginRight: 8 }}>
+                        {l.creado_en ? new Date(l.creado_en + 'Z').toLocaleTimeString('es-PA', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'America/Panama' }) : ''}
+                      </span>
+                      {l.linea}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
           </>
         ) : (
           <div style={{ color: '#888', fontSize: 13 }}>
-            Sin corridas activas en este momento.
+            Sin procesos activos en este momento.
           </div>
         )}
       </div>
@@ -208,11 +218,11 @@ export default function ScraperMonitor() {
         <h3 style={{
           fontSize: 13, fontWeight: 600, color: '#666',
           margin: '0 0 12px 0',
-        }}>Histórico — últimas 25 corridas</h3>
+        }}>Histórico — últimos 25 procesos</h3>
 
         {historico.length === 0 ? (
           <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
-            Sin corridas registradas todavía.
+            Sin procesos registrados todavía.
           </p>
         ) : (
           <div style={{ overflowX: 'auto' }}>

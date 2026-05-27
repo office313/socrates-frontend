@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark, Scale } from 'lucide-react'
+import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard } from 'lucide-react'
 
 const getNavItems = (usuario) => {
   const items = [
@@ -62,6 +62,12 @@ export default function Sidebar({ usuario }) {
             <Building2 size={20} />
             <span style={{ fontSize: 11 }}>Clientes</span>
           </NavLink>
+          {usuario?.rol === 'superadmin' && (
+            <NavLink to="/panel-control" style={({ isActive }) => linkStyle(isActive)}>
+              <LayoutDashboard size={20} />
+              <span style={{ fontSize: 11 }}>Panel</span>
+            </NavLink>
+          )}
         </nav>
       ) : (
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
