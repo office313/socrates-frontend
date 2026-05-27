@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import axios from 'axios'
+import { cronLabel } from '../utils/cronLabels'
 import { useAuth } from '../hooks/useAuth'
 
 // Errores recientes de los crons del backend. Lee /api/admin/scraper-errores
@@ -133,7 +134,7 @@ export default function ScraperErrores() {
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <select value={filtroCron} onChange={e => setFiltroCron(e.target.value)} style={selectStyle}>
             <option value="">Todos los crons</option>
-            {CRONS.map(c => <option key={c} value={c}>{c}</option>)}
+            {CRONS.map(c => <option key={c} value={c}>{cronLabel(c)}</option>)}
           </select>
           <select value={filtroTipo} onChange={e => setFiltroTipo(e.target.value)} style={selectStyle}>
             <option value="">Todos los tipos</option>
@@ -175,8 +176,8 @@ export default function ScraperErrores() {
                   const motivoCorto = motivo.length > 80 ? motivo.slice(0, 80) + '…' : motivo
                   return (
                     <tr key={e.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                      <td style={{ padding: '8px 12px', color: 'var(--blue-dark)', fontWeight: 600, whiteSpace: 'nowrap' }}>
-                        {e.cron_nombre}
+                      <td style={{ padding: '8px 12px', color: 'var(--blue-dark)', fontWeight: 600, whiteSpace: 'nowrap' }} title={e.cron_nombre}>
+                        {cronLabel(e.cron_nombre)}
                       </td>
                       <td style={{ padding: '8px 12px', color: '#444', whiteSpace: 'nowrap' }}>
                         {e.numero_acto || '—'}
