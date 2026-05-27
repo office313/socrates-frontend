@@ -194,7 +194,7 @@ export default function ScraperMonitor() {
             <div style={{
               display: 'grid',
               gridTemplateColumns: 'minmax(260px, 340px) 1fr',
-              gap: 16, alignItems: 'start',
+              gap: 16, alignItems: 'stretch',
             }}>
               <div>
                 <div style={{
@@ -241,7 +241,8 @@ export default function ScraperMonitor() {
               <div ref={logRef} style={{
                 background: '#0b1d36', color: '#cfe5ff', borderRadius: 8,
                 padding: 12, fontFamily: '"SF Mono", Menlo, Consolas, monospace',
-                fontSize: 11, lineHeight: 1.6, height: 180, overflowY: 'auto',
+                fontSize: 11, lineHeight: 1.6, minHeight: 180, height: '100%',
+                overflowY: 'auto',
               }}>
                 {detalle.length === 0 ? (
                   <div style={{ color: '#6b89b3' }}>(esperando líneas de detalle…)</div>
