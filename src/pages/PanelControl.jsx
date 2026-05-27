@@ -1,8 +1,9 @@
 import ScraperMonitor from '../components/ScraperMonitor'
+import CronAgenda from '../components/CronAgenda'
 
-// Panel de Control superadmin. Por ahora solo contiene el Monitor de crons,
-// pero está pensado para crecer: cada bloque futuro (DB health, leads, etc.)
-// va como una <section> dentro del contenedor de secciones.
+// Panel de Control superadmin. Estructura por secciones, lista para crecer:
+// agenda de crons (siempre visible), monitor "casi-vivo" de la corrida activa,
+// y a futuro: salud de la DB, métricas de leads, etc.
 export default function PanelControl() {
   return (
     <div style={{ padding: 24 }}>
@@ -11,6 +12,9 @@ export default function PanelControl() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+        <section>
+          <CronAgenda />
+        </section>
         <section>
           <ScraperMonitor />
         </section>

@@ -36,6 +36,49 @@ function fmtFecha(iso) {
   })
 }
 
+// Velocímetro tipo anillo (SVG). value puede ser null → placeholder discreto.
+// La escala (max) define el porcentaje del anillo; el centro siempre muestra el
+// valor real con su unidad, así RAM > max no engaña visualmente.
+function Gauge({ value, max, label, unit, fmt }) {
+  const r = 28
+  const c = 2 * Math.PI * r
+  const isNull = value === null || value === undefined
+  const pct = isNull ? 0 : Math.min(100, Math.max(0, (value / max) * 100))
+  const offset = c - (c * pct / 100)
+  const stroke = isNull ? '#d0d4dc' : 'var(--blue-dark)'
+  const centro = isNull ? '—' : (fmt ? fmt(value) : String(Math.round(value)))
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+      <div style={{ position: 'relative', width: 72, height: 72 }}>
+        <svg width={72} height={72}>
+          <circle cx={36} cy={36} r={r} stroke="#eef" strokeWidth={6} fill="none" />
+          <circle cx={36} cy={36} r={r} stroke={stroke} strokeWidth={6} fill="none"
+            strokeDasharray={c} strokeDashoffset={offset} strokeLinecap="round"
+            transform="rotate(-90 36 36)"
+            style={{ transition: 'stroke-dashoffset 0.4s' }} />
+        </svg>
+        <div style={{
+          position: 'absolute', inset: 0,
+          display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <div style={{
+            fontSize: 13, fontWeight: 700,
+            color: isNull ? '#aaa' : 'var(--blue-dark)',
+            lineHeight: 1,
+          }}>{centro}</div>
+          {!isNull && unit && (
+            <div style={{ fontSize: 9, color: '#888', fontWeight: 600, marginTop: 2 }}>{unit}</div>
+          )}
+        </div>
+      </div>
+      <div style={{
+        fontSize: 10, fontWeight: 600, color: '#888',
+        textTransform: 'uppercase', letterSpacing: 0.4,
+      }}>{label}</div>
+    </div>
+  )
+}
+
 function EstadoBadge({ estado }) {
   const c = COLOR_ESTADO[estado] || { bg: '#eee', fg: '#444' }
   return (
@@ -177,6 +220,14 @@ export default function ScraperMonitor() {
                     <div style={lblStyle}>Progreso</div>
                     <div style={valStyle}>{pct}%</div>
                   </div>
+                </div>
+
+                <div style={{
+                  display: 'flex', gap: 18, justifyContent: 'center',
+                  marginTop: 14, paddingTop: 14, borderTop: '1px solid #f0f0f0',
+                }}>
+                  <Gauge value={activa.cpu_pct} max={100} label="CPU" unit="%" />
+                  <Gauge value={activa.mem_mb} max={1024} label="RAM" unit="MB" />
                 </div>
 
                 {activa.mensaje && (
