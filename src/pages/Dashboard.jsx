@@ -237,7 +237,7 @@ export default function Dashboard({ usuario }) {
       setPipelineItems(pipItems)
       setStats({
         vigentes: licsResult.status === 'fulfilled' ? (licsResult.value.data.total || 0) : 0,
-        cierranHoy: todas.filter(l => l.fecha_cierre === hoy).length,
+        cierranHoy: todas.filter(l => (l.fecha_cierre || '').substring(0, 10) === hoy).length,
         pipeline: todas.filter(l => numPipeSet.has(l.numero_acto)).length,
         watchlist: todas.filter(l => numWatchSet.has(l.numero_acto)).length,
       })
