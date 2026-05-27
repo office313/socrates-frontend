@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
+import { cronLabel } from '../utils/cronLabels'
 import { useAuth } from '../hooks/useAuth'
 
 // Monitor "casi-vivo" de los crons del scraper (v1: sync_rapida).
@@ -169,7 +170,7 @@ export default function ScraperMonitor() {
                   width: 8, height: 8, borderRadius: '50%',
                   background: '#1b5e20', animation: 'mon-pulse 1.4s infinite',
                 }} />
-                <strong style={{ fontSize: 14, color: '#222' }}>{activa.cron_nombre}</strong>
+                <strong style={{ fontSize: 14, color: '#222' }}>{cronLabel(activa.cron_nombre)}</strong>
                 <EstadoBadge estado={activa.estado} />
                 <span style={{ fontSize: 12, color: '#888' }}>
                   fase: <strong>{activa.fase || '—'}</strong>
@@ -293,7 +294,7 @@ export default function ScraperMonitor() {
               <tbody>
                 {historico.map((h, i) => (
                   <tr key={h.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                    <td style={{ padding: '6px 10px' }}>{h.cron_nombre}</td>
+                    <td style={{ padding: '6px 10px' }}>{cronLabel(h.cron_nombre)}</td>
                     <td style={{ padding: '6px 10px' }}>
                       <EstadoBadge estado={h.estado} />
                     </td>
