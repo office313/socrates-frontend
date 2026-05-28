@@ -96,6 +96,7 @@ export default function ScraperMonitor() {
   const esSuperadmin = usuario?.rol === 'superadmin'
 
   const [data, setData] = useState({ activa: null, detalle: [], historico: [] })
+  const [workers, setWorkers] = useState([])
   const [error, setError] = useState('')
   const logRef = useRef(null)
 
@@ -105,6 +106,20 @@ export default function ScraperMonitor() {
     const fetchData = async () => {
       try {
         const r = await axios.get('/api/admin/scraper-monitor')
+        // Fetch de workers en curso si hay un cron corriendo.
+        // Best-effort: si falla, dejamos workers vacío para no romper la UI.
+        let _workers = []
+        if (r.data?.activa?.estado === 'corriendo' && r.data?.activa?.cron_nombre) {
+          try {
+            const rw = await axios.get(
+              '/api/admin/scraper-workers-actuales?cron=' + encodeURIComponent(r.data.activa.cron_nombre)
+            )
+            _workers = rw.data?.workers || []
+          } catch (errW) {
+            _workers = []
+          }
+        }
+        setWorkers(_workers)
         if (cancelado) return
         setData(r.data)
         setError('')
@@ -235,6 +250,26 @@ export default function ScraperMonitor() {
                   <div style={{
                     fontSize: 12, color: '#666', marginTop: 12, fontStyle: 'italic',
                   }}>{activa.mensaje}</div>
+                )}
+
+                {workers.length > 0 && (
+                  <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #e0e7f0' }}>
+                    <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase',
+                                  letterSpacing: 0.4, fontWeight: 600, marginBottom: 6 }}>
+                      En curso ahora ({workers.length})
+                    </div>
+                    <div style={{ fontSize: 11, color: '#0f2d57', lineHeight: 1.7,
+                                  fontFamily: '"SF Mono", Menlo, Consolas, monospace' }}>
+                      {workers.map(w => {
+                        const _t = w.iniciado_en ? Math.round((Date.now() - new Date(w.iniciado_en + 'Z').getTime()) / 1000) : 0
+                        return (
+                          <div key={w.id}>
+                            {w.numero_acto || '—'} <span style={{ color: '#88a' }}>· {_t}s</span>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
                 )}
               </div>
 
