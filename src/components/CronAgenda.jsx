@@ -16,32 +16,32 @@ const CRONS = [
   {
     label: 'Sync PanamaCompra',
     horarios: {
-      'L-V': ['09:00', '11:00', '13:00', '15:00', '17:00'],
+      'L-V': ['07:30', '08:30', '09:30', '10:45', '11:30', '12:30', '13:30', '14:30', '15:30', '16:30', '17:30'],
       'S-D': ['18:00'],
     },
   },
   {
     label: 'Categorización IA',
     horarios: {
-      'L-V': ['09:45', '11:45', '13:45', '15:45', '17:45'],
-      'S-D': ['18:45'],
+      'L-V': ['07:50', '08:50', '09:50', '11:05', '11:50', '12:55', '13:50', '14:50', '15:50', '16:50', '17:50'],
+      'S-D': ['18:20'],
     },
   },
   {
-    label: 'Adjudicaciones V3',
-    horarios: { 'L-V': ['12:00', '16:00'], 'S-D': ['16:00'] },
-  },
-  {
-    label: 'Adjudicaciones V2',
-    horarios: { 'L-V': ['17:30'], 'S-D': ['16:30'] },
-  },
-  {
     label: 'ACP vigentes',
-    horarios: { 'L-V': ['10:00', '12:30'], 'S-D': ['17:00'] },
+    horarios: { 'L-V': ['10:00', '12:50'], 'S-D': ['17:00'] },
   },
   {
     label: 'ACP awards',
-    horarios: { 'L-V': ['10:20', '12:50'], 'S-D': ['17:20'] },
+    horarios: { 'L-V': ['10:20', '13:10'], 'S-D': ['17:20'] },
+  },
+  {
+    label: 'Adjudicaciones V3',
+    horarios: { 'TODOS': ['19:00'] },
+  },
+  {
+    label: 'Adjudicaciones V2',
+    horarios: { 'TODOS': ['21:00'] },
   },
   {
     label: 'Limpieza nocturna',
