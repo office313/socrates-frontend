@@ -97,6 +97,7 @@ export default function ScraperMonitor() {
 
   const [data, setData] = useState({ activa: null, detalle: [], historico: [] })
   const [workers, setWorkers] = useState([])
+  const [filtroCronHistorico, setFiltroCronHistorico] = useState('')
   const [error, setError] = useState('')
   const logRef = useRef(null)
 
@@ -306,15 +307,35 @@ export default function ScraperMonitor() {
         <h3 style={{
           fontSize: 13, fontWeight: 600, color: '#666',
           margin: '0 0 12px 0',
-        }}>Histórico — últimos 25 procesos</h3>
+        }}>Histórico de procesos</h3>
 
-        {historico.length === 0 ? (
-          <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
-            Sin procesos registrados todavía.
-          </p>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 8 }}>
+          <select
+            value={filtroCronHistorico}
+            onChange={e => setFiltroCronHistorico(e.target.value)}
+            style={{
+              fontSize: 12, padding: '4px 8px', border: '1px solid #d0d7de',
+              borderRadius: 6, background: 'white', color: '#333', cursor: 'pointer',
+            }}
+          >
+            <option value="">Todos los crons</option>
+            {Array.from(new Set(historico.map(h => h.cron_nombre))).sort().map(slug => (
+              <option key={slug} value={slug}>{cronLabel(slug)}</option>
+            ))}
+          </select>
+        </div>
+
+        {(() => {
+          const _historicoFiltrado = filtroCronHistorico
+            ? historico.filter(h => h.cron_nombre === filtroCronHistorico)
+            : historico
+          return _historicoFiltrado.length === 0 ? (
+            <p style={{ fontSize: 12, color: '#aaa', margin: 0 }}>
+              Sin procesos registrados todavía.
+            </p>
+          ) : (
+            <div style={{ overflowX: 'auto', overflowY: 'auto', maxHeight: 360 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
               <thead>
                 <tr style={{ background: '#f8f9fa' }}>
                   {['Cron', 'Estado', 'Procesadas', 'Guardadas', 'Saltadas',
@@ -328,7 +349,7 @@ export default function ScraperMonitor() {
                 </tr>
               </thead>
               <tbody>
-                {historico.map((h, i) => (
+                {_historicoFiltrado.map((h, i) => (
                   <tr key={h.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
                     <td style={{ padding: '6px 10px' }}>{cronLabel(h.cron_nombre)}</td>
                     <td style={{ padding: '6px 10px' }}>
@@ -355,7 +376,7 @@ export default function ScraperMonitor() {
               </tbody>
             </table>
           </div>
-        )}
+        )})()}
       </div>
 
       <style>{`@keyframes mon-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }`}</style>
