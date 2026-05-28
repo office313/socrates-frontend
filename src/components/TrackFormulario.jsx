@@ -326,13 +326,14 @@ export default function TrackFormulario({
   return (
     <div style={{
       background: 'white', borderRadius: 14, border: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column', overflow: 'hidden',
+      display: 'flex', flexDirection: 'column', overflow: 'visible',
     }}>
       {/* HEADER del formulario con navegación PROMINENTE prev/next */}
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 20px', background: '#fafbfc', borderBottom: '1px solid var(--border)',
+        padding: '10px 20px', background: '#fafbfc', borderBottom: '1px solid var(--border)',
         gap: 16, flexWrap: 'wrap',
+        position: 'sticky', top: 0, zIndex: 30, borderRadius: '14px 14px 0 0',
       }}>
         {/* Izq: prev + posición + next */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -372,13 +373,19 @@ export default function TrackFormulario({
       </div>
 
       {/* BODY scrollable, sin position: fixed */}
-      <div style={{ padding: '20px 28px' }}>
+      <div style={{ padding: '14px 28px' }}>
         <div style={{ maxWidth: 1280, margin: '0 auto' }}>
+
+          {/* ── BLOQUE SUPERIOR STICKY ──────────────────────────────── */}
+          <div style={{
+            position: 'sticky', top: 54, zIndex: 25, background: 'white',
+            paddingTop: 4, paddingBottom: 4,
+          }}>
 
             {/* ── CABECERA DESTACADA ───────────────────────────────────── */}
             <div style={{
               background: 'white', borderRadius: 14, border: '1px solid var(--border)',
-              padding: '24px 28px', marginBottom: 18,
+              padding: '16px 24px', marginBottom: 10,
               display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 1fr', gap: '20px 32px',
               alignItems: 'start',
             }}>
@@ -458,14 +465,14 @@ export default function TrackFormulario({
             {/* SocratesBloque ya trae su propio orb dinámico + título — no
                 añadimos wrapper con cabecera para evitar duplicación. Solo
                 scroll interno para que un análisis largo no infle la cabecera. */}
-            <div style={{ maxHeight: 260, overflowY: 'auto', marginBottom: 16 }}>
+            <div style={{ maxHeight: 260, overflowY: 'auto', marginBottom: 10 }}>
               <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
             </div>
 
             {/* ── PESTAÑAS ───────────────────────────────────────────── */}
             <div style={{
               display: 'inline-flex', gap: 4, padding: 4, background: 'white',
-              border: '1px solid var(--border)', borderRadius: 12, marginBottom: 16,
+              border: '1px solid var(--border)', borderRadius: 12, marginBottom: 12,
             }}>
               {tabs.map(t => {
                 const activo = tab === t.key
@@ -479,6 +486,9 @@ export default function TrackFormulario({
                 )
               })}
             </div>
+
+          </div>
+          {/* ── fin BLOQUE SUPERIOR STICKY ──────────────────────────── */}
 
             {/* ── CONTENIDO POR PESTAÑA ─────────────────────────────── */}
             {tab === 'general' && (
