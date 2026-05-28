@@ -116,16 +116,16 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
         background: seleccionada ? '#f5f9ff' : 'white',
         border: `1px solid ${resaltada ? '#0f2d57' : '#e0e0e0'}`,
         boxShadow: seleccionada ? '0 0 0 1px #0f2d57' : 'none',
-        borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+        borderRadius: 12, padding: '10px 12px', cursor: 'pointer',
         transition: 'all 0.15s',
       }}>
       <div style={{
-        fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500,
+        fontSize: 12, color: '#455a64', marginBottom: 12, fontWeight: 500,
         lineHeight: 1.3, minHeight: '2.6em',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>{estado}</div>
-      <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
-      <div style={{ fontSize: 14, color: '#78909c', marginTop: 6 }}>{formatearMonto(monto)}</div>
+      <div style={{ fontSize: 24, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: 12, color: '#78909c', marginTop: 6 }}>{formatearMonto(monto)}</div>
     </div>
   )
 }
@@ -405,8 +405,13 @@ export default function Pipeline() {
     })
   }
 
+  const esFormulario = vista === 'formulario'
+
   return (
-    <div style={{ padding: 24 }}>
+    <div style={esFormulario
+      ? { padding: 24, height: '100vh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
+      : { padding: 24 }
+    }>
       {/* Modal pequeño antiguo ELIMINADO 2026-05-24: el flujo de clic en una
           fila del Listado ahora abre directamente la vista Formulario (modo
           fullscreen con cabecera destacada y 3 pestañas) sobre esa licitación.
@@ -422,9 +427,9 @@ export default function Pipeline() {
         <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} />
       )}
 
-      <div style={{ marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
           {/* Toggle de vista PROMINENTE: bordeado en azul corporativo,
               activo con bg sólido. Separado del resto de filtros para que
               destaque a primera vista. */}
@@ -441,7 +446,7 @@ export default function Pipeline() {
                   setVista(val)
                 }}
                   style={{
-                    padding: '9px 22px', borderRadius: 8, cursor: 'pointer', fontSize: 14,
+                    padding: '6px 16px', borderRadius: 8, cursor: 'pointer', fontSize: 14,
                     fontWeight: 700, letterSpacing: 0.2,
                     color: activo ? 'white' : 'var(--blue-dark)',
                     background: activo ? 'var(--blue-dark)' : 'transparent',
@@ -458,8 +463,8 @@ export default function Pipeline() {
             value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
             onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
             style={{
-              padding: '8px 12px', border: '1px solid #e0e0e0',
-              borderRadius: 8, background: 'white', fontSize: 13, color: '#37474f', cursor: 'pointer',
+              padding: '6px 10px', border: '1px solid #e0e0e0',
+              borderRadius: 8, background: 'white', fontSize: 12, color: '#37474f', cursor: 'pointer',
             }}>
             <option value="">Otros estados</option>
             {ESTADOS_DROPDOWN.map(estado => (
@@ -472,7 +477,7 @@ export default function Pipeline() {
             {[['activas', 'Activas'], ['todas', 'Todas']].map(([val, label]) => (
               <span key={val} onClick={() => cambiarAlcance(val)}
                 style={{
-                  padding: '5px 16px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
+                  padding: '4px 12px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
                   fontWeight: alcance === val ? 600 : 400,
                   color: alcance === val ? '#0f2d57' : '#78909c',
                   background: alcance === val ? 'white' : 'transparent',
@@ -484,7 +489,7 @@ export default function Pipeline() {
             ))}
           </div>
           <button onClick={() => setModalManual(true)}
-            style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            style={{ padding: '6px 14px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             + Añadir a Track
           </button>
         </div>
@@ -492,7 +497,7 @@ export default function Pipeline() {
 
       {/* Buscador SIEMPRE visible (en ambas vistas). En modo Formulario,
           al aplicar búsqueda, formularioIdx se resetea a 0 vía useEffect. */}
-      <div style={{ marginBottom: 16, position: 'relative' }}>
+      <div style={{ marginBottom: 10, position: 'relative' }}>
         <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
           🔍
         </span>
@@ -506,10 +511,10 @@ export default function Pipeline() {
           placeholder="Buscar por número, institución, descripción, palabra clave..."
           style={{
             width: '100%',
-            padding: '12px 110px 12px 44px',
+            padding: '8px 110px 8px 44px',
             border: `1px solid ${inputFocus ? 'var(--blue)' : '#e5e7eb'}`,
             borderRadius: 12,
-            fontSize: 14,
+            fontSize: 13,
             outline: 'none',
             background: 'white',
             boxShadow: inputFocus ? '0 0 0 3px rgba(21, 101, 192, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
@@ -529,13 +534,13 @@ export default function Pipeline() {
         <button onClick={aplicarBusqueda}
           style={{
             position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-            padding: '8px 16px', background: 'var(--blue)', color: 'white',
+            padding: '6px 14px', background: 'var(--blue)', color: 'white',
             border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
           }}>Buscar</button>
       </div>
 
       {/* 7 cards grandes — conteo y monto sobre todo el pipeline */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 12, marginBottom: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10, marginBottom: 12 }}>
         {ESTADOS_CARDS.map(estado => {
           const delEstado = items.filter(it => it.estado === estado)
           return (
@@ -555,19 +560,21 @@ export default function Pipeline() {
           las flechas prev/next del TrackFormulario navegan SOLO por `filtrados`. */}
       {vista === 'formulario' ? (
         filtrados.length > 0 ? (
-          <TrackFormulario
-            items={filtrados}
-            currentIdx={Math.min(formularioIdx, filtrados.length - 1)}
-            onIndexChange={setFormularioIdx}
-            onSave={guardarFormulario}
-            onDelete={eliminarFormulario}
-            onReload={cargar}
-            onClose={() => setVista('listado')}
-            onEstudio={(form) => setModalEstudio({
-              keywords: [],
-              numeroActo: form.numero_acto_derivado || form.numero_acto,
-            })}
-          />
+          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
+            <TrackFormulario
+              items={filtrados}
+              currentIdx={Math.min(formularioIdx, filtrados.length - 1)}
+              onIndexChange={setFormularioIdx}
+              onSave={guardarFormulario}
+              onDelete={eliminarFormulario}
+              onReload={cargar}
+              onClose={() => setVista('listado')}
+              onEstudio={(form) => setModalEstudio({
+                keywords: [],
+                numeroActo: form.numero_acto_derivado || form.numero_acto,
+              })}
+            />
+          </div>
         ) : (
           <div style={{ padding: 40, textAlign: 'center', background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', color: '#666' }}>
             No hay licitaciones que mostrar con los filtros actuales.
