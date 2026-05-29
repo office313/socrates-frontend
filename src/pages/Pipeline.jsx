@@ -407,28 +407,44 @@ export default function Pipeline() {
 
   const esFormulario = vista === 'formulario'
 
-  return (
-    <div style={esFormulario
-      ? { padding: 24, height: '100vh', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', overflow: 'hidden' }
-      : { padding: 24 }
-    }>
-      {/* Modal pequeño antiguo ELIMINADO 2026-05-24: el flujo de clic en una
-          fila del Listado ahora abre directamente la vista Formulario (modo
-          fullscreen con cabecera destacada y 3 pestañas) sobre esa licitación.
-          Ver onClick en la fila de la tabla más abajo. */}
-      {modalEstudio && (
-        <ModalEstudioMercado
-          keywords={modalEstudio.keywords}
-          numeroActo={modalEstudio.numeroActo}
-          onClose={() => setModalEstudio(null)}
-        />
-      )}
-      {modalManual && (
-        <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} />
-      )}
+  // Controles de Track (cabecera + buscador + 7 cards). En Listado se renderizan
+  // a ancho completo arriba; en Formulario se inyectan dentro de la columna
+  // izquierda estrecha de TrackFormulario (compact=true → cards en grid de 3,
+  // sin márgenes inferiores porque la columna ya espacia con gap).
+  // Controles "Activas/Todas" + "+ Añadir a Track". En Listado viven en el
+  // header izquierdo; en Formulario se inyectan en la fila de pestañas de la
+  // columna derecha (topRightControls) y se omiten del header compact.
+  const renderAlcanceYAñadir = () => (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
+        {[['activas', 'Activas'], ['todas', 'Todas']].map(([val, label]) => (
+          <span key={val} onClick={() => cambiarAlcance(val)}
+            style={{
+              padding: '4px 12px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
+              fontWeight: alcance === val ? 600 : 400,
+              color: alcance === val ? '#0f2d57' : '#78909c',
+              background: alcance === val ? 'white' : 'transparent',
+              boxShadow: alcance === val ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
+              transition: 'all 0.15s', userSelect: 'none',
+            }}>
+            {label}
+          </span>
+        ))}
+      </div>
+      <button onClick={() => setModalManual(true)}
+        style={{ padding: '6px 14px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+        + Añadir a Track
+      </button>
+    </div>
+  )
 
-      <div style={{ marginBottom: 14, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+  const renderControles = (compact) => (
+    <>
+      <div style={{
+        marginBottom: compact ? 0 : 14, display: 'flex', justifyContent: 'space-between',
+        alignItems: 'center', gap: 12, flexWrap: 'wrap',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
           <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
           {/* Toggle de vista PROMINENTE: bordeado en azul corporativo,
               activo con bg sólido. Separado del resto de filtros para que
@@ -458,7 +474,7 @@ export default function Pipeline() {
             })}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <select
             value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
             onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
@@ -473,31 +489,15 @@ export default function Pipeline() {
               </option>
             ))}
           </select>
-          <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
-            {[['activas', 'Activas'], ['todas', 'Todas']].map(([val, label]) => (
-              <span key={val} onClick={() => cambiarAlcance(val)}
-                style={{
-                  padding: '4px 12px', borderRadius: 999, cursor: 'pointer', fontSize: 13,
-                  fontWeight: alcance === val ? 600 : 400,
-                  color: alcance === val ? '#0f2d57' : '#78909c',
-                  background: alcance === val ? 'white' : 'transparent',
-                  boxShadow: alcance === val ? '0 1px 2px rgba(0,0,0,0.08)' : 'none',
-                  transition: 'all 0.15s', userSelect: 'none',
-                }}>
-                {label}
-              </span>
-            ))}
-          </div>
-          <button onClick={() => setModalManual(true)}
-            style={{ padding: '6px 14px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-            + Añadir a Track
-          </button>
+          {/* En modo Formulario (compact) estos controles se mueven a la fila
+              de pestañas de la columna derecha vía topRightControls. */}
+          {!compact && renderAlcanceYAñadir()}
         </div>
       </div>
 
       {/* Buscador SIEMPRE visible (en ambas vistas). En modo Formulario,
           al aplicar búsqueda, formularioIdx se resetea a 0 vía useEffect. */}
-      <div style={{ marginBottom: 10, position: 'relative' }}>
+      <div style={{ marginBottom: compact ? 0 : 10, position: 'relative' }}>
         <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
           🔍
         </span>
@@ -508,7 +508,7 @@ export default function Pipeline() {
           onKeyDown={e => { if (e.key === 'Enter') aplicarBusqueda() }}
           onFocus={() => setInputFocus(true)}
           onBlur={() => setInputFocus(false)}
-          placeholder="Buscar por número, institución, descripción, palabra clave..."
+          placeholder="Buscar por número, institución, descripción..."
           style={{
             width: '100%',
             padding: '8px 110px 8px 44px',
@@ -539,9 +539,10 @@ export default function Pipeline() {
           }}>Buscar</button>
       </div>
 
-      {/* 7 cards grandes — conteo y monto sobre todo el pipeline */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 10, marginBottom: 12 }}>
-        {ESTADOS_CARDS.map(estado => {
+      {/* Cards de estado — conteo y monto sobre todo el pipeline. En columna
+          estrecha (compact) van en grid de 3; a ancho completo, los 7 en fila. */}
+      <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(3, 1fr)' : 'repeat(7, 1fr)', gap: compact ? 8 : 10, marginBottom: compact ? 0 : 12 }}>
+        {(compact ? ESTADOS_CARDS.filter(e => e !== 'Entregado parcialmente') : ESTADOS_CARDS).map(estado => {
           const delEstado = items.filter(it => it.estado === estado)
           return (
             <CardEstado key={estado}
@@ -554,36 +555,73 @@ export default function Pipeline() {
           )
         })}
       </div>
+    </>
+  )
 
-      {/* Render condicional según la vista activa. Filtros + buscador + cards
-          quedan SIEMPRE arriba; aquí solo cambia el cuerpo. En modo formulario,
-          las flechas prev/next del TrackFormulario navegan SOLO por `filtrados`. */}
-      {vista === 'formulario' ? (
-        filtrados.length > 0 ? (
-          <div style={{ flex: 1, minHeight: 0, overflow: 'hidden' }}>
-            <TrackFormulario
-              items={filtrados}
-              currentIdx={Math.min(formularioIdx, filtrados.length - 1)}
-              onIndexChange={setFormularioIdx}
-              onSave={guardarFormulario}
-              onDelete={eliminarFormulario}
-              onReload={cargar}
-              onClose={() => setVista('listado')}
-              onEstudio={(form) => setModalEstudio({
-                keywords: [],
-                numeroActo: form.numero_acto_derivado || form.numero_acto,
-              })}
-            />
-          </div>
-        ) : (
-          <div style={{ padding: 40, textAlign: 'center', background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', color: '#666' }}>
-            No hay licitaciones que mostrar con los filtros actuales.
-            <button onClick={() => setVista('listado')}
-              style={{ display: 'block', margin: '16px auto 0', padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              Volver al Listado
-            </button>
-          </div>
-        )
+  // Modales comunes a ambas vistas.
+  const modales = (
+    <>
+      {/* Modal pequeño antiguo ELIMINADO 2026-05-24: el flujo de clic en una
+          fila del Listado ahora abre directamente la vista Formulario (modo
+          fullscreen con cabecera destacada y 3 pestañas) sobre esa licitación.
+          Ver onClick en la fila de la tabla más abajo. */}
+      {modalEstudio && (
+        <ModalEstudioMercado
+          keywords={modalEstudio.keywords}
+          numeroActo={modalEstudio.numeroActo}
+          onClose={() => setModalEstudio(null)}
+        />
+      )}
+      {modalManual && (
+        <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} />
+      )}
+    </>
+  )
+
+  // ── MODO FORMULARIO: dos columnas a pantalla completa ──────────────────
+  // Columna izquierda (controles + cabecera + Sócrates) y derecha (pestañas +
+  // contenido) viven dentro de TrackFormulario; aquí solo le pasamos los
+  // controles de Track como `topControls`.
+  if (esFormulario && filtrados.length > 0) {
+    return (
+      <>
+        {modales}
+        <div style={{ height: '100vh', boxSizing: 'border-box', padding: 16, overflow: 'hidden' }}>
+          <TrackFormulario
+            items={filtrados}
+            currentIdx={Math.min(formularioIdx, filtrados.length - 1)}
+            onIndexChange={setFormularioIdx}
+            onSave={guardarFormulario}
+            onDelete={eliminarFormulario}
+            onReload={cargar}
+            onClose={() => setVista('listado')}
+            onEstudio={(form) => setModalEstudio({
+              keywords: [],
+              numeroActo: form.numero_acto_derivado || form.numero_acto,
+            })}
+            topControls={renderControles(true)}
+            topRightControls={renderAlcanceYAñadir()}
+          />
+        </div>
+      </>
+    )
+  }
+
+  // ── MODO LISTADO (y formulario sin resultados): controles a ancho completo
+  // arriba + tabla (o aviso de vacío) debajo. Idéntico al diseño previo. ──
+  return (
+    <div style={{ padding: 24 }}>
+      {modales}
+      {renderControles(false)}
+
+      {esFormulario ? (
+        <div style={{ padding: 40, textAlign: 'center', background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', color: '#666' }}>
+          No hay licitaciones que mostrar con los filtros actuales.
+          <button onClick={() => setVista('listado')}
+            style={{ display: 'block', margin: '16px auto 0', padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Volver al Listado
+          </button>
+        </div>
       ) : (
       /* Scroll container dedicado: las filas scrollean DENTRO de la caja,
          el thead se queda pegado arriba de la caja (sticky top: 0 relativo

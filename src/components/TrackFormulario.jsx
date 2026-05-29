@@ -95,6 +95,7 @@ function Chip({ estado }) {
 export default function TrackFormulario({
   items, currentIdx, onIndexChange,
   onSave, onDelete, onReload, onClose, onEstudio,
+  topControls, topRightControls,
 }) {
   const item = items[currentIdx] || null
   const hasPrev = currentIdx > 0
@@ -323,162 +324,181 @@ export default function TrackFormulario({
   const institucionMostrada = form.derivado?.institucion || form.institucion || ''
   const unidadMostrada = form.derivado?.unidad_compradora || form.unidad_compra || ''
 
+  // Etiqueta gris pequeña reutilizada en cada bloque de la pastilla izquierda.
+  const labelStyle = { fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 4 }
+
   return (
     <div style={{
-      background: 'white', borderRadius: 14, border: '1px solid var(--border)',
-      display: 'flex', flexDirection: 'column', overflow: 'visible',
+      display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden',
     }}>
-      {/* HEADER del formulario con navegación PROMINENTE prev/next */}
+      {/* ── BLOQUE DE DOS COLUMNAS ──────────────────────────────────── */}
       <div style={{
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 20px', background: '#fafbfc', borderBottom: '1px solid var(--border)',
-        gap: 16, flexWrap: 'wrap',
-        position: 'sticky', top: 0, zIndex: 30, borderRadius: '14px 14px 0 0',
+        display: 'flex', flexDirection: 'row', flex: 1, minHeight: 0,
+        gap: 12, overflow: 'hidden',
       }}>
-        {/* Izq: prev + posición + next */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <button onClick={irAnterior} disabled={!hasPrev} title="Anterior (←)"
-            style={navBtnStyle(!hasPrev)}>
-            <span style={{ fontSize: 22, lineHeight: 1, marginRight: 2 }}>‹</span> Anterior
-          </button>
+
+        {/* ════ COLUMNA IZQUIERDA (1/4): controles + cabecera + Sócrates ════ */}
+        <div style={{
+          flex: '0 0 25%', minWidth: 340, maxWidth: 440,
+          display: 'flex', flexDirection: 'column', gap: 12,
+          overflowY: 'auto', minHeight: 0,
+        }}>
+          {/* 1-3. Controles de Track (cabecera + buscador + cards) inyectados
+              desde Pipeline.jsx. En Listado se renderizan a ancho completo. */}
+          {topControls}
+
+          {/* 4. Navegación Anterior / N de N / Siguiente */}
           <div style={{
-            padding: '8px 14px', background: 'white', border: '1px solid var(--border)',
-            borderRadius: 8, fontSize: 13, fontWeight: 600, color: 'var(--blue-dark)',
-            minWidth: 86, textAlign: 'center',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 8, flexWrap: 'wrap',
           }}>
-            {currentIdx + 1} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>de {items.length}</span>
-          </div>
-          <button onClick={irSiguiente} disabled={!hasNext} title="Siguiente (→)"
-            style={navBtnStyle(!hasNext)}>
-            Siguiente <span style={{ fontSize: 22, lineHeight: 1, marginLeft: 2 }}>›</span>
-          </button>
-        </div>
-
-        {/* Dch: dirty indicator */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          {dirty && (
-            <span style={{
-              fontSize: 12, fontWeight: 600, color: '#e65100',
-              padding: '6px 12px', background: '#fff3e0', borderRadius: 999,
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}>
-              <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#e65100' }} />
-              Cambios sin guardar
-            </span>
-          )}
-          <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-            Tip: ← → para navegar · Esc para volver al Listado
-          </span>
-        </div>
-      </div>
-
-      {/* BODY scrollable, sin position: fixed */}
-      <div style={{ padding: '14px 28px' }}>
-        <div style={{ maxWidth: 1280, margin: '0 auto' }}>
-
-          {/* ── BLOQUE SUPERIOR STICKY ──────────────────────────────── */}
-          <div style={{
-            position: 'sticky', top: 54, zIndex: 25, background: 'white',
-            paddingTop: 4, paddingBottom: 4,
-          }}>
-
-            {/* ── CABECERA DESTACADA ───────────────────────────────────── */}
+            <button onClick={irAnterior} disabled={!hasPrev} title="Anterior (←)"
+              style={navBtnStyle(!hasPrev)}>
+              <span style={{ fontSize: 18, lineHeight: 1, marginRight: 2 }}>‹</span> Anterior
+            </button>
             <div style={{
-              background: 'white', borderRadius: 14, border: '1px solid var(--border)',
-              padding: '16px 24px', marginBottom: 10,
-              display: 'grid', gridTemplateColumns: '1.4fr 0.8fr 1fr', gap: '20px 32px',
-              alignItems: 'start',
+              fontSize: 12, fontWeight: 600, color: 'var(--blue-dark)',
+              textAlign: 'center', whiteSpace: 'nowrap',
             }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 6 }}>Nº ACTO</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 26, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15, wordBreak: 'break-all' }}>
-                    {numActivo || '—'}
-                  </div>
-                  {/* Badge de relanzamiento: solo si hay convocatorias previas
-                      capturadas. Discreto pero visible — color ámbar, icono ⟲. */}
-                  {form.convocatorias_anteriores && form.convocatorias_anteriores.length > 0 && (
-                    <span title="Esta licitación fue relanzada por la institución; hay convocatorias previas"
-                      style={{
-                        display: 'inline-flex', alignItems: 'center', gap: 5,
-                        padding: '4px 11px', background: '#fff7e6',
-                        color: '#b25c00', border: '1px solid #ffd591',
-                        borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: 0.2,
-                      }}>
-                      <span style={{ fontSize: 14, lineHeight: 1 }}>⟲</span>
-                      Relanzamiento · {form.convocatorias_anteriores.length} anterior{form.convocatorias_anteriores.length === 1 ? '' : 'es'}
-                    </span>
-                  )}
+              {currentIdx + 1} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>de {items.length}</span>
+            </div>
+            <button onClick={irSiguiente} disabled={!hasNext} title="Siguiente (→)"
+              style={navBtnStyle(!hasNext)}>
+              Siguiente <span style={{ fontSize: 18, lineHeight: 1, marginLeft: 2 }}>›</span>
+            </button>
+          </div>
+
+          {/* 5. ANÁLISIS DE SÓCRATES (banda) — entre navegación y pastilla.
+              SocratesBloque ya trae su propio orb dinámico + título. */}
+          <div style={{ flexShrink: 0 }}>
+            <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
+          </div>
+
+          {/* 6. Pastilla identificativa: ocupa el espacio vertical disponible
+              entre Sócrates y el Tip, con scroll propio si su contenido excede. */}
+          <div style={{
+            background: 'white', borderRadius: 14, border: '1px solid var(--border)',
+            padding: '12px 14px',
+            flex: 1, minHeight: 0, overflowY: 'auto',
+          }}>
+            {dirty && (
+              <span style={{
+                fontSize: 12, fontWeight: 600, color: '#e65100',
+                padding: '5px 10px', background: '#fff3e0', borderRadius: 999,
+                display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 10,
+              }}>
+                <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#e65100' }} />
+                Cambios sin guardar
+              </span>
+            )}
+
+            {/* Nº ACTO */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={labelStyle}>Nº ACTO</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15, wordBreak: 'break-all' }}>
+                  {numActivo || '—'}
                 </div>
-                {form.numero_acto_derivado && form.numero_acto && form.numero_acto !== form.numero_acto_derivado && (
-                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-                    CL Origen: <strong style={{ color: 'var(--blue)' }}>{form.numero_acto}</strong>
-                  </div>
+                {/* Badge de relanzamiento: solo si hay convocatorias previas
+                    capturadas. Discreto pero visible — color ámbar, icono ⟲. */}
+                {form.convocatorias_anteriores && form.convocatorias_anteriores.length > 0 && (
+                  <span title="Esta licitación fue relanzada por la institución; hay convocatorias previas"
+                    style={{
+                      display: 'inline-flex', alignItems: 'center', gap: 5,
+                      padding: '4px 11px', background: '#fff7e6',
+                      color: '#b25c00', border: '1px solid #ffd591',
+                      borderRadius: 999, fontSize: 12, fontWeight: 700, letterSpacing: 0.2,
+                    }}>
+                    <span style={{ fontSize: 14, lineHeight: 1 }}>⟲</span>
+                    Relanzamiento · {form.convocatorias_anteriores.length} anterior{form.convocatorias_anteriores.length === 1 ? '' : 'es'}
+                  </span>
                 )}
               </div>
-
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 6 }}>ESTADO</div>
-                <Chip estado={form.estado} />
-                {form.fecha_cierre && (
-                  <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-muted)' }}>
-                    Cierre: <strong style={{ color: 'var(--text)' }}>{fmtFecha(form.fecha_cierre)}</strong>
-                  </div>
-                )}
-              </div>
-
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 6 }}>PRECIO OFERTADO</div>
-                <div style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15 }}>
-                  {form.precio_ofertado ? `US$ ${formatCurrency(form.precio_ofertado)}` : '—'}
-                </div>
-                {form.precio_referencia ? (
-                  <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-                    Ref: <strong style={{ color: 'var(--text)' }}>US$ {formatCurrency(form.precio_referencia)}</strong>
-                  </div>
-                ) : null}
-              </div>
-
-              <div style={{ gridColumn: '1 / 3' }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 6 }}>INSTITUCIÓN</div>
-                <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
-                  {institucionMostrada || '—'}
-                </div>
-              </div>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1, marginBottom: 6 }}>UNIDAD DE COMPRA</div>
-                <div style={{ fontSize: 15, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>
-                  {unidadMostrada || '—'}
-                </div>
-              </div>
-
-              {descripcionMostrada && (
-                <div style={{ gridColumn: '1 / -1', paddingTop: 4, borderTop: '1px dashed var(--border)' }}>
-                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.45, marginTop: 12 }}>
-                    {descripcionMostrada}
-                  </div>
+              {form.numero_acto_derivado && form.numero_acto && form.numero_acto !== form.numero_acto_derivado && (
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                  CL Origen: <strong style={{ color: 'var(--blue)' }}>{form.numero_acto}</strong>
                 </div>
               )}
             </div>
 
-            {/* ── PANEL SÓCRATES (visible en TODAS las pestañas) ───────── */}
-            {/* SocratesBloque ya trae su propio orb dinámico + título — no
-                añadimos wrapper con cabecera para evitar duplicación. Solo
-                scroll interno para que un análisis largo no infle la cabecera. */}
-            <div style={{ maxHeight: 260, overflowY: 'auto', marginBottom: 10 }}>
-              <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
+            {/* ESTADO */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={labelStyle}>ESTADO</div>
+              <Chip estado={form.estado} />
+              {form.fecha_cierre && (
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                  Cierre: <strong style={{ color: 'var(--text)' }}>{fmtFecha(form.fecha_cierre)}</strong>
+                </div>
+              )}
             </div>
 
-            {/* ── PESTAÑAS ───────────────────────────────────────────── */}
+            {/* PRECIO OFERTADO */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={labelStyle}>PRECIO OFERTADO</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15 }}>
+                {form.precio_ofertado ? `US$ ${formatCurrency(form.precio_ofertado)}` : '—'}
+              </div>
+              {form.precio_referencia ? (
+                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                  Ref: <strong style={{ color: 'var(--text)' }}>US$ {formatCurrency(form.precio_referencia)}</strong>
+                </div>
+              ) : null}
+            </div>
+
+            {/* INSTITUCIÓN */}
+            <div style={{ marginBottom: 10 }}>
+              <div style={labelStyle}>INSTITUCIÓN</div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
+                {institucionMostrada || '—'}
+              </div>
+            </div>
+
+            {/* UNIDAD DE COMPRA */}
+            <div style={{ marginBottom: descripcionMostrada ? 10 : 0 }}>
+              <div style={labelStyle}>UNIDAD DE COMPRA</div>
+              <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>
+                {unidadMostrada || '—'}
+              </div>
+            </div>
+
+            {/* Descripción */}
+            {descripcionMostrada && (
+              <div style={{ paddingTop: 8, borderTop: '1px dashed var(--border)' }}>
+                <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.45 }}>
+                  {descripcionMostrada}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 7. Tip de teclado al fondo de la columna */}
+          <div style={{ marginTop: 'auto', paddingTop: 4, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+            Tip: ← → para navegar · Esc para volver al Listado
+          </div>
+        </div>
+
+        {/* ════ COLUMNA DERECHA (3/4): pestañas + contenido ════ */}
+        <div style={{
+          flex: 1, display: 'flex', flexDirection: 'column',
+          minWidth: 0, minHeight: 0, overflow: 'hidden',
+          background: 'white', borderRadius: 14, border: '1px solid var(--border)',
+          padding: 12,
+        }}>
+          {/* ── PESTAÑAS + controles (Activas/Todas, + Añadir) en la misma fila ── */}
+          <div style={{
+            flexShrink: 0, marginBottom: 10,
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            gap: 12, flexWrap: 'wrap',
+          }}>
             <div style={{
-              display: 'inline-flex', gap: 4, padding: 4, background: 'white',
-              border: '1px solid var(--border)', borderRadius: 12, marginBottom: 12,
+              display: 'inline-flex', gap: 4, padding: 3, background: 'white',
+              border: '1px solid var(--border)', borderRadius: 12,
             }}>
               {tabs.map(t => {
                 const activo = tab === t.key
                 return (
                   <button key={t.key} onClick={() => setTab(t.key)} style={{
-                    padding: '9px 22px', borderRadius: 8, fontSize: 13.5, fontWeight: 600,
+                    padding: '6px 16px', borderRadius: 8, fontSize: 12, fontWeight: 600,
                     color: activo ? 'white' : 'var(--text-muted)',
                     background: activo ? 'var(--blue-dark)' : 'transparent',
                     border: 'none', cursor: 'pointer', transition: 'all 0.15s',
@@ -486,11 +506,11 @@ export default function TrackFormulario({
                 )
               })}
             </div>
-
+            {topRightControls}
           </div>
-          {/* ── fin BLOQUE SUPERIOR STICKY ──────────────────────────── */}
 
-            {/* ── CONTENIDO POR PESTAÑA ─────────────────────────────── */}
+          {/* ── CONTENIDO POR PESTAÑA (único bloque scrolleable) ───── */}
+          <div style={{ flex: 1, overflowY: 'auto', minHeight: 0 }}>
             {tab === 'general' && (
               <TabGeneral
                 form={form} set={set} input={input} viewField={viewField}
@@ -514,14 +534,16 @@ export default function TrackFormulario({
             {tab === 'pliego' && (
               <TabPliego form={form} />
             )}
-
+          </div>
         </div>
       </div>
 
-      {/* FOOTER */}
+      {/* FOOTER a ancho completo de las dos columnas */}
       <div style={{
+        flexShrink: 0, marginTop: 12,
         display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
-        padding: '14px 24px', background: 'white', borderTop: '1px solid var(--border)',
+        padding: '12px 16px', background: 'white', borderRadius: 14,
+        border: '1px solid var(--border)',
       }}>
         <div style={{ display: 'flex', gap: 8 }}>
           {item?.id && onEstudio && (
@@ -931,15 +953,15 @@ function TabPliego({ form }) {
   const numActivo = form.numero_acto_derivado || form.numero_acto
   if (esFuenteACP(form)) {
     return (
-      <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto', minHeight: 600 }}>
+      <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto', height: '100%' }}>
         <PanelLicitacionACP lic={form} />
       </div>
     )
   }
   return (
-    <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden' }}>
+    <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', height: '100%' }}>
       <iframe key={urlPliego || numActivo} src={urlPliego}
-        style={{ width: '100%', height: 'calc(100vh - 360px)', minHeight: 600, border: 'none', display: 'block' }} />
+        style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} />
     </div>
   )
 }
