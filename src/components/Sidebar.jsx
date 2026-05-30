@@ -1,6 +1,6 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard } from 'lucide-react'
-import iconoSocrates from '../assets/socratespro-icono-oscuro.svg'
+import iconoSocrates from '../assets/socratespro-icono-rojo.svg'
 
 const getNavItems = (usuario) => {
   const items = [
@@ -47,7 +47,7 @@ export default function Sidebar({ usuario }) {
       top: 0, left: 0, bottom: 0,
       zIndex: 100,
     }}>
-      <img src={iconoSocrates} alt="Socrates Pro" width="46" height="46" style={{ display: 'block', marginBottom: 24 }} />
+      <img src={iconoSocrates} alt="Socrates Pro" width="48" height="48" style={{ display: 'block', marginBottom: 24 }} />
 
       {esCatplan ? (
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>
