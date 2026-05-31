@@ -283,7 +283,7 @@ export default function Registro() {
                   {PAISES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </Campo></div>
-              <div style={{ flex: 1 }}><Campo label="Código postal"><input style={is} value={form.codigo_postal} onChange={setF('codigo_postal')} required /></Campo></div>
+              <div style={{ flex: 1 }}><Campo label="Código postal (opcional)"><input style={is} value={form.codigo_postal} onChange={setF('codigo_postal')} /></Campo></div>
             </div>
             <Campo label="Teléfono"><input style={is} value={form.telefono} onChange={setF('telefono')} required /></Campo>
 
@@ -336,14 +336,21 @@ export default function Registro() {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>{p.nombre}</span>
-                      <span style={{ fontWeight: 700, fontSize: 15 }}>
-                        ${p.base_usd}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mes</span>
-                      </span>
+                      {p.base_lanzamiento_usd != null ? (
+                        <span style={{ fontWeight: 700, fontSize: 15 }}>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 400, textDecoration: 'line-through', marginRight: 6 }}>${p.base_usd}</span>
+                          ${p.base_lanzamiento_usd}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mes</span>
+                        </span>
+                      ) : (
+                        <span style={{ fontWeight: 700, fontSize: 15 }}>
+                          ${p.base_usd}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mes</span>
+                        </span>
+                      )}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                       {p.modulo_track ? 'Incluye módulo Track' : 'Radar, Watchlist, Explorer, Legal'}
                       {p.base_lanzamiento_usd != null && (
-                        <span style={{ color: 'var(--red)', fontWeight: 600 }}> · Lanzamiento ${p.base_lanzamiento_usd}/mes los primeros {p.lanzamiento_meses} meses</span>
+                        <span style={{ color: 'var(--red)', fontWeight: 600 }}> · Promoción los primeros {p.lanzamiento_meses} meses</span>
                       )}
                     </div>
                   </button>
