@@ -472,7 +472,7 @@ export default function TrackFormulario({
           </div>
 
           {/* 7. Tip de teclado al fondo de la columna */}
-          <div style={{ marginTop: 'auto', paddingTop: 4, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+          <div style={{ marginTop: 'auto', paddingTop: 4, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4, textAlign: 'center' }}>
             Tip: ← → para navegar · Esc para volver al Listado
           </div>
         </div>

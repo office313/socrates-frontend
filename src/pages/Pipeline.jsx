@@ -121,7 +121,7 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
       }}>
       <div style={{
         fontSize: 12, color: '#455a64', marginBottom: 12, fontWeight: 500,
-        lineHeight: 1.3, minHeight: '2.6em',
+        lineHeight: 1.3, minHeight: '3.9em',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>{estado}</div>
       <div style={{ fontSize: 24, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
@@ -474,13 +474,14 @@ export default function Pipeline() {
             })}
           </div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', width: compact ? '100%' : 'auto' }}>
           <select
             value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
             onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
             style={{
               padding: '6px 10px', border: '1px solid #e0e0e0',
               borderRadius: 8, background: 'white', fontSize: 12, color: '#37474f', cursor: 'pointer',
+              width: '100%',
             }}>
             <option value="">Otros estados</option>
             {ESTADOS_DROPDOWN.map(estado => (
