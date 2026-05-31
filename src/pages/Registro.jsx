@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import iconoSocrates from '../assets/socratespro-logo-completo.svg'
+import { PAISES } from '../utils/paises'
 
 // Estilos compartidos (coherentes con Login.jsx / Settings.jsx)
 const is = {
@@ -76,13 +77,13 @@ export default function Registro() {
   const simularPago = async () => {
     setError(''); setLoading(true)
     try {
-      // Simula el pago: activa la cuenta. Luego se inicia sesión con el login
-      // normal (con el email/contraseña elegidos en el alta).
+      // Simula el pago: activa la cuenta. La sesión ya está abierta desde el
+      // paso 1 (cookie), así que entra DIRECTO a la app sin re-login.
       const r = await fetch('/api/_staging/activar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ rt }),
       })
-      if (r.ok) window.location.href = '/app/login'
+      if (r.ok) window.location.href = '/app/'
       else setError('No se pudo simular el pago (pruebas).')
     } catch { setError('Error de conexión.') } finally { setLoading(false) }
   }
@@ -277,7 +278,11 @@ export default function Registro() {
               <div style={{ flex: 1 }}><Campo label="Provincia"><input style={is} value={form.provincia} onChange={setF('provincia')} required /></Campo></div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}><Campo label="País"><input style={is} value={form.pais} onChange={setF('pais')} required /></Campo></div>
+              <div style={{ flex: 1 }}><Campo label="País">
+                <select style={{ ...is, appearance: 'auto' }} value={form.pais} onChange={setF('pais')} required>
+                  {PAISES.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </Campo></div>
               <div style={{ flex: 1 }}><Campo label="Código postal"><input style={is} value={form.codigo_postal} onChange={setF('codigo_postal')} required /></Campo></div>
             </div>
             <Campo label="Teléfono"><input style={is} value={form.telefono} onChange={setF('telefono')} required /></Campo>
