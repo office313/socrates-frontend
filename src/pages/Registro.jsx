@@ -45,6 +45,34 @@ export default function Registro() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // Solo entorno de pruebas (localhost). En producción (socratespro.lat) es false
+  // y estos atajos no se muestran ni existen en el backend.
+  const esStaging = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+  const continuarStaging = async () => {
+    setError('')
+    try {
+      const r = await fetch(`/api/_staging/verify-url?email=${encodeURIComponent(form.email)}`)
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d.url) window.location.href = d.url
+      else setError('No se pudo continuar (pruebas). ¿Enviaste el paso anterior?')
+    } catch { setError('Error de conexión.') }
+  }
+
+  const simularPago = async () => {
+    setError(''); setLoading(true)
+    try {
+      // Simula el pago: activa la cuenta. Luego se inicia sesión con el login
+      // normal (con el email/contraseña elegidos en el alta).
+      const r = await fetch('/api/_staging/activar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rt }),
+      })
+      if (r.ok) window.location.href = '/app/login'
+      else setError('No se pudo simular el pago (pruebas).')
+    } catch { setError('Error de conexión.') } finally { setLoading(false) }
+  }
+
   // Paso 1
   const [form, setForm] = useState({
     nombre: '', email: '', password: '', empresa_nombre: '',
@@ -208,6 +236,12 @@ export default function Registro() {
                 Reenviar email
               </button>
             </p>
+            {esStaging && (
+              <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px dashed var(--border)' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Entorno de pruebas (el email no se envía de verdad)</div>
+                <button onClick={continuarStaging} style={btn(true)}>Continuar sin email →</button>
+              </div>
+            )}
           </div>
         )}
 
@@ -299,12 +333,25 @@ export default function Registro() {
               </div>
             </div>
 
-            <button type="button" disabled style={{ ...btn(false), cursor: 'not-allowed' }}>
-              Ir al pago seguro (próximamente)
-            </button>
-            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-              El pago con Stripe se habilita en la Fase 2. Tu cuenta queda guardada hasta entonces.
-            </p>
+            {esStaging ? (
+              <>
+                <button type="button" onClick={simularPago} disabled={loading} style={btn(!loading)}>
+                  {loading ? 'Activando...' : 'Simular pago y entrar (pruebas)'}
+                </button>
+                <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+                  Entorno de pruebas: el pago con Stripe aún no existe; esto simula la confirmación y te lleva al onboarding.
+                </p>
+              </>
+            ) : (
+              <>
+                <button type="button" disabled style={{ ...btn(false), cursor: 'not-allowed' }}>
+                  Ir al pago seguro (próximamente)
+                </button>
+                <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+                  El pago con Stripe se habilita en la Fase 2. Tu cuenta queda guardada hasta entonces.
+                </p>
+              </>
+            )}
           </div>
         )}
       </div>
