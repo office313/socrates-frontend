@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
 import Login from './pages/Login'
+import Registro from './pages/Registro'
 import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Analytics from './pages/Analytics'
@@ -19,6 +20,7 @@ function App() {
     <BrowserRouter basename="/app">
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/registro" element={<Registro />} />
         <Route path="/*" element={
           <Layout usuario={usuario} loading={loading}>
             <Routes>
