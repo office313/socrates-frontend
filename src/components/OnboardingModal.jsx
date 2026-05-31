@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import logo from '../assets/socratespro-logo-completo.svg'
+import iconoRojo from '../assets/socratespro-icono-rojo.svg'
 
 // Estilos coherentes con Login/Registro.
 const card = {
@@ -185,25 +186,26 @@ function Paso2FA({ onSiguiente, numero }) {
   )
 }
 
-// --- Paso 4: Keywords (+ expansión IA opcional) ---
+// --- Paso 4: Keywords (textarea separada por comas + expansión IA de 1 palabra) ---
+function parseKeywords(t) {
+  return Array.from(new Set(
+    (t || '').split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean)
+  ))
+}
+
 function PasoKeywords({ onSiguiente, numero }) {
   const [texto, setTexto] = useState('')
-  const [kws, setKws] = useState([])
+  const [aiTerm, setAiTerm] = useState('')
   const [sugerencias, setSugerencias] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [iaLoading, setIaLoading] = useState(false)
 
-  const añadirDesdeTexto = () => {
-    const nuevas = texto.split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean)
-    if (!nuevas.length) return
-    setKws(prev => Array.from(new Set([...prev, ...nuevas])))
-    setTexto('')
-  }
-  const quitar = (k) => setKws(prev => prev.filter(x => x !== k))
+  const lista = parseKeywords(texto)
 
+  // La IA expande UNA sola palabra (no se le manda la lista entera).
   const sugerirIA = async () => {
-    const base = texto.trim() || kws[kws.length - 1]
+    const base = aiTerm.trim().toLowerCase()
     if (!base) return
     setIaLoading(true); setError('')
     try {
@@ -212,17 +214,20 @@ function PasoKeywords({ onSiguiente, numero }) {
         body: JSON.stringify({ keyword: base }),
       })
       const d = await r.json().catch(() => ({}))
-      const exp = (d.expansiones || []).map(s => String(s).toLowerCase()).filter(s => !kws.includes(s))
+      const exp = (d.expansiones || []).map(s => String(s).toLowerCase()).filter(s => !lista.includes(s))
       setSugerencias(exp)
     } catch { setError('No se pudieron generar sugerencias ahora.') }
     finally { setIaLoading(false) }
   }
 
+  const añadirSugerencia = (s) => {
+    setTexto(prev => (prev.trim() ? prev.replace(/\s*,?\s*$/, '') + ', ' : '') + s)
+    setSugerencias(prev => prev.filter(x => x !== s))
+  }
+
   const guardarYSeguir = async () => {
-    // por si quedó texto sin añadir
-    const pendientes = texto.split(/[,\n]/).map(s => s.trim().toLowerCase()).filter(Boolean)
-    const todas = Array.from(new Set([...kws, ...pendientes]))
-    if (!todas.length) { setError('Añade al menos una palabra clave.'); return }
+    const todas = parseKeywords(texto)
+    if (!todas.length) { setError('Escribe al menos una palabra clave.'); return }
     setLoading(true); setError('')
     try {
       const r = await fetch('/api/keywords', {
@@ -239,44 +244,50 @@ function PasoKeywords({ onSiguiente, numero }) {
     <div>
       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{numero}</div>
       <h1 style={h1}>Tus palabras clave</h1>
-      <p style={sub}>¿Qué productos o servicios vendes al Estado? Añade palabras clave; tu Radar buscará licitaciones que coincidan. Ej: <em>tóner, computadoras, aire acondicionado, uniformes</em>.</p>
+      <p style={sub}>
+        ¿Qué productos o servicios vendes al Estado? Escríbelas <strong>separadas por comas</strong>.
+        Si ya las tienes en otra herramienta, puedes copiarlas y pegarlas aquí directamente.
+      </p>
       {error && <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, margin: '8px 0' }}>{error}</div>}
 
-      <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-        <input style={is} value={texto} onChange={e => setTexto(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); añadirDesdeTexto() } }}
-          placeholder="Escribe una palabra clave y pulsa Enter" />
-        <button style={{ ...btnGhost, width: 'auto', padding: '0 16px' }} onClick={añadirDesdeTexto}>Añadir</button>
+      <textarea
+        value={texto}
+        onChange={e => setTexto(e.target.value)}
+        rows={9}
+        placeholder="tóner, computadoras, aire acondicionado, uniformes, mantenimiento de equipos, papelería, sillas de oficina, ..."
+        style={{
+          width: '100%', boxSizing: 'border-box', padding: '12px 14px',
+          border: '1px solid var(--border)', borderRadius: 8, fontSize: 14,
+          outline: 'none', resize: 'vertical', lineHeight: 1.6, fontFamily: 'inherit',
+          minHeight: 160,
+        }}
+      />
+      <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+        Sepáralas por comas · <strong>{lista.length}</strong> {lista.length === 1 ? 'palabra clave' : 'palabras clave'} detectadas
       </div>
 
-      <div style={{ marginTop: 8 }}>
-        <button style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer', padding: 0 }}
-          onClick={sugerirIA} disabled={iaLoading}>
-          {iaLoading ? '✨ Generando sugerencias…' : '✨ Sugerir variantes con IA'}
-        </button>
+      {/* Sugerencia IA — acotada a UNA palabra */}
+      <div style={{ marginTop: 16, background: 'var(--gray)', borderRadius: 10, padding: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>✨ ¿Quieres ideas? Variantes de una palabra</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <input style={is} value={aiTerm} onChange={e => setAiTerm(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); sugerirIA() } }}
+            placeholder="ej: computadora" />
+          <button style={{ ...btnGhost, width: 'auto', padding: '0 16px', whiteSpace: 'nowrap' }} onClick={sugerirIA} disabled={iaLoading}>
+            {iaLoading ? 'Generando…' : 'Sugerir'}
+          </button>
+        </div>
+        {sugerencias.length > 0 && (
+          <div style={{ marginTop: 10, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {sugerencias.map(s => (
+              <button key={s} onClick={() => añadirSugerencia(s)}
+                style={{ background: 'white', color: 'var(--blue)', border: '1px dashed var(--blue)', borderRadius: 14, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
+                + {s}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
-
-      {sugerencias.length > 0 && (
-        <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {sugerencias.map(s => (
-            <button key={s} onClick={() => { setKws(prev => Array.from(new Set([...prev, s]))); setSugerencias(prev => prev.filter(x => x !== s)) }}
-              style={{ background: 'var(--blue-light)', color: 'var(--blue)', border: '1px dashed var(--blue)', borderRadius: 14, padding: '4px 10px', fontSize: 12, cursor: 'pointer' }}>
-              + {s}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {kws.length > 0 && (
-        <div style={{ marginTop: 14, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-          {kws.map(k => (
-            <span key={k} style={{ background: 'var(--gray)', borderRadius: 14, padding: '4px 10px', fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-              {k}
-              <button onClick={() => quitar(k)} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: 15, lineHeight: 1 }}>×</button>
-            </span>
-          ))}
-        </div>
-      )}
 
       <div style={{ marginTop: 22 }}>
         <button style={btnPrimary(!loading)} disabled={loading} onClick={guardarYSeguir}>
@@ -338,11 +349,11 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
     <div style={{ textAlign: 'center' }}>
       {estado === 'preparando' && (
         <>
-          <div style={{ fontSize: 44, marginBottom: 8 }}>📡</div>
+          <img src={iconoRojo} alt="" width="84" height="84"
+            style={{ display: 'block', margin: '8px auto 20px', animation: 'obSpin 1.05s linear infinite' }} />
+          <style>{`@keyframes obSpin{to{transform:rotate(360deg)}}`}</style>
           <h1 style={h1}>Tu Radar se está preparando</h1>
           <p style={sub}>Estamos buscando las licitaciones vigentes que coinciden con tus palabras clave. Tardará unos segundos…</p>
-          <div style={{ margin: '20px auto', width: 28, height: 28, border: '3px solid var(--border)', borderTopColor: 'var(--blue)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
-          <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
         </>
       )}
       {estado === 'listo' && (
