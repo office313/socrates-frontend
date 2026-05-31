@@ -90,6 +90,12 @@ export default function Login() {
             <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: loading ? '#ccc' : 'var(--red)', color: 'white', borderRadius: 8, fontSize: 14, fontWeight: 600, border: 'none', cursor: loading ? 'default' : 'pointer' }}>
               {loading ? 'Verificando...' : 'Entrar'}
             </button>
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button type="button" onClick={() => navigate('/recuperar')}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
           </form>
         ) : (
           <form onSubmit={handleTotp}>

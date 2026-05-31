@@ -3,6 +3,8 @@ import { useAuth } from './hooks/useAuth'
 import Layout from './components/Layout'
 import Login from './pages/Login'
 import Registro from './pages/Registro'
+import Recuperar from './pages/Recuperar'
+import Restablecer from './pages/Restablecer'
 import Dashboard from './pages/Dashboard'
 import Pipeline from './pages/Pipeline'
 import Analytics from './pages/Analytics'
@@ -21,6 +23,8 @@ function App() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/registro" element={<Registro />} />
+        <Route path="/recuperar" element={<Recuperar />} />
+        <Route path="/restablecer" element={<Restablecer />} />
         <Route path="/*" element={
           <Layout usuario={usuario} loading={loading}>
             <Routes>

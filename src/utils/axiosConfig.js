@@ -16,7 +16,8 @@ axios.interceptors.response.use(
       // /registro la usan clientes DESLOGUEADOS — sin esta excepción, el 401
       // de /api/me los echaría a /login y nunca podrían registrarse.
       const path = window.location.pathname
-      const publicas = ['/app/login', '/login', '/app/registro', '/registro']
+      const publicas = ['/app/login', '/login', '/app/registro', '/registro',
+        '/app/recuperar', '/recuperar', '/app/restablecer', '/restablecer']
       if (!publicas.includes(path)) {
         window.location.href = '/app/login'
       }
