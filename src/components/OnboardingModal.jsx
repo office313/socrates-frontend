@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import logo from '../assets/socratespro-logo-completo.svg'
 import iconoRojo from '../assets/socratespro-icono-rojo.svg'
+import iconoCargando from '../assets/socratespro-icono-rojo-cargando.svg'
 
 // Estilos coherentes con Login/Registro.
 const card = {
@@ -349,9 +350,8 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
     <div style={{ textAlign: 'center' }}>
       {estado === 'preparando' && (
         <>
-          <img src={iconoRojo} alt="" width="84" height="84"
-            style={{ display: 'block', margin: '8px auto 20px', animation: 'obSpin 1.05s linear infinite' }} />
-          <style>{`@keyframes obSpin{to{transform:rotate(360deg)}}`}</style>
+          <img src={iconoCargando} alt="" width="84" height="84"
+            style={{ display: 'block', margin: '8px auto 20px' }} />
           <h1 style={h1}>Tu Radar se está preparando</h1>
           <p style={sub}>Estamos buscando las licitaciones vigentes que coinciden con tus palabras clave. Tardará unos segundos…</p>
         </>
