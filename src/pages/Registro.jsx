@@ -36,6 +36,20 @@ const ERRORES = {
   token_expirado: 'El enlace de verificación caducó. Pide uno nuevo desde tu email o vuelve a registrarte.',
 }
 
+// Medidor simple de seguridad de la contraseña.
+function fuerzaPassword(p) {
+  if (!p) return { nivel: 0, label: '', color: 'var(--border)' }
+  let s = 0
+  if (p.length >= 8) s++
+  if (p.length >= 12) s++
+  if (/[a-z]/.test(p) && /[A-Z]/.test(p)) s++
+  if (/\d/.test(p)) s++
+  if (/[^A-Za-z0-9]/.test(p)) s++
+  if (p.length < 8 || s <= 2) return { nivel: 1, label: 'Débil', color: '#e74c3c' }
+  if (s === 3) return { nivel: 2, label: 'Media', color: '#e67e22' }
+  return { nivel: 3, label: 'Fuerte', color: '#27ae60' }
+}
+
 export default function Registro() {
   const params = new URLSearchParams(window.location.search)
   const planInicial = normalizarPlan(params.get('plan'))
@@ -75,9 +89,12 @@ export default function Registro() {
 
   // Paso 1
   const [form, setForm] = useState({
-    nombre: '', email: '', password: '', empresa_nombre: '',
-    ruc: '', dv: '', direccion: '', codigo_postal: '', telefono: '',
+    nombre: '', apellido: '', email: '', password: '', empresa_nombre: '',
+    ruc: '', dv: '', direccion: '', ciudad: '', provincia: '', pais: 'Panamá',
+    codigo_postal: '', telefono: '',
   })
+  const [password2, setPassword2] = useState('')
+  const [rucCheck, setRucCheck] = useState(null) // null | {valido, mensaje} | 'checking'
 
   // Paso 2
   const [planesMeta, setPlanesMeta] = useState(PLANES_FALLBACK)
@@ -107,6 +124,20 @@ export default function Registro() {
   }, [paso])
 
   const setF = (k) => (e) => setForm({ ...form, [k]: e.target.value })
+  // Para RUC/DV: al cambiarlos se invalida la verificación previa.
+  const setRuc = (k) => (e) => { setRucCheck(null); setForm({ ...form, [k]: e.target.value }) }
+
+  const fuerza = fuerzaPassword(form.password)
+
+  const verificarRuc = async () => {
+    if (!form.ruc.trim() || !form.dv.trim()) { setRucCheck({ valido: false, mensaje: 'Escribe el RUC y su DV.' }); return }
+    setRucCheck('checking')
+    try {
+      const r = await fetch(`/api/registro/verificar-ruc?ruc=${encodeURIComponent(form.ruc)}&dv=${encodeURIComponent(form.dv)}`)
+      const d = await r.json().catch(() => ({ valido: false, mensaje: 'No se pudo verificar.' }))
+      setRucCheck(d)
+    } catch { setRucCheck({ valido: false, mensaje: 'No se pudo verificar ahora.' }) }
+  }
 
   const cfg = planesMeta.planes[plan] || PLANES_FALLBACK.planes[plan]
   const usuariosTotal = planesMeta.usuarios_base + planesMeta.usuarios_por_pack * packs
@@ -116,7 +147,11 @@ export default function Registro() {
   // ---- Paso 1: enviar datos ----
   const enviarPaso1 = async (e) => {
     e.preventDefault()
-    setError(''); setLoading(true)
+    setError('')
+    if (form.password !== password2) { setError('Las contraseñas no coinciden.'); return }
+    if (fuerza.nivel < 2) { setError('La contraseña es demasiado débil. Usa al menos 8 caracteres con mayúsculas, minúsculas y números.'); return }
+    if (!rucCheck || rucCheck === 'checking' || !rucCheck.valido) { setError('Verifica el RUC antes de continuar (botón "Verificar RUC").'); return }
+    setLoading(true)
     try {
       const r = await fetch('/api/registro/paso1', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -188,29 +223,64 @@ export default function Registro() {
               Plan seleccionado: <strong>{normalizarPlan(plan) === 'pro-plus' ? 'Pro+' : 'Pro'}</strong>. Podrás cambiarlo en el siguiente paso.
             </p>
 
-            <Campo label="Nombre completo"><input style={is} value={form.nombre} onChange={setF('nombre')} required /></Campo>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}><Campo label="Nombre"><input style={is} value={form.nombre} onChange={setF('nombre')} required /></Campo></div>
+              <div style={{ flex: 1 }}><Campo label="Apellidos"><input style={is} value={form.apellido} onChange={setF('apellido')} required /></Campo></div>
+            </div>
             <Campo label="Email"><input type="email" style={is} value={form.email} onChange={setF('email')} placeholder="tu@email.com" required /></Campo>
-            <Campo label="Contraseña"><input type="password" style={is} value={form.password} onChange={setF('password')} placeholder="Mínimo 8 caracteres" minLength={8} required /></Campo>
+
+            <Campo label="Contraseña">
+              <input type="password" style={is} value={form.password} onChange={setF('password')} placeholder="Mínimo 8 caracteres" minLength={8} required />
+              {form.password && (
+                <div style={{ marginTop: 6 }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[1, 2, 3].map(n => (
+                      <div key={n} style={{ flex: 1, height: 4, borderRadius: 2, background: n <= fuerza.nivel ? fuerza.color : 'var(--border)' }} />
+                    ))}
+                  </div>
+                  <div style={{ fontSize: 11, color: fuerza.color, fontWeight: 600, marginTop: 3 }}>Seguridad: {fuerza.label}</div>
+                </div>
+              )}
+            </Campo>
+            <Campo label="Repetir contraseña">
+              <input type="password" style={is} value={password2} onChange={e => setPassword2(e.target.value)} required />
+              {password2 && form.password !== password2 && (
+                <div style={{ fontSize: 11, color: 'var(--red)', marginTop: 3 }}>Las contraseñas no coinciden</div>
+              )}
+            </Campo>
+
             <Campo label="Nombre de la empresa"><input style={is} value={form.empresa_nombre} onChange={setF('empresa_nombre')} required /></Campo>
 
-            <div style={{ display: 'flex', gap: 12 }}>
+            <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
               <div style={{ flex: 2 }}>
-                <Campo label="RUC"><input style={is} value={form.ruc} onChange={setF('ruc')} placeholder="155646-1-2017" required /></Campo>
+                <Campo label="RUC"><input style={is} value={form.ruc} onChange={setRuc('ruc')} placeholder="155646-1-2017" required /></Campo>
               </div>
               <div style={{ flex: 1 }}>
-                <Campo label="DV"><input style={is} value={form.dv} onChange={setF('dv')} placeholder="00" maxLength={2} required /></Campo>
+                <Campo label="DV"><input style={is} value={form.dv} onChange={setRuc('dv')} placeholder="00" maxLength={2} required /></Campo>
               </div>
             </div>
+            <button type="button" onClick={verificarRuc} style={{
+              width: '100%', padding: '9px', marginBottom: 4, background: 'white', color: 'var(--blue)',
+              border: '1px solid var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>
+              {rucCheck === 'checking' ? 'Verificando...' : 'Verificar RUC'}
+            </button>
+            {rucCheck && rucCheck !== 'checking' && (
+              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: rucCheck.valido ? '#27ae60' : 'var(--red)' }}>
+                {rucCheck.valido ? '✓ ' : '✗ '}{rucCheck.mensaje}
+              </div>
+            )}
 
             <Campo label="Dirección"><input style={is} value={form.direccion} onChange={setF('direccion')} required /></Campo>
             <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <Campo label="Código postal"><input style={is} value={form.codigo_postal} onChange={setF('codigo_postal')} required /></Campo>
-              </div>
-              <div style={{ flex: 1 }}>
-                <Campo label="Teléfono"><input style={is} value={form.telefono} onChange={setF('telefono')} required /></Campo>
-              </div>
+              <div style={{ flex: 1 }}><Campo label="Ciudad"><input style={is} value={form.ciudad} onChange={setF('ciudad')} required /></Campo></div>
+              <div style={{ flex: 1 }}><Campo label="Provincia"><input style={is} value={form.provincia} onChange={setF('provincia')} required /></Campo></div>
             </div>
+            <div style={{ display: 'flex', gap: 12 }}>
+              <div style={{ flex: 1 }}><Campo label="País"><input style={is} value={form.pais} onChange={setF('pais')} required /></Campo></div>
+              <div style={{ flex: 1 }}><Campo label="Código postal"><input style={is} value={form.codigo_postal} onChange={setF('codigo_postal')} required /></Campo></div>
+            </div>
+            <Campo label="Teléfono"><input style={is} value={form.telefono} onChange={setF('telefono')} required /></Campo>
 
             <button type="submit" disabled={loading} style={{ ...btn(!loading), marginTop: 8 }}>
               {loading ? 'Creando...' : 'Continuar'}
@@ -290,11 +360,15 @@ export default function Registro() {
 
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
-              <Linea label="Total mensual" valor={`$${totalMensual}/mes`} fuerte />
-              {totalLanzamiento != null && (
-                <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>
-                  Pagas ${totalLanzamiento}/mes los primeros {cfg.lanzamiento_meses} meses
-                </div>
+              {totalLanzamiento != null ? (
+                <>
+                  <Linea label="Total mensual" valor={`$${totalLanzamiento}/mes`} fuerte />
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Precio de lanzamiento los primeros {cfg.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${totalMensual}/mes</span>
+                  </div>
+                </>
+              ) : (
+                <Linea label="Total mensual" valor={`$${totalMensual}/mes`} fuerte />
               )}
             </div>
 
@@ -312,11 +386,15 @@ export default function Registro() {
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
               <Linea label="Plan" valor={resumen.plan_nombre} />
               <Linea label="Usuarios totales" valor={`${resumen.usuarios_total}`} />
-              <Linea label="Total mensual" valor={`$${resumen.total_mensual_usd}/mes`} fuerte />
-              {resumen.total_lanzamiento_usd != null && (
-                <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>
-                  ${resumen.total_lanzamiento_usd}/mes los primeros {resumen.lanzamiento_meses} meses
-                </div>
+              {resumen.total_lanzamiento_usd != null ? (
+                <>
+                  <Linea label="Total mensual" valor={`$${resumen.total_lanzamiento_usd}/mes`} fuerte />
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Precio de lanzamiento los primeros {resumen.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${resumen.total_mensual_usd}/mes</span>
+                  </div>
+                </>
+              ) : (
+                <Linea label="Total mensual" valor={`$${resumen.total_mensual_usd}/mes`} fuerte />
               )}
             </div>
 
