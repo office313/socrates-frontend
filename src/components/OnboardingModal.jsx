@@ -292,16 +292,22 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
   const [estado, setEstado] = useState('preparando') // preparando | listo | espera
   const [info, setInfo] = useState({ licitaciones: 0 })
   const pollRef = useRef(null)
+  const completarRef = useRef(false)
 
   useEffect(() => {
     let cancelado = false
     const arrancar = async () => {
-      try {
-        await fetch('/api/onboarding/completar', {
-          method: 'POST', headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ modo_busqueda: modoBusqueda, modo_keywords: modoKeywords }),
-        })
-      } catch { /* seguimos al sondeo igualmente */ }
+      // Disparar "completar" (que lanza el match) UNA sola vez, aunque StrictMode
+      // ejecute el efecto dos veces en desarrollo.
+      if (!completarRef.current) {
+        completarRef.current = true
+        try {
+          await fetch('/api/onboarding/completar', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ modo_busqueda: modoBusqueda, modo_keywords: modoKeywords }),
+          })
+        } catch { /* seguimos al sondeo igualmente */ }
+      }
 
       let intentos = 0
       pollRef.current = setInterval(async () => {
