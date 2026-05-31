@@ -74,18 +74,11 @@ export default function Registro() {
     } catch { setError('Error de conexión.') }
   }
 
-  const simularPago = async () => {
+  const simularPago = () => {
     setError(''); setLoading(true)
-    try {
-      // Simula el pago: activa la cuenta. La sesión ya está abierta desde el
-      // paso 1 (cookie), así que entra DIRECTO a la app sin re-login.
-      const r = await fetch('/api/_staging/activar', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rt }),
-      })
-      if (r.ok) window.location.href = '/app/'
-      else setError('No se pudo simular el pago (pruebas).')
-    } catch { setError('Error de conexión.') } finally { setLoading(false) }
+    // Navegación de página completa al endpoint de activación: activa la cuenta,
+    // pone la cookie y redirige a /app en la misma navegación (lo más fiable).
+    window.location.href = `/api/_staging/activar?rt=${encodeURIComponent(rt)}`
   }
 
   // Paso 1
