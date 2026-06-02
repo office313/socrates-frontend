@@ -156,8 +156,31 @@ export default function Clientes() {
   const [modalUsuario, setModalUsuario] = useState(null)
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null)
   const [msg, setMsg] = useState('')
+  const [pacEstado, setPacEstado] = useState(null)
+  const [pacSincronizando, setPacSincronizando] = useState(false)
 
   const mostrarMsg = (texto) => { setMsg(texto); setTimeout(() => setMsg(''), 3000) }
+
+  const cargarPacEstado = () => {
+    axios.get('/api/admin/pac/estado').then(r => setPacEstado(r.data)).catch(() => {})
+  }
+  const sincronizarPac = () => {
+    setPacSincronizando(true)
+    axios.post('/api/admin/pac/sincronizar')
+      .then(r => {
+        mostrarMsg(r.data.mensaje || 'Sincronización iniciada')
+        // El scraper corre en background; refrescamos el estado a los 20s.
+        setTimeout(cargarPacEstado, 20000)
+      })
+      .catch(() => mostrarMsg('Error al iniciar la sincronización'))
+      .finally(() => setPacSincronizando(false))
+  }
+  const fmtFechaHora = (iso) => {
+    if (!iso) return '—'
+    const d = new Date(iso)
+    if (isNaN(d)) return '—'
+    return d.toLocaleString('es-PA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  }
 
   const cargarEmpresas = () => {
     axios.get('/api/admin/empresas').then(r => {
@@ -177,7 +200,7 @@ export default function Clientes() {
     })
   }
 
-  useEffect(() => { cargarEmpresas(); cargarUsuarios() }, [])
+  useEffect(() => { cargarEmpresas(); cargarUsuarios(); cargarPacEstado() }, [])
 
   const toggleEmpresa = (id) => {
     setExpandida(expandida === id ? null : id)
@@ -302,6 +325,44 @@ export default function Clientes() {
             </div>
           )
         })}
+      </div>
+
+      {/* ───────────────── Plan Anual de Compras (PAC) ───────────────── */}
+      <div style={{ marginTop: 32 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Plan Anual de Compras</h2>
+          <button onClick={sincronizarPac} disabled={pacSincronizando} style={{ ...bs, opacity: pacSincronizando ? 0.6 : 1, cursor: pacSincronizando ? 'default' : 'pointer' }}>
+            {pacSincronizando ? 'Iniciando…' : '↻ Sincronizar PAC'}
+          </button>
+        </div>
+        <p style={{ margin: '0 0 16px', fontSize: 12, color: '#888' }}>
+          Última sincronización: {fmtFechaHora(pacEstado?.ultima_sincronizacion)} · Total registros: {(pacEstado?.total_registros ?? 0).toLocaleString('en-US')}
+        </p>
+        <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: '#f8f9fa' }}>
+                {['Entidad', 'Año', 'Código documento', 'Registros', 'Última actualización'].map((h, i) => (
+                  <th key={h} style={{ padding: '10px 16px', textAlign: i === 3 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 11 }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(pacEstado?.entidades || []).map((e, i) => (
+                <tr key={i} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                  <td style={{ padding: '8px 16px' }}>{e.institucion}</td>
+                  <td style={{ padding: '8px 16px', color: '#666' }}>{e.año_pac}</td>
+                  <td style={{ padding: '8px 16px', color: '#666' }}>{e.codigo_documento}</td>
+                  <td style={{ padding: '8px 16px', textAlign: 'right' }}>{(e.total_registros ?? 0).toLocaleString('en-US')}</td>
+                  <td style={{ padding: '8px 16px', color: '#666' }}>{fmtFechaHora(e.ultima_actualizacion)}</td>
+                </tr>
+              ))}
+              {(!pacEstado || pacEstado.entidades.length === 0) && (
+                <tr><td colSpan={5} style={{ padding: '24px 16px', textAlign: 'center', color: '#aaa' }}>Sin datos de PAC. Pulsa "Sincronizar PAC".</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   )

@@ -22,6 +22,15 @@ const fmtFecha = (f) => {
   const p = f.substring(0, 10).split('-')
   return p[2] + '-' + p[1] + '-' + p[0]
 }
+// PAC: monto en Balboas "B/. #,##0.00" y fecha dd/mm/yyyy, con — si null.
+const fmtBalboa = (v) => (v === null || v === undefined || v === '')
+  ? '—'
+  : 'B/. ' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const fmtFechaPac = (f) => {
+  if (!f) return '—'
+  const p = f.substring(0, 10).split('-')
+  return p[2] + '/' + p[1] + '/' + p[0]
+}
 
 const RANGOS = [
   { value: 'hoy', label: 'Hoy' },
@@ -157,6 +166,81 @@ export default function Analytics({ usuario }) {
   const [hayMas, setHayMas] = useState(false)
   const [cargandoMas, setCargandoMas] = useState(false)
   const PAGE_SIZE = 100
+
+  // ─────────────── PAC — Plan de Compras (compras futuras) ───────────────
+  const PAC_PAGE_SIZE = 50
+  const anioActual = new Date().getFullYear()
+  const [pacQ, setPacQ] = useState('')
+  const [pacKeywords, setPacKeywords] = useState(true)
+  const [pacAnio, setPacAnio] = useState(anioActual)
+  const [pacObjeto, setPacObjeto] = useState('')
+  const [pacResultados, setPacResultados] = useState([])
+  const [pacTotal, setPacTotal] = useState(0)
+  const [pacMonto, setPacMonto] = useState(0)
+  const [pacLoading, setPacLoading] = useState(false)
+  const [pacBuscado, setPacBuscado] = useState(false)
+  const [pacPagina, setPacPagina] = useState(1)
+  const [pacHayMas, setPacHayMas] = useState(false)
+  const [pacCargandoMas, setPacCargandoMas] = useState(false)
+
+  const pacParams = (pagina) => {
+    const p = new URLSearchParams()
+    if (pacQ) p.append('q', pacQ)
+    p.append('keywords', pacKeywords ? 'true' : 'false')
+    p.append('año', String(pacAnio))
+    if (pacObjeto) p.append('objeto_contractual', pacObjeto)
+    p.append('pagina', String(pagina))
+    p.append('por_pagina', String(PAC_PAGE_SIZE))
+    return p.toString()
+  }
+  const buscarPac = () => {
+    setPacLoading(true)
+    axios.get('/api/pac?' + pacParams(1))
+      .then(r => {
+        const rows = r.data.resultados || []
+        setPacResultados(rows)
+        setPacTotal(r.data.total || 0)
+        setPacMonto(r.data.monto_total || 0)
+        setPacPagina(1)
+        setPacHayMas(rows.length < (r.data.total || 0))
+        setPacBuscado(true)
+      })
+      .catch(() => { setPacResultados([]); setPacTotal(0); setPacMonto(0); setPacBuscado(true) })
+      .finally(() => setPacLoading(false))
+  }
+  const cargarMasPac = () => {
+    if (!pacHayMas || pacCargandoMas || pacLoading) return
+    setPacCargandoMas(true)
+    const sig = pacPagina + 1
+    axios.get('/api/pac?' + pacParams(sig))
+      .then(r => {
+        const nuevos = r.data.resultados || []
+        setPacResultados(prev => {
+          const comb = prev.concat(nuevos)
+          setPacHayMas(comb.length < (r.data.total || pacTotal))
+          return comb
+        })
+        setPacPagina(sig)
+      })
+      .finally(() => setPacCargandoMas(false))
+  }
+  const cargarMasPacRef = useRef(cargarMasPac)
+  cargarMasPacRef.current = cargarMasPac
+  const pacSentinelRef = useRef(null)
+  useEffect(() => {
+    const node = pacSentinelRef.current
+    if (!node) return
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) cargarMasPacRef.current()
+    }, { rootMargin: '300px' })
+    obs.observe(node)
+    return () => obs.disconnect()
+  }, [pacBuscado, pacHayMas, tab])
+  // Auto-carga al entrar por primera vez a la pestaña.
+  useEffect(() => {
+    if (tab === 'pac' && !pacBuscado && !pacLoading) buscarPac()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab])
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -494,6 +578,7 @@ export default function Analytics({ usuario }) {
       <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
         <button style={tabStyle('historico')} onClick={() => setTab('historico')}>Estudio de Mercado</button>
         <button style={tabStyle('numero')} onClick={() => setTab('numero')}>Buscar por Número</button>
+        <button style={tabStyle('pac')} onClick={() => setTab('pac')}>Plan de Compras</button>
       </div>
 
       {tab === 'historico' && (
@@ -955,6 +1040,82 @@ export default function Analytics({ usuario }) {
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
               <p style={{ fontSize: 16, marginBottom: 8 }}>Introduce el número de licitación</p>
               <p style={{ fontSize: 13 }}>{tieneTrack ? 'Busca una licitación vigente por su número exacto para añadirla a Track o Watchlist' : 'Busca una licitación vigente por su número exacto para añadirla al Watchlist'}</p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'pac' && (
+        <div>
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 16, marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: '2 1 280px' }}>
+              <label style={ls}>Buscar en descripción</label>
+              <input value={pacQ} onChange={e => setPacQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscarPac()} placeholder="Buscar en descripción..." style={is} />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#444', cursor: 'pointer', paddingBottom: 9, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={pacKeywords} onChange={e => setPacKeywords(e.target.checked)} />
+              Con mis keywords
+            </label>
+            <div style={{ flex: '0 0 110px' }}>
+              <label style={ls}>Año</label>
+              <select value={pacAnio} onChange={e => setPacAnio(Number(e.target.value))} style={is}>
+                {[anioActual + 1, anioActual, anioActual - 1, anioActual - 2].map(y => <option key={y} value={y}>{y}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: '0 0 160px' }}>
+              <label style={ls}>Objeto contractual</label>
+              <select value={pacObjeto} onChange={e => setPacObjeto(e.target.value)} style={is}>
+                <option value="">Todos</option>
+                <option value="Bienes">Bienes</option>
+                <option value="Obras">Obras</option>
+                <option value="Servicios">Servicios</option>
+              </select>
+            </div>
+            <button onClick={buscarPac} disabled={pacLoading}
+              style={{ padding: '9px 22px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', height: 38 }}>
+              {pacLoading ? 'Buscando…' : 'Buscar'}
+            </button>
+          </div>
+
+          {pacBuscado && (
+            <div style={{ fontSize: 13, color: '#444', margin: '0 0 12px', fontWeight: 600 }}>
+              {pacTotal.toLocaleString('en-US')} registros · {fmtBalboa(pacMonto)} total estimado
+            </div>
+          )}
+
+          {pacBuscado && (
+            <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa' }}>
+                      {['Institución', 'Descripción', 'Rubro', 'Tipo procedimiento', 'Monto estimado', 'Fecha estimada'].map((h, i) => (
+                        <th key={i} style={{ padding: '10px 16px', textAlign: i === 4 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pacResultados.map((r, i) => (
+                      <tr key={r.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                        <td style={{ padding: '10px 16px' }}>{r.institucion || '—'}</td>
+                        <td style={{ padding: '10px 16px', color: '#444', maxWidth: 360 }}>{r.descripcion_objeto || '—'}</td>
+                        <td style={{ padding: '10px 16px', color: '#666', maxWidth: 220 }}>{r.descripcion_rubro || '—'}</td>
+                        <td style={{ padding: '10px 16px', color: '#666' }}>{r.tipo_procedimiento || '—'}</td>
+                        <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 600, color: '#2e7d32', whiteSpace: 'nowrap' }}>{fmtBalboa(r.presupuesto_estimado)}</td>
+                        <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>{fmtFechaPac(r.fecha_publicacion_estimada)}</td>
+                      </tr>
+                    ))}
+                    {pacResultados.length === 0 && !pacLoading && (
+                      <tr><td colSpan={6} style={{ padding: '24px 16px', textAlign: 'center', color: '#888' }}>Sin resultados.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {pacResultados.length > 0 && (
+                <div ref={pacSentinelRef} style={{ padding: '14px 16px', borderTop: '1px solid #f0f0f0', textAlign: 'center', fontSize: 12, color: '#888' }}>
+                  {pacCargandoMas ? 'Cargando más…' : pacHayMas ? `Cargando… (${pacResultados.length} de ${pacTotal})` : `Fin de los resultados (${pacTotal} en total)`}
+                </div>
+              )}
             </div>
           )}
         </div>
