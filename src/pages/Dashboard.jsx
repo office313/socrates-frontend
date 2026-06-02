@@ -148,6 +148,7 @@ export default function Dashboard({ usuario }) {
   const [modalDetalle, setModalDetalle] = useState(null)
   const [modalEstudio, setModalEstudio] = useState(null)
   const [progreso, setProgreso] = useState(null)
+  const [sdiCount, setSdiCount] = useState(0)
   // Trigger para re-cargar datos (incrementar = re-run del useEffect de carga).
   const [reloadTrigger, setReloadTrigger] = useState(0)
   // Estado del último poll de progreso, para detectar transición activo→completo.
@@ -212,6 +213,13 @@ export default function Dashboard({ usuario }) {
       setStats(s => ({ ...s, pipeline: s.pipeline + 1 }))
     } catch { alert('Error al añadir a Track') }
   }
+
+  // Badge SDI: estudios de mercado vigentes que coinciden con las keywords.
+  useEffect(() => {
+    axios.get('/api/sdi/count-by-keywords')
+      .then(r => setSdiCount(r.data.total || 0))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     Promise.allSettled([
@@ -466,6 +474,15 @@ export default function Dashboard({ usuario }) {
       </div>
 
       {(progreso?.estado === 'descargando' || progreso?.estado === 'sincronizando') && <RadarSync progreso={progreso} />}
+
+      {sdiCount > 0 && (
+        <div onClick={() => navigate('/analytics?tab=sdi')}
+          style={{ background: '#eef4fb', border: '1px solid #d6e4f5', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: 'var(--blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>📋</span>
+          <span>{sdiCount} estudio{sdiCount !== 1 ? 's' : ''} de mercado vigente{sdiCount !== 1 ? 's' : ''} con tus keywords</span>
+          <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>Ver en Explorer →</span>
+        </div>
+      )}
 
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)' }}>
         <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

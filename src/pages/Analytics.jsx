@@ -242,8 +242,79 @@ export default function Analytics({ usuario }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
 
+  // ─────────────── SDI — Solicitudes de Información ───────────────
+  const SDI_PAGE_SIZE = 50
+  const [sdiQ, setSdiQ] = useState('')
+  const [sdiKeywords, setSdiKeywords] = useState(true)
+  const [sdiVigentes, setSdiVigentes] = useState(true)
+  const [sdiResultados, setSdiResultados] = useState([])
+  const [sdiTotal, setSdiTotal] = useState(0)
+  const [sdiLoading, setSdiLoading] = useState(false)
+  const [sdiBuscado, setSdiBuscado] = useState(false)
+  const [sdiPagina, setSdiPagina] = useState(1)
+  const [sdiHayMas, setSdiHayMas] = useState(false)
+  const [sdiCargandoMas, setSdiCargandoMas] = useState(false)
+
+  const sdiParams = (pagina) => {
+    const p = new URLSearchParams()
+    if (sdiQ) p.append('q', sdiQ)
+    p.append('keywords', sdiKeywords ? 'true' : 'false')
+    p.append('vigentes_only', sdiVigentes ? 'true' : 'false')
+    p.append('pagina', String(pagina))
+    p.append('por_pagina', String(SDI_PAGE_SIZE))
+    return p.toString()
+  }
+  const buscarSdi = () => {
+    setSdiLoading(true)
+    axios.get('/api/sdi?' + sdiParams(1))
+      .then(r => {
+        const rows = r.data.resultados || []
+        setSdiResultados(rows)
+        setSdiTotal(r.data.total || 0)
+        setSdiPagina(1)
+        setSdiHayMas(rows.length < (r.data.total || 0))
+        setSdiBuscado(true)
+      })
+      .catch(() => { setSdiResultados([]); setSdiTotal(0); setSdiBuscado(true) })
+      .finally(() => setSdiLoading(false))
+  }
+  const cargarMasSdi = () => {
+    if (!sdiHayMas || sdiCargandoMas || sdiLoading) return
+    setSdiCargandoMas(true)
+    const sig = sdiPagina + 1
+    axios.get('/api/sdi?' + sdiParams(sig))
+      .then(r => {
+        const nuevos = r.data.resultados || []
+        setSdiResultados(prev => {
+          const comb = prev.concat(nuevos)
+          setSdiHayMas(comb.length < (r.data.total || sdiTotal))
+          return comb
+        })
+        setSdiPagina(sig)
+      })
+      .finally(() => setSdiCargandoMas(false))
+  }
+  const cargarMasSdiRef = useRef(cargarMasSdi)
+  cargarMasSdiRef.current = cargarMasSdi
+  const sdiSentinelRef = useRef(null)
+  useEffect(() => {
+    const node = sdiSentinelRef.current
+    if (!node) return
+    const obs = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting) cargarMasSdiRef.current()
+    }, { rootMargin: '300px' })
+    obs.observe(node)
+    return () => obs.disconnect()
+  }, [sdiBuscado, sdiHayMas, tab])
+  useEffect(() => {
+    if (tab === 'sdi' && !sdiBuscado && !sdiLoading) buscarSdi()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab])
+
   useEffect(() => {
     const params = new URLSearchParams(location.search)
+    const tabParam = params.get('tab')
+    if (tabParam && ['historico', 'numero', 'pac', 'sdi'].includes(tabParam)) setTab(tabParam)
     const kws = params.get('keywords')
     const rng = params.get('rango')
     const auto = params.get('auto')
@@ -579,6 +650,7 @@ export default function Analytics({ usuario }) {
         <button style={tabStyle('historico')} onClick={() => setTab('historico')}>Estudio de Mercado</button>
         <button style={tabStyle('numero')} onClick={() => setTab('numero')}>Buscar por Número</button>
         <button style={tabStyle('pac')} onClick={() => setTab('pac')}>Plan de Compras</button>
+        <button style={tabStyle('sdi')} onClick={() => setTab('sdi')}>SDI</button>
       </div>
 
       {tab === 'historico' && (
@@ -1114,6 +1186,83 @@ export default function Analytics({ usuario }) {
               {pacResultados.length > 0 && (
                 <div ref={pacSentinelRef} style={{ padding: '14px 16px', borderTop: '1px solid #f0f0f0', textAlign: 'center', fontSize: 12, color: '#888' }}>
                   {pacCargandoMas ? 'Cargando más…' : pacHayMas ? `Cargando… (${pacResultados.length} de ${pacTotal})` : `Fin de los resultados (${pacTotal} en total)`}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'sdi' && (
+        <div>
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 16, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: '2 1 280px' }}>
+              <label style={ls}>Buscar</label>
+              <input value={sdiQ} onChange={e => setSdiQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscarSdi()} placeholder="Buscar..." style={is} />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#444', cursor: 'pointer', paddingBottom: 9, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={sdiKeywords} onChange={e => setSdiKeywords(e.target.checked)} />
+              Con mis keywords
+            </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#444', cursor: 'pointer', paddingBottom: 9, whiteSpace: 'nowrap' }}>
+              <input type="checkbox" checked={sdiVigentes} onChange={e => setSdiVigentes(e.target.checked)} />
+              Solo vigentes
+            </label>
+            <button onClick={buscarSdi} disabled={sdiLoading}
+              style={{ padding: '9px 22px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', height: 38 }}>
+              {sdiLoading ? 'Buscando…' : 'Buscar'}
+            </button>
+          </div>
+
+          {sdiBuscado && (
+            <div style={{ fontSize: 13, color: '#444', margin: '0 0 12px', fontWeight: 600 }}>
+              {sdiTotal.toLocaleString('en-US')} solicitudes de información
+            </div>
+          )}
+
+          {sdiBuscado && (
+            <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: '#f8f9fa' }}>
+                      {['Número', 'Institución / Unidad', 'Título', 'Publicado', 'Cierre', 'Docs'].map((h, i) => (
+                        <th key={i} style={{ padding: '10px 16px', textAlign: i === 5 ? 'center' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sdiResultados.map((r, i) => {
+                      const cierraPronto = r.dias_restantes !== null && r.dias_restantes <= 2
+                      return (
+                        <tr key={r.id}
+                          onClick={() => r.url_fuente && window.open(r.url_fuente, '_blank', 'noopener')}
+                          style={{ background: i % 2 === 0 ? 'white' : '#fafafa', cursor: 'pointer' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#e8f0fb'}
+                          onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafafa'}>
+                          <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 600, whiteSpace: 'nowrap' }}>{r.numero_sdi}</td>
+                          <td style={{ padding: '10px 16px', maxWidth: 220 }}>
+                            <div>{r.institucion || '—'}</div>
+                            {r.unidad_compra && <div style={{ fontSize: 11, color: '#999' }}>{r.unidad_compra}</div>}
+                          </td>
+                          <td style={{ padding: '10px 16px', color: '#444', maxWidth: 360 }}>{r.titulo || '—'}</td>
+                          <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>{fmtFechaPac(r.fecha_publicacion)}</td>
+                          <td style={{ padding: '10px 16px', whiteSpace: 'nowrap', color: cierraPronto ? '#c62828' : '#444', fontWeight: cierraPronto ? 700 : 400 }}>
+                            {fmtFechaPac(r.fecha_limite)}{cierraPronto && r.dias_restantes >= 0 ? ` (${r.dias_restantes}d)` : ''}
+                          </td>
+                          <td style={{ padding: '10px 16px', textAlign: 'center' }}>{r.tiene_documentos ? '📎' : ''}</td>
+                        </tr>
+                      )
+                    })}
+                    {sdiResultados.length === 0 && !sdiLoading && (
+                      <tr><td colSpan={6} style={{ padding: '24px 16px', textAlign: 'center', color: '#888' }}>Sin resultados.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              {sdiResultados.length > 0 && (
+                <div ref={sdiSentinelRef} style={{ padding: '14px 16px', borderTop: '1px solid #f0f0f0', textAlign: 'center', fontSize: 12, color: '#888' }}>
+                  {sdiCargandoMas ? 'Cargando más…' : sdiHayMas ? `Cargando… (${sdiResultados.length} de ${sdiTotal})` : `Fin de los resultados (${sdiTotal} en total)`}
                 </div>
               )}
             </div>
