@@ -17,8 +17,8 @@ function ModalUsuario({ usuarioActual, usuarioEditar, empresas, onClose, onSave 
 
   const validar = () => {
     if (!form.nombre || !form.email) return 'Nombre y email son obligatorios'
-    if (esNuevo && !form.password) return 'La contraseña es obligatoria'
-    if (form.password && form.password !== form.confirmar) return 'Las contraseñas no coinciden'
+    // Al crear no se elige contraseña (se genera y se envía por email).
+    if (!esNuevo && form.password && form.password !== form.confirmar) return 'Las contraseñas no coinciden'
     return null
   }
 
@@ -47,16 +47,22 @@ function ModalUsuario({ usuarioActual, usuarioEditar, empresas, onClose, onSave 
             <label style={labelStyle}>Email</label>
             <input type="email" value={form.email} onChange={e => set('email', e.target.value)} style={inputStyle} />
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-            <div>
-              <label style={labelStyle}>{esNuevo ? 'Contraseña' : 'Nueva contraseña'}</label>
-              <input type="password" value={form.password || ''} onChange={e => set('password', e.target.value)} style={inputStyle} placeholder={esNuevo ? '' : 'Dejar vacío para no cambiar'} />
+          {esNuevo ? (
+            <div style={{ background: '#eef4fb', border: '1px solid #d6e4f5', borderRadius: 8, padding: '10px 12px', fontSize: 12, color: '#555' }}>
+              Se generará una contraseña provisional y se enviará por email de bienvenida al nuevo usuario.
             </div>
-            <div>
-              <label style={labelStyle}>Confirmar contraseña</label>
-              <input type="password" value={form.confirmar || ''} onChange={e => set('confirmar', e.target.value)} style={inputStyle} />
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <div>
+                <label style={labelStyle}>Nueva contraseña</label>
+                <input type="password" value={form.password || ''} onChange={e => set('password', e.target.value)} style={inputStyle} placeholder="Dejar vacío para no cambiar" />
+              </div>
+              <div>
+                <label style={labelStyle}>Confirmar contraseña</label>
+                <input type="password" value={form.confirmar || ''} onChange={e => set('confirmar', e.target.value)} style={inputStyle} />
+              </div>
             </div>
-          </div>
+          )}
           <div>
             <label style={labelStyle}>Rol</label>
             <select value={form.rol} onChange={e => set('rol', e.target.value)} style={inputStyle}>
@@ -308,6 +314,7 @@ export default function Settings({ usuario }) {
   const [msg, setMsg] = useState('')
   const [msgColor, setMsgColor] = useState('green')
   const [modalUsuario, setModalUsuario] = useState(null)
+  const [pwdProvisional, setPwdProvisional] = useState(null)
   const [modalEmpresa, setModalEmpresa] = useState(null)
   const [modalKeywords, setModalKeywords] = useState(false)
 
@@ -364,9 +371,15 @@ export default function Settings({ usuario }) {
     const req = form.id ? axios.put(`/api/usuarios/${form.id}`, form) : axios.post('/api/usuarios', form)
     req.then(r => {
       if (r.data.error) { mostrarMsg(r.data.error, false); return }
-      mostrarMsg(form.id ? 'Usuario actualizado' : 'Usuario creado')
       setModalUsuario(null)
       cargarUsuarios()
+      if (form.id) { mostrarMsg('Usuario actualizado'); return }
+      if (r.data.email_enviado) {
+        mostrarMsg(`Usuario creado. Se ha enviado email de bienvenida a ${form.email}`)
+      } else {
+        // El email no salió (p.ej. SES sandbox): mostrar la provisional una vez.
+        setPwdProvisional({ email: form.email, password: r.data.password_provisional })
+      }
     })
   }
 
@@ -548,6 +561,30 @@ export default function Settings({ usuario }) {
           onClose={() => setModalUsuario(null)}
           onSave={guardarUsuario}
         />
+      )}
+
+      {pwdProvisional && (
+        <div onClick={() => setPwdProvisional(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, width: 440, overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: '#e65100' }}>
+              <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>Contraseña provisional</h2>
+            </div>
+            <div style={{ padding: 24, fontSize: 13, color: '#333', lineHeight: 1.6 }}>
+              <p style={{ margin: '0 0 12px' }}>
+                El email de bienvenida <strong>no pudo enviarse</strong> a <strong>{pwdProvisional.email}</strong>.
+                Comunica esta contraseña provisional al usuario. <strong>No se volverá a mostrar.</strong>
+              </p>
+              <div style={{ background: '#f5f5f5', border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 16px', fontFamily: 'monospace', fontSize: 18, fontWeight: 700, textAlign: 'center', letterSpacing: 1 }}>
+                {pwdProvisional.password}
+              </div>
+            </div>
+            <div style={{ padding: '14px 20px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setPwdProvisional(null)}
+                style={{ padding: '8px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Entendido</button>
+            </div>
+          </div>
+        </div>
       )}
 
       {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && usuario?.empresa_id !== 2 && (
