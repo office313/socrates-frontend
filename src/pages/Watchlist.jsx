@@ -176,6 +176,11 @@ export default function Watchlist() {
   const [modalDetalle, setModalDetalle] = useState(null)
   const [modalEstudio, setModalEstudio] = useState(null)
   const [pipeline, setPipeline] = useState(new Set())
+  const [numAdd, setNumAdd] = useState('')
+  const [addMsg, setAddMsg] = useState(null)      // { tipo: 'error'|'ok', texto }
+  const [addBuscando, setAddBuscando] = useState(false)
+  const [toast, setToast] = useState('')
+  const mostrarToast = (t) => { setToast(t); setTimeout(() => setToast(''), 3000) }
 
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' })
   const esHoy = (f) => f && f.substring(0, 10) === hoy
@@ -220,6 +225,27 @@ export default function Watchlist() {
     cargar()
   }
 
+  // Añadir a Watchlist por número. El endpoint valida la existencia en BD
+  // (licitaciones/adjudicaciones) y deduplica, devolviendo el error apropiado.
+  const anadirPorNumero = async () => {
+    const num = numAdd.trim()
+    if (!num) return
+    setAddBuscando(true); setAddMsg(null)
+    try {
+      const r = await axios.post('/api/watchlist/' + encodeURIComponent(num))
+      if (r.data && r.data.error) {
+        const ya = r.data.error.toLowerCase().includes('watchlist')
+        setAddMsg({ tipo: 'error', texto: ya ? 'Ya está en Watchlist' : 'Licitación no encontrada' })
+        return
+      }
+      setNumAdd(''); mostrarToast('Añadido a Watchlist'); cargar()
+    } catch (e) {
+      setAddMsg({ tipo: 'error', texto: 'Error: ' + (e.response?.data?.error || e.message) })
+    } finally {
+      setAddBuscando(false)
+    }
+  }
+
   return (
     <div style={{ padding: 24 }}>
       {modalEstudio && (
@@ -241,10 +267,35 @@ export default function Watchlist() {
         />
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Watchlist</h1>
         <span style={{ fontSize: 13, color: '#888' }}>{licitaciones.length} items</span>
       </div>
+
+      {/* Añadir por número de licitación */}
+      <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+        <input
+          type="text"
+          value={numAdd}
+          onChange={e => { setNumAdd(e.target.value); if (addMsg) setAddMsg(null) }}
+          onKeyDown={e => { if (e.key === 'Enter') anadirPorNumero() }}
+          placeholder="Añadir por número de licitación..."
+          style={{ flex: '1 1 320px', maxWidth: 420, padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white' }}
+        />
+        <button onClick={anadirPorNumero} disabled={addBuscando}
+          style={{ padding: '8px 18px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: addBuscando ? 'default' : 'pointer', opacity: addBuscando ? 0.6 : 1 }}>
+          {addBuscando ? 'Añadiendo…' : 'Añadir'}
+        </button>
+        {addMsg && (
+          <span style={{ fontSize: 12, fontWeight: 600, color: addMsg.tipo === 'ok' ? '#2e7d32' : '#c62828' }}>{addMsg.texto}</span>
+        )}
+      </div>
+
+      {toast && (
+        <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: '#2e7d32', color: 'white', padding: '12px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 2000 }}>
+          {toast}
+        </div>
+      )}
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: '#aaa' }}>Cargando...</div>
