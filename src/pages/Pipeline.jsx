@@ -130,7 +130,7 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
   )
 }
 
-function ModalManual({ onClose, onAdded }) {
+function ModalManual({ onClose, onAdded, usuario }) {
   const [numero, setNumero] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [error, setError] = useState('')
@@ -167,6 +167,10 @@ function ModalManual({ onClose, onAdded }) {
         email_contacto: datos.comprador_email || '',
         telefono_contacto: datos.comprador_telefono || '',
         estado: 'En Preparación',
+        agente: usuario?.nombre || '',
+        modalidad_adjudicacion: datos.modalidad_adjudicacion || '',
+        termino_entrega_v3: datos.termino_entrega_v3 || '',
+        provincia_entrega: datos.provincia_entrega || '',
       }
       const r = await axios.post('/api/pipeline', payload)
       if (r.data.error) { setError(r.data.error); setAñadiendo(false); return }
@@ -263,7 +267,7 @@ const searchableText = (item) => {
   return (base + ' ' + der).toLowerCase()
 }
 
-export default function Pipeline() {
+export default function Pipeline({ usuario }) {
   const [items, setItems] = useState([])
   const [alcance, setAlcance] = useState('activas')  // 'activas' | 'todas'
   const [filtro, setFiltro] = useState('')           // estado fino o '' (ninguno)
@@ -280,9 +284,62 @@ export default function Pipeline() {
   // click abre el modal pequeño antiguo).
   const [vista, setVista] = useState('formulario')   // 'formulario' | 'listado'
   const [formularioIdx, setFormularioIdx] = useState(0)
+  const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
+  const [toast, setToast] = useState('')
+  const [numAdd, setNumAdd] = useState('')        // input "añadir por número"
+  const [addMsg, setAddMsg] = useState(null)      // { tipo: 'error'|'ok', texto }
+  const [addBuscando, setAddBuscando] = useState(false)
+
+  const mostrarToast = (t) => { setToast(t); setTimeout(() => setToast(''), 3000) }
 
   const cargar = () => {
     axios.get('/api/pipeline').then(r => setItems(r.data.resultados || []))
+    axios.get('/api/watchlist')
+      .then(r => setNumerosWatchlist(new Set((r.data.resultados || []).map(x => x.numero_acto))))
+      .catch(() => {})
+  }
+
+  const anadirWatchlist = (numeroActo) => {
+    axios.post('/api/watchlist/' + encodeURIComponent(numeroActo))
+      .then(r => {
+        if (r.data && r.data.error) { mostrarToast(r.data.error); return }
+        setNumerosWatchlist(prev => { const s = new Set(prev); s.add(numeroActo); return s })
+        mostrarToast('Añadido a Watchlist')
+      })
+      .catch(() => mostrarToast('Error al añadir a Watchlist'))
+  }
+
+  // Añadir a Track por número: busca en BD→V3 (mismo endpoint que el modal) y,
+  // si existe, la inserta en Track con el mismo payload que "+ Añadir a Track".
+  const anadirPorNumero = async () => {
+    const num = numAdd.trim()
+    if (!num) return
+    setAddBuscando(true); setAddMsg(null)
+    try {
+      const r = await axios.get(`/api/pipeline/buscar-licitacion?numero_acto=${encodeURIComponent(num)}`)
+      if (r.data.error) {
+        const yaEnTrack = r.data.error.toLowerCase().includes('pipeline')
+        setAddMsg({ tipo: 'error', texto: yaEnTrack ? 'Esta licitación ya está en Track' : 'Licitación no encontrada' })
+        return
+      }
+      const d = r.data
+      const payload = {
+        numero_acto: d.numero_acto, fecha_cierre: d.fecha_cierre || '', institucion: d.institucion || '',
+        unidad_compra: d.unidad_compradora || '', descripcion: d.descripcion || '', tipo_proceso: d.tipo_proceso || '',
+        url_fuente: d.url_fuente || '', precio_referencia: d.presupuesto || 0, forma_adjudicacion: d.forma_adjudicacion || '',
+        contacto: d.comprador_nombre || '', email_contacto: d.comprador_email || '', telefono_contacto: d.comprador_telefono || '',
+        estado: 'En Preparación', agente: usuario?.nombre || '',
+        modalidad_adjudicacion: d.modalidad_adjudicacion || '', termino_entrega_v3: d.termino_entrega_v3 || '',
+        provincia_entrega: d.provincia_entrega || '',
+      }
+      const r2 = await axios.post('/api/pipeline', payload)
+      if (r2.data.error) { setAddMsg({ tipo: 'error', texto: r2.data.error }); return }
+      setNumAdd(''); setAddMsg({ tipo: 'ok', texto: 'Añadido a Track' }); cargar()
+    } catch (e) {
+      setAddMsg({ tipo: 'error', texto: 'Error: ' + (e.response?.data?.error || e.message) })
+    } finally {
+      setAddBuscando(false)
+    }
   }
 
   useEffect(() => { cargar() }, [])
@@ -539,6 +596,28 @@ export default function Pipeline() {
           }}>Buscar</button>
       </div>
 
+      {/* Añadir por número de licitación (busca BD→V3 y añade a Track). Solo en
+          la vista Listado para no recargar la columna estrecha del Formulario. */}
+      {!compact && (
+        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <input
+            type="text"
+            value={numAdd}
+            onChange={e => { setNumAdd(e.target.value); if (addMsg) setAddMsg(null) }}
+            onKeyDown={e => { if (e.key === 'Enter') anadirPorNumero() }}
+            placeholder="Añadir por número de licitación..."
+            style={{ flex: '1 1 320px', maxWidth: 420, padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white' }}
+          />
+          <button onClick={anadirPorNumero} disabled={addBuscando}
+            style={{ padding: '8px 18px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: addBuscando ? 'default' : 'pointer', opacity: addBuscando ? 0.6 : 1 }}>
+            {addBuscando ? 'Añadiendo…' : 'Añadir'}
+          </button>
+          {addMsg && (
+            <span style={{ fontSize: 12, fontWeight: 600, color: addMsg.tipo === 'ok' ? '#2e7d32' : '#c62828' }}>{addMsg.texto}</span>
+          )}
+        </div>
+      )}
+
       {/* Cards de estado — conteo y monto sobre todo el pipeline. En columna
           estrecha (compact) van en grid de 3; a ancho completo, los 7 en fila. */}
       <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(3, 1fr)' : 'repeat(7, 1fr)', gap: compact ? 8 : 10, marginBottom: compact ? 0 : 12 }}>
@@ -573,7 +652,12 @@ export default function Pipeline() {
         />
       )}
       {modalManual && (
-        <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} />
+        <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} usuario={usuario} />
+      )}
+      {toast && (
+        <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: '#2e7d32', color: 'white', padding: '12px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 2000 }}>
+          {toast}
+        </div>
       )}
     </>
   )
@@ -654,11 +738,12 @@ export default function Pipeline() {
                   {orden.campo === col.campo && <span style={{ marginLeft: 4 }}>{orden.dir === 'asc' ? '↑' : '↓'}</span>}
                 </th>
               ))}
+              <th style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12, position: 'sticky', top: 0, background: '#f8f9fa', zIndex: 5 }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filtrados.length === 0 ? (
-              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
+              <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
                 {appliedQuery ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                     <span>Sin resultados para "{appliedQuery}"</span>
@@ -686,6 +771,18 @@ export default function Pipeline() {
                   <td style={{ padding: '10px 16px' }}><Badge estado={p.estado} /></td>
                   <td style={{ padding: '10px 16px', textAlign: 'right' }}>{fmt(p.precio_referencia)}</td>
                   <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--blue)' }}>{fmt(p.precio_ofertado)}</td>
+                  <td style={{ padding: '10px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                    {numerosWatchlist.has(numMostrado) ? (
+                      <span title="Ya en Watchlist" style={{ fontSize: 11, color: '#aaa' }}>✓ Watchlist</span>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); anadirWatchlist(numMostrado) }}
+                        title="Añadir a Watchlist"
+                        style={{ padding: '4px 10px', background: '#f0f4ff', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                        👁 Watchlist
+                      </button>
+                    )}
+                  </td>
                 </tr>
               )
             })}
