@@ -311,14 +311,14 @@ export default function Settings({ usuario }) {
   const [modalEmpresa, setModalEmpresa] = useState(null)
   const [modalKeywords, setModalKeywords] = useState(false)
 
-  const cargarUsuarios = () => axios.get('/api/admin/usuarios').then(r => setUsuarios(r.data.usuarios || []))
+  const cargarUsuarios = () => axios.get('/api/usuarios').then(r => setUsuarios(r.data.usuarios || []))
   const cargarEmpresas = () => axios.get('/api/admin/empresas').then(r => setEmpresas(r.data.empresas || []))
 
   useEffect(() => {
     axios.get('/api/keywords/modo').then(r => setModo(r.data.modo || 'amplio'))
     axios.get('/api/empresa/config').then(r => setModoKeywords(r.data.modo_keywords || 'compartido'))
     axios.get('/api/totp/estado').then(r => setTotp(r.data.activo || false))
-    if (usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') {
+    if (usuario?.rol === 'supervisor') {
       cargarUsuarios()
     }
     if (usuario?.rol === 'superadmin') {
@@ -361,7 +361,7 @@ export default function Settings({ usuario }) {
   }
 
   const guardarUsuario = (form) => {
-    const req = form.id ? axios.put(`/api/admin/usuarios/${form.id}`, form) : axios.post('/api/admin/usuarios', form)
+    const req = form.id ? axios.put(`/api/usuarios/${form.id}`, form) : axios.post('/api/usuarios', form)
     req.then(r => {
       if (r.data.error) { mostrarMsg(r.data.error, false); return }
       mostrarMsg(form.id ? 'Usuario actualizado' : 'Usuario creado')
@@ -372,7 +372,10 @@ export default function Settings({ usuario }) {
 
   const eliminarUsuario = (id) => {
     if (!confirm('¿Eliminar este usuario?')) return
-    axios.delete(`/api/admin/usuarios/${id}`).then(() => { mostrarMsg('Usuario eliminado'); cargarUsuarios() })
+    axios.delete(`/api/usuarios/${id}`).then(r => {
+      if (r.data && r.data.error) { mostrarMsg(r.data.error, false); return }
+      mostrarMsg('Usuario eliminado'); cargarUsuarios()
+    })
   }
 
   const ss = { background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 24, marginBottom: 20 }
@@ -489,6 +492,63 @@ export default function Settings({ usuario }) {
           </div>
         </div>
       </div>
+
+      {usuario?.rol === 'supervisor' && (
+        <div style={ss}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <h2 style={{ ...ts, margin: 0, paddingBottom: 0, border: 'none' }}>Usuarios</h2>
+            <button onClick={() => setModalUsuario({})}
+              style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
+              + Nuevo usuario
+            </button>
+          </div>
+          <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
+            Gestiona los usuarios de tu empresa. Los usuarios pueden ver el Radar y las licitaciones; los supervisores además gestionan keywords y usuarios.
+          </p>
+          {usuarios.length === 0 ? (
+            <p style={{ color: '#aaa', fontSize: 13 }}>No hay usuarios.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ background: '#f8f9fa' }}>
+                  {['Nombre', 'Email', 'Rol', 'Acciones'].map((h, i) => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: i === 3 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12 }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {usuarios.map((u, i) => (
+                  <tr key={u.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                    <td style={{ padding: '10px 16px' }}>{u.nombre}{u.es_tu_cuenta && <span style={{ fontSize: 11, color: '#999' }}> (tú)</span>}</td>
+                    <td style={{ padding: '10px 16px', color: '#666' }}>{u.email}</td>
+                    <td style={{ padding: '10px 16px' }}>
+                      <span style={{ background: u.rol === 'supervisor' ? '#e8f0fb' : '#f5f5f5', color: u.rol === 'supervisor' ? 'var(--blue)' : '#666', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{u.rol}</span>
+                    </td>
+                    <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <button onClick={() => setModalUsuario(u)} title="Editar"
+                        style={{ padding: '4px 10px', background: 'var(--blue-light, #e8f0fb)', color: 'var(--blue)', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', marginRight: 6 }}>✏️</button>
+                      {!u.es_tu_cuenta && (
+                        <button onClick={() => eliminarUsuario(u.id)} title="Eliminar"
+                          style={{ padding: '4px 10px', background: '#ffebee', color: '#c62828', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>🗑️</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
+
+      {modalUsuario && (
+        <ModalUsuario
+          usuarioActual={usuario}
+          usuarioEditar={modalUsuario.id ? modalUsuario : null}
+          empresas={empresas}
+          onClose={() => setModalUsuario(null)}
+          onSave={guardarUsuario}
+        />
+      )}
 
       {(usuario?.rol === 'supervisor' || usuario?.rol === 'superadmin') && usuario?.empresa_id !== 2 && (
         <div style={ss}>
