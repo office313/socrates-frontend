@@ -554,69 +554,75 @@ export default function Pipeline({ usuario }) {
 
       {/* Buscador SIEMPRE visible (en ambas vistas). En modo Formulario,
           al aplicar búsqueda, formularioIdx se resetea a 0 vía useEffect. */}
-      <div style={{ marginBottom: compact ? 0 : 10, position: 'relative' }}>
-        <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
-          🔍
-        </span>
-        <input
-          type="text"
-          value={query}
-          onChange={e => onQueryChange(e.target.value)}
-          onKeyDown={e => { if (e.key === 'Enter') aplicarBusqueda() }}
-          onFocus={() => setInputFocus(true)}
-          onBlur={() => setInputFocus(false)}
-          placeholder="Buscar por número, institución, descripción..."
-          style={{
-            width: '100%',
-            padding: '8px 110px 8px 44px',
-            border: `1px solid ${inputFocus ? 'var(--blue)' : '#e5e7eb'}`,
-            borderRadius: 12,
-            fontSize: 13,
-            outline: 'none',
-            background: 'white',
-            boxShadow: inputFocus ? '0 0 0 3px rgba(21, 101, 192, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
-            transition: 'border-color 0.15s, box-shadow 0.15s',
-            boxSizing: 'border-box',
-          }}
-        />
-        {query && (
-          <button onClick={limpiarBusqueda} title="Limpiar búsqueda"
-            style={{
-              position: 'absolute', right: 96, top: '50%', transform: 'translateY(-50%)',
-              width: 24, height: 24, borderRadius: '50%', border: 'none',
-              background: '#e5e7eb', color: '#555', fontSize: 14, fontWeight: 600,
-              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-            }}>×</button>
-        )}
-        <button onClick={aplicarBusqueda}
-          style={{
-            position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-            padding: '6px 14px', background: 'var(--blue)', color: 'white',
-            border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-          }}>Buscar</button>
-      </div>
-
-      {/* Añadir por número de licitación (busca BD→V3 y añade a Track). Solo en
-          la vista Listado para no recargar la columna estrecha del Formulario. */}
-      {!compact && (
-        <div style={{ marginBottom: 12, display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      {/* Fila superior en dos mitades: izquierda buscador, derecha "añadir por
+          número". En móvil se apilan (flexWrap). En modo Formulario (compact) el
+          buscador ocupa todo y no se muestra el alta por número. */}
+      <div style={{ marginBottom: compact ? 0 : 12, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
+        {/* Mitad izquierda: buscador */}
+        <div style={{ flex: compact ? '1 1 100%' : '1 1 320px', position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
+            🔍
+          </span>
           <input
             type="text"
-            value={numAdd}
-            onChange={e => { setNumAdd(e.target.value); if (addMsg) setAddMsg(null) }}
-            onKeyDown={e => { if (e.key === 'Enter') anadirPorNumero() }}
-            placeholder="Añadir por número de licitación..."
-            style={{ flex: '1 1 320px', maxWidth: 420, padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, outline: 'none', background: 'white' }}
+            value={query}
+            onChange={e => onQueryChange(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter') aplicarBusqueda() }}
+            onFocus={() => setInputFocus(true)}
+            onBlur={() => setInputFocus(false)}
+            placeholder="Buscar en Track..."
+            style={{
+              width: '100%',
+              padding: '8px 110px 8px 44px',
+              border: `1px solid ${inputFocus ? 'var(--blue)' : '#e5e7eb'}`,
+              borderRadius: 12,
+              fontSize: 13,
+              outline: 'none',
+              background: 'white',
+              boxShadow: inputFocus ? '0 0 0 3px rgba(21, 101, 192, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
+              transition: 'border-color 0.15s, box-shadow 0.15s',
+              boxSizing: 'border-box',
+            }}
           />
-          <button onClick={anadirPorNumero} disabled={addBuscando}
-            style={{ padding: '8px 18px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: addBuscando ? 'default' : 'pointer', opacity: addBuscando ? 0.6 : 1 }}>
-            {addBuscando ? 'Añadiendo…' : 'Añadir'}
-          </button>
-          {addMsg && (
-            <span style={{ fontSize: 12, fontWeight: 600, color: addMsg.tipo === 'ok' ? '#2e7d32' : '#c62828' }}>{addMsg.texto}</span>
+          {query && (
+            <button onClick={limpiarBusqueda} title="Limpiar búsqueda"
+              style={{
+                position: 'absolute', right: 96, top: '50%', transform: 'translateY(-50%)',
+                width: 24, height: 24, borderRadius: '50%', border: 'none',
+                background: '#e5e7eb', color: '#555', fontSize: 14, fontWeight: 600,
+                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+              }}>×</button>
           )}
+          <button onClick={aplicarBusqueda}
+            style={{
+              position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+              padding: '6px 14px', background: 'var(--blue)', color: 'white',
+              border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            }}>Buscar</button>
         </div>
-      )}
+
+        {/* Mitad derecha: añadir por número (busca BD→V3 y añade a Track). Solo
+            en la vista Listado. */}
+        {!compact && (
+          <div style={{ flex: '1 1 320px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <input
+              type="text"
+              value={numAdd}
+              onChange={e => { setNumAdd(e.target.value); if (addMsg) setAddMsg(null) }}
+              onKeyDown={e => { if (e.key === 'Enter') anadirPorNumero() }}
+              placeholder="Añadir por número..."
+              style={{ flex: '1 1 180px', padding: '8px 12px', border: '1px solid #e5e7eb', borderRadius: 12, fontSize: 13, outline: 'none', background: 'white', boxSizing: 'border-box' }}
+            />
+            <button onClick={anadirPorNumero} disabled={addBuscando}
+              style={{ padding: '8px 18px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: addBuscando ? 'default' : 'pointer', opacity: addBuscando ? 0.6 : 1 }}>
+              {addBuscando ? 'Añadiendo…' : 'Añadir'}
+            </button>
+            {addMsg && (
+              <span style={{ flexBasis: '100%', fontSize: 12, fontWeight: 600, color: addMsg.tipo === 'ok' ? '#2e7d32' : '#c62828' }}>{addMsg.texto}</span>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Cards de estado — conteo y monto sobre todo el pipeline. En columna
           estrecha (compact) van en grid de 3; a ancho completo, los 7 en fila. */}
@@ -685,6 +691,8 @@ export default function Pipeline({ usuario }) {
             })}
             topControls={renderControles(true)}
             topRightControls={renderAlcanceYAñadir()}
+            numerosWatchlist={numerosWatchlist}
+            onWatchlist={anadirWatchlist}
           />
         </div>
       </>
@@ -738,12 +746,11 @@ export default function Pipeline({ usuario }) {
                   {orden.campo === col.campo && <span style={{ marginLeft: 4 }}>{orden.dir === 'asc' ? '↑' : '↓'}</span>}
                 </th>
               ))}
-              <th style={{ padding: '10px 16px', textAlign: 'center', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12, position: 'sticky', top: 0, background: '#f8f9fa', zIndex: 5 }}>Acciones</th>
             </tr>
           </thead>
           <tbody>
             {filtrados.length === 0 ? (
-              <tr><td colSpan={9} style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
+              <tr><td colSpan={8} style={{ padding: 40, textAlign: 'center', color: '#aaa' }}>
                 {appliedQuery ? (
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                     <span>Sin resultados para "{appliedQuery}"</span>
@@ -771,18 +778,6 @@ export default function Pipeline({ usuario }) {
                   <td style={{ padding: '10px 16px' }}><Badge estado={p.estado} /></td>
                   <td style={{ padding: '10px 16px', textAlign: 'right' }}>{fmt(p.precio_referencia)}</td>
                   <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: 600, color: 'var(--blue)' }}>{fmt(p.precio_ofertado)}</td>
-                  <td style={{ padding: '10px 16px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                    {numerosWatchlist.has(numMostrado) ? (
-                      <span title="Ya en Watchlist" style={{ fontSize: 11, color: '#aaa' }}>✓ Watchlist</span>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); anadirWatchlist(numMostrado) }}
-                        title="Añadir a Watchlist"
-                        style={{ padding: '4px 10px', background: '#f0f4ff', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                        👁 Watchlist
-                      </button>
-                    )}
-                  </td>
                 </tr>
               )
             })}

@@ -96,6 +96,7 @@ export default function TrackFormulario({
   items, currentIdx, onIndexChange,
   onSave, onDelete, onReload, onClose, onEstudio,
   topControls, topRightControls,
+  numerosWatchlist, onWatchlist,
 }) {
   const item = items[currentIdx] || null
   const hasPrev = currentIdx > 0
@@ -551,6 +552,16 @@ export default function TrackFormulario({
               padding: '9px 16px', background: 'white', color: 'var(--blue)',
               border: '1px solid var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}>📊 Estudio de Mercado</button>
+          )}
+          {item?.id && onWatchlist && (
+            numerosWatchlist?.has(numActivo) ? (
+              <span title="Ya en Watchlist" style={{ padding: '9px 16px', color: '#aaa', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>✓ En Watchlist</span>
+            ) : (
+              <button onClick={() => onWatchlist(numActivo)} title="Añadir a Watchlist" style={{
+                padding: '9px 16px', background: '#f0f4ff', color: 'var(--blue)',
+                border: '1px solid var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}>→ Watchlist</button>
+            )
           )}
           {item?.id && (
             <button onClick={() => onDelete(item.id)} style={{
