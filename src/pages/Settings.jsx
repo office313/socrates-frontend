@@ -297,6 +297,196 @@ function ModalUsuarioSimple({ empresa, usuarioEditar, onClose, onSave }) {
   )
 }
 
+function RadarAvanzado({ ss, ts, is, ls, bs, mostrarMsg }) {
+  const [disponibles, setDisponibles] = useState([])
+  const [sectoresSel, setSectoresSel] = useState([])
+  const [criterios, setCriterios] = useState([])
+  const [instituciones, setInstituciones] = useState([])
+  const [provincias, setProvincias] = useState([])
+  const [unidades, setUnidades] = useState([])
+  const [nuevo, setNuevo] = useState(null)
+  const [guardandoSec, setGuardandoSec] = useState(false)
+
+  const cargarCriterios = () => axios.get('/api/settings/criterios').then(r => setCriterios(r.data.criterios || []))
+
+  useEffect(() => {
+    axios.get('/api/settings/sectores').then(r => { setDisponibles(r.data.disponibles || []); setSectoresSel(r.data.sectores || []) })
+    cargarCriterios()
+    axios.get('/api/instituciones?fuente=all').then(r => setInstituciones(r.data.instituciones || []))
+    axios.get('/api/provincias').then(r => setProvincias(r.data.provincias || []))
+  }, [])
+
+  const toggleSector = (s) => setSectoresSel(sel => sel.includes(s) ? sel.filter(x => x !== s) : [...sel, s])
+  const guardarSectores = () => {
+    setGuardandoSec(true)
+    axios.put('/api/settings/sectores', { sectores: sectoresSel })
+      .then(() => mostrarMsg('Sectores guardados'))
+      .catch(() => mostrarMsg('Error al guardar sectores', false))
+      .finally(() => setGuardandoSec(false))
+  }
+
+  const abrirNuevo = () => { setNuevo({ institucion: '', unidad_compra: '', provincia: '', monto_min: '', monto_max: '' }); setUnidades([]) }
+  const cancelarNuevo = () => { setNuevo(null); setUnidades([]) }
+  const setN = (k, v) => setNuevo(n => ({ ...n, [k]: v }))
+  const onInstitucion = (v) => {
+    setNuevo(n => ({ ...n, institucion: v, unidad_compra: '' }))
+    setUnidades([])
+    if (v) axios.get(`/api/instituciones?fuente=all&institucion=${encodeURIComponent(v)}`).then(r => setUnidades(r.data.unidades || []))
+  }
+
+  const guardarCriterio = () => {
+    const body = {
+      institucion: nuevo.institucion || null,
+      unidad_compra: nuevo.unidad_compra || null,
+      provincia: nuevo.provincia || null,
+      monto_min: nuevo.monto_min !== '' ? parseFloat(nuevo.monto_min) : null,
+      monto_max: nuevo.monto_max !== '' ? parseFloat(nuevo.monto_max) : null,
+    }
+    if (!body.institucion && !body.unidad_compra && !body.provincia && body.monto_min == null && body.monto_max == null) {
+      mostrarMsg('Configura al menos un campo del criterio', false); return
+    }
+    axios.post('/api/settings/criterios', body).then(r => {
+      if (r.data.error) { mostrarMsg(r.data.error, false); return }
+      cancelarNuevo(); cargarCriterios(); mostrarMsg('Criterio añadido')
+    }).catch(() => mostrarMsg('Error al guardar el criterio', false))
+  }
+
+  const eliminarCriterio = (id) => {
+    if (!confirm('¿Eliminar este criterio?')) return
+    axios.delete(`/api/settings/criterios/${id}`).then(() => { cargarCriterios(); mostrarMsg('Criterio eliminado') })
+  }
+
+  // Aviso suave: la institución elegida parece pertenecer a otra provincia.
+  const avisoProvincia = (() => {
+    if (!nuevo || !nuevo.institucion || !nuevo.provincia) return false
+    const inst = nuevo.institucion.toLowerCase()
+    const provEnNombre = provincias.find(p => {
+      const token = p.toLowerCase().replace('comarca ', '')
+      return token.length > 3 && inst.includes(token)
+    })
+    return provEnNombre && provEnNombre !== nuevo.provincia
+  })()
+
+  const subTitle = { fontSize: 14, fontWeight: 700, color: '#333', margin: '0 0 6px' }
+  const help = { fontSize: 12.5, color: '#666', margin: '0 0 14px', lineHeight: 1.6 }
+  const fmtMonto = (v) => v == null ? null : `B/. ${Number(v).toLocaleString('es-PA')}`
+
+  return (
+    <div style={ss}>
+      <h2 style={ts}>Radar avanzado</h2>
+
+      {/* ---------- Sectores ---------- */}
+      <div style={{ marginBottom: 28 }}>
+        <h3 style={subTitle}>Sectores</h3>
+        <p style={help}>Solo se mostrarán licitaciones de los sectores seleccionados. Si no seleccionás ninguno, se muestran todos.</p>
+        {disponibles.length === 0 ? (
+          <p style={{ color: '#aaa', fontSize: 13 }}>No hay sectores disponibles todavía.</p>
+        ) : (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 8, marginBottom: 16 }}>
+            {disponibles.map(s => {
+              const active = sectoresSel.includes(s)
+              return (
+                <label key={s} style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', borderRadius: 8, cursor: 'pointer',
+                  border: `1px solid ${active ? 'var(--blue)' : '#e5e7eb'}`,
+                  background: active ? 'var(--blue-light, #e8f0fb)' : 'white',
+                  fontSize: 13, fontWeight: active ? 600 : 400, color: active ? 'var(--blue)' : '#444',
+                }}>
+                  <input type="checkbox" checked={active} onChange={() => toggleSector(s)} style={{ accentColor: 'var(--blue)' }} />
+                  {s}
+                </label>
+              )
+            })}
+          </div>
+        )}
+        <button onClick={guardarSectores} disabled={guardandoSec} style={{ ...bs, opacity: guardandoSec ? 0.6 : 1 }}>
+          {guardandoSec ? 'Guardando…' : 'Guardar sectores'}
+        </button>
+      </div>
+
+      {/* ---------- Criterios especiales ---------- */}
+      <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 22 }}>
+        <h3 style={subTitle}>Criterios Especiales</h3>
+        <p style={help}>Una licitación aparece en Radar si cumple todos los campos de al menos un criterio.</p>
+
+        {criterios.length === 0 ? (
+          <p style={{ color: '#aaa', fontSize: 13, marginBottom: 14 }}>No hay criterios especiales configurados.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+            {criterios.map(c => (
+              <div key={c.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '10px 14px', border: '1px solid #e5e7eb', borderRadius: 8, background: '#fafafa' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                  {c.institucion && <span style={chipStyle}>🏛 {c.institucion}</span>}
+                  {c.unidad_compra && <span style={chipStyle}>🏢 {c.unidad_compra}</span>}
+                  {c.provincia && <span style={chipStyle}>📍 {c.provincia}</span>}
+                  {(c.monto_min != null || c.monto_max != null) && (
+                    <span style={chipStyle}>💰 {fmtMonto(c.monto_min) || 'B/. 0'} – {fmtMonto(c.monto_max) || '∞'}</span>
+                  )}
+                </div>
+                <button onClick={() => eliminarCriterio(c.id)} title="Eliminar criterio"
+                  style={{ padding: '4px 10px', background: '#ffebee', color: '#c62828', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', flexShrink: 0 }}>🗑</button>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {nuevo ? (
+          <div style={{ border: '1px solid var(--blue)', borderRadius: 10, padding: 16, background: 'white' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={ls}>Institución</label>
+                <select value={nuevo.institucion} onChange={e => onInstitucion(e.target.value)} style={is}>
+                  <option value="">— Cualquiera —</option>
+                  {instituciones.map(i => <option key={i} value={i}>{i}</option>)}
+                </select>
+              </div>
+              <div style={{ gridColumn: '1/-1' }}>
+                <label style={ls}>Unidad de compra</label>
+                <select value={nuevo.unidad_compra} onChange={e => setN('unidad_compra', e.target.value)} style={{ ...is, background: nuevo.institucion ? 'white' : '#f5f5f5' }} disabled={!nuevo.institucion}>
+                  <option value="">{nuevo.institucion ? '— Cualquiera —' : 'Seleccioná una institución primero'}</option>
+                  {unidades.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={ls}>Provincia</label>
+                <select value={nuevo.provincia} onChange={e => setN('provincia', e.target.value)} style={is}>
+                  <option value="">— Cualquiera —</option>
+                  {provincias.map(p => <option key={p} value={p}>{p}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={ls}>Monto mínimo (B/.)</label>
+                  <input type="number" min="0" value={nuevo.monto_min} onChange={e => setN('monto_min', e.target.value)} style={is} placeholder="—" />
+                </div>
+                <div>
+                  <label style={ls}>Monto máximo (B/.)</label>
+                  <input type="number" min="0" value={nuevo.monto_max} onChange={e => setN('monto_max', e.target.value)} style={is} placeholder="—" />
+                </div>
+              </div>
+            </div>
+            {avisoProvincia && (
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe082', color: '#8d6e00', padding: '8px 12px', borderRadius: 8, fontSize: 12.5, marginBottom: 12 }}>
+                ⚠️ La institución seleccionada puede no estar en esta provincia.
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={guardarCriterio} style={bs}>Guardar</button>
+              <button onClick={cancelarNuevo} style={{ padding: '9px 20px', background: '#f5f5f5', color: '#666', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Cancelar</button>
+            </div>
+          </div>
+        ) : (
+          <button onClick={abrirNuevo} style={{ padding: '9px 18px', background: 'var(--blue-light, #e8f0fb)', color: 'var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: '1px solid var(--blue)' }}>
+            + Añadir criterio
+          </button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+const chipStyle = { background: '#eef2f7', color: '#445', padding: '3px 9px', borderRadius: 12, fontSize: 12, fontWeight: 500 }
+
 export default function Settings({ usuario }) {
   const tieneTrack = useTrack()
   const [nombre, setNombre] = useState(usuario?.nombre || '')
@@ -664,6 +854,10 @@ export default function Settings({ usuario }) {
       )}
 
 
+
+      {usuario?.rol === 'supervisor' && (
+        <RadarAvanzado ss={ss} ts={ts} is={is} ls={ls} bs={bs} mostrarMsg={mostrarMsg} />
+      )}
 
       {usuario?.rol === 'superadmin' && usuario?.empresa_id !== 2 && (
         <div style={ss}>
