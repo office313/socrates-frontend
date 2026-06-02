@@ -171,6 +171,7 @@ export default function Analytics({ usuario }) {
   const PAC_PAGE_SIZE = 50
   const anioActual = new Date().getFullYear()
   const [pacQ, setPacQ] = useState('')
+  const [pacInstitucion, setPacInstitucion] = useState('')
   const [pacKeywords, setPacKeywords] = useState(true)
   const [pacAnio, setPacAnio] = useState(anioActual)
   const [pacObjeto, setPacObjeto] = useState('')
@@ -186,6 +187,7 @@ export default function Analytics({ usuario }) {
   const pacParams = (pagina) => {
     const p = new URLSearchParams()
     if (pacQ) p.append('q', pacQ)
+    if (pacInstitucion) p.append('institucion', pacInstitucion)
     p.append('keywords', pacKeywords ? 'true' : 'false')
     p.append('año', String(pacAnio))
     if (pacObjeto) p.append('objeto_contractual', pacObjeto)
@@ -245,8 +247,13 @@ export default function Analytics({ usuario }) {
   // ─────────────── SDI — Solicitudes de Información ───────────────
   const SDI_PAGE_SIZE = 50
   const [sdiQ, setSdiQ] = useState('')
+  const [sdiInstitucion, setSdiInstitucion] = useState('')
+  const [sdiUnidad, setSdiUnidad] = useState('')
   const [sdiKeywords, setSdiKeywords] = useState(true)
   const [sdiVigentes, setSdiVigentes] = useState(true)
+  const [sdiInstOpts, setSdiInstOpts] = useState([])
+  const [sdiUnidOpts, setSdiUnidOpts] = useState([])
+  const [pacInstOpts, setPacInstOpts] = useState([])
   const [sdiResultados, setSdiResultados] = useState([])
   const [sdiTotal, setSdiTotal] = useState(0)
   const [sdiLoading, setSdiLoading] = useState(false)
@@ -258,6 +265,8 @@ export default function Analytics({ usuario }) {
   const sdiParams = (pagina) => {
     const p = new URLSearchParams()
     if (sdiQ) p.append('q', sdiQ)
+    if (sdiInstitucion) p.append('institucion', sdiInstitucion)
+    if (sdiUnidad) p.append('unidad', sdiUnidad)
     p.append('keywords', sdiKeywords ? 'true' : 'false')
     p.append('vigentes_only', sdiVigentes ? 'true' : 'false')
     p.append('pagina', String(pagina))
@@ -310,6 +319,19 @@ export default function Analytics({ usuario }) {
     if (tab === 'sdi' && !sdiBuscado && !sdiLoading) buscarSdi()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tab])
+
+  // Opciones de los desplegables de institución (SDI y PAC) — cargadas una vez.
+  useEffect(() => {
+    axios.get('/api/instituciones?fuente=sdi').then(r => setSdiInstOpts(r.data.instituciones || [])).catch(() => {})
+    axios.get('/api/instituciones?fuente=pac').then(r => setPacInstOpts(r.data.instituciones || [])).catch(() => {})
+  }, [])
+  // Unidades de la institución SDI seleccionada (se recargan al cambiarla).
+  useEffect(() => {
+    if (!sdiInstitucion) { setSdiUnidOpts([]); return }
+    axios.get('/api/instituciones?fuente=sdi&institucion=' + encodeURIComponent(sdiInstitucion))
+      .then(r => setSdiUnidOpts(r.data.unidades || []))
+      .catch(() => setSdiUnidOpts([]))
+  }, [sdiInstitucion])
 
   useEffect(() => {
     const params = new URLSearchParams(location.search)
@@ -648,9 +670,9 @@ export default function Analytics({ usuario }) {
       <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Explorer</h1>
       <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
         <button style={tabStyle('historico')} onClick={() => setTab('historico')}>Estudio de Mercado</button>
-        <button style={tabStyle('numero')} onClick={() => setTab('numero')}>Buscar por Número</button>
-        <button style={tabStyle('pac')} onClick={() => setTab('pac')}>Plan de Compras</button>
         <button style={tabStyle('sdi')} onClick={() => setTab('sdi')}>SDI</button>
+        <button style={tabStyle('pac')} onClick={() => setTab('pac')}>Plan de Compras</button>
+        <button style={tabStyle('numero')} onClick={() => setTab('numero')}>Buscar por Número</button>
       </div>
 
       {tab === 'historico' && (
@@ -1120,9 +1142,16 @@ export default function Analytics({ usuario }) {
       {tab === 'pac' && (
         <div>
           <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 16, marginBottom: 16, display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: '2 1 280px' }}>
+            <div style={{ flex: '2 1 240px' }}>
               <label style={ls}>Buscar en descripción</label>
               <input value={pacQ} onChange={e => setPacQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscarPac()} placeholder="Buscar en descripción..." style={is} />
+            </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={ls}>Institución</label>
+              <select value={pacInstitucion} onChange={e => setPacInstitucion(e.target.value)} style={is}>
+                <option value="">Todas</option>
+                {pacInstOpts.map(i => <option key={i} value={i}>{i}</option>)}
+              </select>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#444', cursor: 'pointer', paddingBottom: 9, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={pacKeywords} onChange={e => setPacKeywords(e.target.checked)} />
@@ -1196,9 +1225,24 @@ export default function Analytics({ usuario }) {
       {tab === 'sdi' && (
         <div>
           <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 16, marginBottom: 16, display: 'flex', gap: 16, alignItems: 'flex-end', flexWrap: 'wrap' }}>
-            <div style={{ flex: '2 1 280px' }}>
+            <div style={{ flex: '2 1 220px' }}>
               <label style={ls}>Buscar</label>
               <input value={sdiQ} onChange={e => setSdiQ(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscarSdi()} placeholder="Buscar..." style={is} />
+            </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={ls}>Institución</label>
+              <select value={sdiInstitucion} onChange={e => { setSdiInstitucion(e.target.value); setSdiUnidad('') }} style={is}>
+                <option value="">Todas</option>
+                {sdiInstOpts.map(i => <option key={i} value={i}>{i}</option>)}
+              </select>
+            </div>
+            <div style={{ flex: '1 1 180px' }}>
+              <label style={ls}>Unidad</label>
+              <select value={sdiUnidad} onChange={e => setSdiUnidad(e.target.value)} disabled={!sdiInstitucion}
+                style={{ ...is, background: sdiInstitucion ? 'white' : '#f0f0f0', cursor: sdiInstitucion ? 'pointer' : 'not-allowed' }}>
+                <option value="">{sdiInstitucion ? 'Todas' : '—'}</option>
+                {sdiUnidOpts.map(u => <option key={u} value={u}>{u}</option>)}
+              </select>
             </div>
             <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#444', cursor: 'pointer', paddingBottom: 9, whiteSpace: 'nowrap' }}>
               <input type="checkbox" checked={sdiKeywords} onChange={e => setSdiKeywords(e.target.checked)} />
@@ -1232,14 +1276,9 @@ export default function Analytics({ usuario }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {sdiResultados.map((r, i) => {
-                      const cierraPronto = r.dias_restantes !== null && r.dias_restantes <= 2
-                      return (
+                    {sdiResultados.map((r, i) => (
                         <tr key={r.id}
-                          onClick={() => r.url_fuente && window.open(r.url_fuente, '_blank', 'noopener')}
-                          style={{ background: i % 2 === 0 ? 'white' : '#fafafa', cursor: 'pointer' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#e8f0fb'}
-                          onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafafa'}>
+                          style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
                           <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 600, whiteSpace: 'nowrap' }}>{r.numero_sdi}</td>
                           <td style={{ padding: '10px 16px', maxWidth: 220 }}>
                             <div>{r.institucion || '—'}</div>
@@ -1247,13 +1286,15 @@ export default function Analytics({ usuario }) {
                           </td>
                           <td style={{ padding: '10px 16px', color: '#444', maxWidth: 360 }}>{r.titulo || '—'}</td>
                           <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>{fmtFechaPac(r.fecha_publicacion)}</td>
-                          <td style={{ padding: '10px 16px', whiteSpace: 'nowrap', color: cierraPronto ? '#c62828' : '#444', fontWeight: cierraPronto ? 700 : 400 }}>
-                            {fmtFechaPac(r.fecha_limite)}{cierraPronto && r.dias_restantes >= 0 ? ` (${r.dias_restantes}d)` : ''}
+                          <td style={{ padding: '10px 16px', whiteSpace: 'nowrap' }}>{fmtFechaPac(r.fecha_limite)}</td>
+                          <td style={{ padding: '10px 16px', textAlign: 'center' }}>
+                            {r.documento_url ? (
+                              <a href={r.documento_url} target="_blank" rel="noopener noreferrer" title="Abrir documento"
+                                style={{ textDecoration: 'none', fontSize: 16 }}>📎</a>
+                            ) : ''}
                           </td>
-                          <td style={{ padding: '10px 16px', textAlign: 'center' }}>{r.tiene_documentos ? '📎' : ''}</td>
                         </tr>
-                      )
-                    })}
+                    ))}
                     {sdiResultados.length === 0 && !sdiLoading && (
                       <tr><td colSpan={6} style={{ padding: '24px 16px', textAlign: 'center', color: '#888' }}>Sin resultados.</td></tr>
                     )}
