@@ -793,19 +793,16 @@ export default function Pipeline({ usuario }) {
               const numMostrado = vinc ? p.numero_acto_derivado : p.numero_acto
               const instMostrada = vinc ? (p.derivado?.institucion || p.institucion) : p.institucion
               const descMostrada = vinc ? (p.derivado?.descripcion || p.descripcion) : p.descripcion
+              // Fila con cambios no vistos: fondo azul muy suave en TODA la fila
+              // (en vez de un punto en el Nº Acto). Se restaura en onMouseLeave.
+              const tieneCambios = cambiosPorActo[p.numero_acto]?.length > 0
+              const baseBg = tieneCambios ? '#EFF6FF' : (i % 2 === 0 ? 'white' : '#fafafa')
               return (
-                <tr key={p.id} onClick={() => { setFormularioIdx(i); setVista('formulario') }} style={{ cursor: 'pointer', background: i % 2 === 0 ? 'white' : '#fafafa' }}
+                <tr key={p.id} title={tieneCambios ? 'Cambios detectados desde tu última visita' : undefined}
+                  onClick={() => { setFormularioIdx(i); setVista('formulario') }} style={{ cursor: 'pointer', background: baseBg }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
-                  onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafafa'}>
-                  <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>
-                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      {cambiosPorActo[p.numero_acto]?.length > 0 && (
-                        <span title="Cambios detectados desde tu última visita"
-                          style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
-                      )}
-                      <span>{numMostrado}</span>
-                    </span>
-                  </td>
+                  onMouseLeave={e => e.currentTarget.style.background = baseBg}>
+                  <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>{numMostrado}</td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{fmtFecha(p.fecha_cierre)}</td>
                   <td style={{ padding: '10px 16px' }}>{(instMostrada || '-').substring(0, 25)}</td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{(descMostrada || '-').substring(0, 40)}...</td>
