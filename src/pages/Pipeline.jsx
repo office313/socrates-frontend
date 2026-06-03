@@ -799,11 +799,11 @@ export default function Pipeline({ usuario }) {
                   onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafafa'}>
                   <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>
                     <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-                      <span>{numMostrado}</span>
                       {cambiosPorActo[p.numero_acto]?.length > 0 && (
                         <span title="Cambios detectados desde tu última visita"
                           style={{ width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', flexShrink: 0 }} />
                       )}
+                      <span>{numMostrado}</span>
                     </span>
                   </td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{fmtFecha(p.fecha_cierre)}</td>
