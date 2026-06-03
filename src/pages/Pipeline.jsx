@@ -551,7 +551,8 @@ export default function Pipeline({ usuario }) {
               de pestañas de la columna derecha vía topRightControls. */}
           {!compact && renderAlcanceYAñadir()}
         </div>
-        <SelectorEmpresa />
+        {/* Selector de empresa solo en vista Listado (no en Formulario/compact). */}
+        {!compact && <SelectorEmpresa />}
       </div>
 
       {/* Buscador SIEMPRE visible (en ambas vistas). En modo Formulario,

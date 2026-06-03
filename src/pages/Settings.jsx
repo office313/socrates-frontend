@@ -626,6 +626,14 @@ export default function Settings({ usuario }) {
     })
   }
 
+  const revocarAcceso = (u, emp) => {
+    if (!confirm(`¿Quitar el acceso de ${u.nombre} a ${emp.nombre}?`)) return
+    axios.delete(`/api/usuarios/${u.id}/vincular-empresa/${emp.id}`).then(r => {
+      if (r.data && r.data.error) { mostrarMsg(r.data.error, false); return }
+      mostrarMsg('Acceso revocado'); cargarUsuarios()
+    }).catch(() => mostrarMsg('Error al revocar acceso', false))
+  }
+
   const ss = { background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 24, marginBottom: 20 }
   const ts = { fontSize: 15, fontWeight: 600, color: 'var(--blue)', margin: '0 0 20px', paddingBottom: 12, borderBottom: '1px solid #e5e7eb' }
   const is = { width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }
@@ -759,8 +767,8 @@ export default function Settings({ usuario }) {
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f8f9fa' }}>
-                  {['Nombre', 'Email', 'Rol', 'Acciones'].map((h, i) => (
-                    <th key={h} style={{ padding: '10px 16px', textAlign: i === 3 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12 }}>{h}</th>
+                  {['Nombre', 'Email', 'Rol', 'Empresas', 'Acciones'].map((h, i, arr) => (
+                    <th key={h} style={{ padding: '10px 16px', textAlign: i === arr.length - 1 ? 'right' : 'left', fontWeight: 600, color: '#888', borderBottom: '1px solid #e5e7eb', fontSize: 12 }}>{h}</th>
                   ))}
                 </tr>
               </thead>
@@ -771,6 +779,23 @@ export default function Settings({ usuario }) {
                     <td style={{ padding: '10px 16px', color: '#666' }}>{u.email}</td>
                     <td style={{ padding: '10px 16px' }}>
                       <span style={{ background: u.rol === 'supervisor' ? '#e8f0fb' : '#f5f5f5', color: u.rol === 'supervisor' ? 'var(--blue)' : '#666', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{u.rol}</span>
+                    </td>
+                    <td style={{ padding: '10px 16px' }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {(u.empresas || []).map(emp => {
+                          const principal = emp.id === u.empresa_id
+                          return (
+                            <span key={emp.id} title={principal ? 'Empresa principal' : `Acceso a ${emp.nombre}`}
+                              style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: principal ? '#e8f0fb' : '#eef2f7', color: principal ? 'var(--blue)' : '#445', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>
+                              {emp.nombre}
+                              {!principal && (
+                                <span onClick={() => revocarAcceso(u, emp)} title="Quitar acceso"
+                                  style={{ cursor: 'pointer', color: '#c62828', fontWeight: 700, fontSize: 13, lineHeight: 1, marginLeft: 1 }}>×</span>
+                              )}
+                            </span>
+                          )
+                        })}
+                      </div>
                     </td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                       <button onClick={() => setModalUsuario(u)} title="Editar"
