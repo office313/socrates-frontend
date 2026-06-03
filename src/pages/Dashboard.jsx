@@ -142,7 +142,7 @@ export default function Dashboard({ usuario }) {
   const [ultimaSync, setUltimaSync] = useState('')
   const [vistas, setVistas] = useState(new Set())
   const [filtro, setFiltro] = useState('todas')
-  const [categoriasFiltro, setCategoriasFiltro] = useState([])
+  const [categoriasFiltro] = useState([])
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   const [modalDetalle, setModalDetalle] = useState(null)
@@ -314,8 +314,6 @@ export default function Dashboard({ usuario }) {
   const licitacionesFiltradas = categoriasFiltro.length === 0
     ? baseFiltrada
     : baseFiltrada.filter(l => categoriasFiltro.includes(l.categoria_ia))
-
-  const categoriasDisponibles = [...new Set(licitaciones.map(l => l.categoria_ia).filter(Boolean))].sort()
 
   const noLeidasCount = licitaciones.filter(l => !vistas.has(l.numero_acto)).length
 
@@ -496,32 +494,6 @@ export default function Dashboard({ usuario }) {
             )}
           </span>
         </div>
-        {categoriasDisponibles.length > 0 && (
-          <div style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
-            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 600, marginRight: 4 }}>CATEGORÍA:</span>
-            {categoriasDisponibles.map(cat => {
-              const activa = categoriasFiltro.includes(cat)
-              return (
-                <button key={cat}
-                  onClick={() => setCategoriasFiltro(prev => activa ? prev.filter(c => c !== cat) : [...prev, cat])}
-                  style={{
-                    padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 500, cursor: 'pointer',
-                    background: activa ? 'var(--blue)' : '#f0f2f5',
-                    color: activa ? 'white' : '#555',
-                    border: '1px solid ' + (activa ? 'var(--blue)' : '#e5e7eb'),
-                  }}>
-                  {cat}
-                </button>
-              )
-            })}
-            {categoriasFiltro.length > 0 && (
-              <button onClick={() => setCategoriasFiltro([])}
-                style={{ padding: '3px 8px', borderRadius: 12, fontSize: 11, cursor: 'pointer', background: 'none', color: 'var(--blue)', border: 'none', textDecoration: 'underline' }}>
-                limpiar
-              </button>
-            )}
-          </div>
-        )}
         {/* Scroll container dedicado para la tabla: el thead se queda
             pegado arriba (sticky top: 0 relativo a este container, no
             al viewport). Mismo enfoque que Track tras 8e29d48 — más
