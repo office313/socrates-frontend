@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import axios from 'axios'
 import PanelLicitacionACP, { esFuenteACP } from './PanelLicitacionACP'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from './ResumenIA'
-import { pliegoIframeUrl } from '../utils/pliegoUrl'
+import PliegoIframe from './PliegoIframe'
 
 // Vista FORMULARIO a pantalla completa del Track (Pipeline).
 // Alternativa al modal pequeño con 7 pestañas (Modal en pages/Pipeline.jsx).
@@ -1112,10 +1112,6 @@ function ProveedorRow({ idx, value, onChange }) {
 
 function TabPliego({ form }) {
   const numActivo = form.numero_acto_derivado || form.numero_acto
-  const urlPliego = pliegoIframeUrl({
-    numero_acto: numActivo,
-    url_fuente: form.derivado?.url_fuente || form.url_fuente || '',
-  })
   if (esFuenteACP(form)) {
     return (
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'auto', height: '100%' }}>
@@ -1125,7 +1121,8 @@ function TabPliego({ form }) {
   }
   return (
     <div style={{ background: 'white', borderRadius: 12, border: '1px solid var(--border)', overflow: 'hidden', height: '100%' }}>
-      <iframe key={urlPliego || numActivo} src={urlPliego}
+      <PliegoIframe
+        lic={{ numero_acto: numActivo, url_fuente: form.derivado?.url_fuente || form.url_fuente || '' }}
         style={{ width: '100%', height: '100%', border: 'none', display: 'block' }} />
     </div>
   )

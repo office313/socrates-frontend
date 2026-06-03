@@ -7,7 +7,7 @@ import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import CuadroCotizaciones from '../components/CuadroCotizaciones'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import { useTrack } from '../hooks/useTrack'
-import { pliegoIframeUrl } from '../utils/pliegoUrl'
+import PliegoIframe from '../components/PliegoIframe'
 import SelectorEmpresa from '../components/SelectorEmpresa'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
@@ -1127,7 +1127,7 @@ export default function Analytics({ usuario }) {
                   {esFuenteACP(licitacionEncontrada)
                     ? <PanelLicitacionACP lic={licitacionEncontrada} />
                     : licitacionEncontrada.url_fuente
-                      ? <iframe src={pliegoIframeUrl(licitacionEncontrada)} style={{ width: '100%', height: '100%', border: 'none' }} />
+                      ? <PliegoIframe lic={licitacionEncontrada} style={{ width: '100%', height: '100%', border: 'none' }} />
                       : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
                   }
                 </div>

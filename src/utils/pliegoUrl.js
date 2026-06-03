@@ -42,3 +42,26 @@ export function pliegoIframeUrl(lic) {
   }
   return conCacheBust(url)
 }
+
+// Versión asíncrona: pide al backend la URL FRESCA del iframe (token
+// regenerado desde la API de PanamaCompra a partir del numero_acto), porque el
+// token guardado en url_fuente puede estar desactualizado. El backend ya maneja
+// ACP y el fallback a url_fuente; aquí pasamos el url_fuente local como query
+// para que no dependa de que la lic esté en la tabla licitaciones. El resultado
+// se pasa por pliegoIframeUrl para conservar la transformación LV y el
+// cache-busting. Ante cualquier fallo de red, cae al url_fuente local.
+export async function fetchPliegoIframeUrl(lic) {
+  const numero = lic?.numero_acto || ''
+  let fresca = lic?.url_fuente || ''
+  if (numero) {
+    try {
+      const qs = fresca ? `?url_fuente=${encodeURIComponent(fresca)}` : ''
+      const r = await fetch(`/api/licitaciones/${encodeURIComponent(numero)}/iframe-url${qs}`, { credentials: 'include' })
+      if (r.ok) {
+        const d = await r.json()
+        if (d && d.url) fresca = d.url
+      }
+    } catch { /* sin red: usar el url_fuente local */ }
+  }
+  return pliegoIframeUrl({ ...lic, numero_acto: numero, url_fuente: fresca })
+}
