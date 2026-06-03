@@ -43,6 +43,31 @@ const fmtFecha = (s) => {
 }
 const fmtMoneda = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 
+// Formatea un importe en balboas (B/.) para el bloque de cambios. Los valores
+// llegan como string float ("5000.0"); si no parsea, se muestra tal cual.
+const fmtBalboa = (v) => {
+  const n = Number(String(v).replace(/[^0-9.-]/g, ''))
+  return isNaN(n) ? (v ?? '') : 'B/. ' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
+}
+
+// Renderiza una línea del bloque de cambios detectados (notificaciones Track)
+// según su tipo. Las fechas llegan como YYYY-MM-DD; fmtFecha → DD-MM-YYYY.
+const renderCambio = (c) => {
+  if (c.tipo === 'fecha_cierre') {
+    return <>📅 Fecha de cierre: <strong>{fmtFecha(c.anterior)}</strong> → <strong>{fmtFecha(c.nuevo)}</strong></>
+  }
+  if (c.tipo === 'presupuesto') {
+    return <>💰 Presupuesto: <strong>{fmtBalboa(c.anterior)}</strong> → <strong>{fmtBalboa(c.nuevo)}</strong></>
+  }
+  if (c.tipo === 'relanzamiento') {
+    return <>⟲ Relanzamiento (publicación): <strong>{fmtFecha(c.anterior)}</strong> → <strong>{fmtFecha(c.nuevo)}</strong></>
+  }
+  if (c.tipo === 'documento_nuevo') {
+    return <>📄 {c.nuevo || 'Nuevos documentos detectados'}</>
+  }
+  return <>{c.nuevo || c.tipo}</>
+}
+
 const formatCurrency = (val) => {
   if (val === '' || val === null || val === undefined) return ''
   const n = Number(String(val).replace(/[^0-9.-]/g, ''))
@@ -98,6 +123,7 @@ export default function TrackFormulario({
   onSave, onDelete, onReload, onClose, onEstudio,
   topControls, topRightControls,
   numerosWatchlist, onWatchlist,
+  cambiosPorActo, onCambiosVistos,
 }) {
   const item = items[currentIdx] || null
   const hasPrev = currentIdx > 0
@@ -128,6 +154,26 @@ export default function TrackFormulario({
       return JSON.stringify(form) !== snapshotRef.current
     } catch { return false }
   })()
+
+  // Cambios detectados (notificaciones Track). Los cambios llegan del padre por
+  // numero_acto (el acto de la CL en pipeline). Al mostrar el bloque por primera
+  // vez para una lic, se "congela" su snapshot local (cambiosSnapRef) y se llama
+  // a onCambiosVistos: el padre los marca vistos en backend y limpia el badge
+  // del listado. El snapshot local mantiene el bloque visible aunque el padre
+  // ya haya vaciado su mapa, y evita re-marcar al revisitar la misma lic.
+  const cambiosSnapRef = useRef({})
+  const naCambios = item?.numero_acto || null
+  const cambiosItem = naCambios
+    ? (cambiosSnapRef.current[naCambios] || cambiosPorActo?.[naCambios] || [])
+    : []
+  useEffect(() => {
+    if (!naCambios) return
+    const cs = cambiosPorActo?.[naCambios]
+    if (cs && cs.length && !cambiosSnapRef.current[naCambios]) {
+      cambiosSnapRef.current[naCambios] = cs
+      if (onCambiosVistos) onCambiosVistos(naCambios)
+    }
+  }, [naCambios, cambiosPorActo])
 
   // Reset al cambiar de item: copia el item al form, fija snapshot, limpia estado de vinculación.
   useEffect(() => {
@@ -459,6 +505,26 @@ export default function TrackFormulario({
                 </div>
               )}
             </div>
+
+            {/* CAMBIOS DETECTADOS (notificaciones Track) — bloque discreto con
+                borde izquierdo ámbar. Se muestra si la lic trae cambios no vistos;
+                al mostrarse, el efecto de arriba ya los marcó como vistos. */}
+            {cambiosItem.length > 0 && (
+              <div style={{
+                marginBottom: 12, padding: '10px 12px',
+                background: '#fffbeb', borderLeft: '3px solid #f59e0b',
+                borderRadius: '0 8px 8px 0',
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 6 }}>
+                  ⚠️ Cambios detectados desde tu última visita:
+                </div>
+                {cambiosItem.map((c, idx) => (
+                  <div key={idx} style={{ fontSize: 12, color: '#78350f', lineHeight: 1.5 }}>
+                    {renderCambio(c)}
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* ESTADO */}
             <div style={{ marginBottom: 10 }}>

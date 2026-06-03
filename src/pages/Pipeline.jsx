@@ -286,6 +286,11 @@ export default function Pipeline({ usuario }) {
   const [vista, setVista] = useState('formulario')   // 'formulario' | 'listado'
   const [formularioIdx, setFormularioIdx] = useState(0)
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
+  // Cambios detectados (notificaciones Track) no vistos por el usuario.
+  // Mapa numero_acto → [{tipo, anterior, nuevo, detectado_en}]. Se carga con el
+  // listado (GET /api/pipeline/cambios) y alimenta el badge del listado + el
+  // bloque informativo del Formulario.
+  const [cambiosPorActo, setCambiosPorActo] = useState({})
   const [toast, setToast] = useState('')
   const [numAdd, setNumAdd] = useState('')        // input "añadir por número"
   const [addMsg, setAddMsg] = useState(null)      // { tipo: 'error'|'ok', texto }
@@ -298,6 +303,23 @@ export default function Pipeline({ usuario }) {
     axios.get('/api/watchlist')
       .then(r => setNumerosWatchlist(new Set((r.data.resultados || []).map(x => x.numero_acto))))
       .catch(() => {})
+    axios.get('/api/pipeline/cambios')
+      .then(r => {
+        const m = {}
+        ;(r.data || []).forEach(x => { m[x.numero_acto] = x.cambios })
+        setCambiosPorActo(m)
+      })
+      .catch(() => {})
+  }
+
+  // Marca como vistos los cambios de una licitación (POST) y los quita del mapa
+  // local para que el badge del listado desaparezca sin esperar a recargar.
+  const marcarCambiosVistos = (numeroActo) => {
+    axios.post('/api/pipeline/cambios/visto', { numero_acto: numeroActo }).catch(() => {})
+    setCambiosPorActo(prev => {
+      if (!prev[numeroActo]) return prev
+      const m = { ...prev }; delete m[numeroActo]; return m
+    })
   }
 
   const anadirWatchlist = (numeroActo) => {
@@ -696,6 +718,8 @@ export default function Pipeline({ usuario }) {
             topRightControls={renderAlcanceYAñadir()}
             numerosWatchlist={numerosWatchlist}
             onWatchlist={anadirWatchlist}
+            cambiosPorActo={cambiosPorActo}
+            onCambiosVistos={marcarCambiosVistos}
           />
         </div>
       </>
@@ -773,7 +797,13 @@ export default function Pipeline({ usuario }) {
                 <tr key={p.id} onClick={() => { setFormularioIdx(i); setVista('formulario') }} style={{ cursor: 'pointer', background: i % 2 === 0 ? 'white' : '#fafafa' }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
                   onMouseLeave={e => e.currentTarget.style.background = i % 2 === 0 ? 'white' : '#fafafa'}>
-                  <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>{numMostrado}</td>
+                  <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>
+                    {numMostrado}
+                    {cambiosPorActo[p.numero_acto]?.length > 0 && (
+                      <span title="Cambios detectados desde tu última visita"
+                        style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: '#f59e0b', marginLeft: 6, verticalAlign: 'middle', flexShrink: 0 }} />
+                    )}
+                  </td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{fmtFecha(p.fecha_cierre)}</td>
                   <td style={{ padding: '10px 16px' }}>{(instMostrada || '-').substring(0, 25)}</td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{(descMostrada || '-').substring(0, 40)}...</td>
