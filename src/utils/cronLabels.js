@@ -1,6 +1,6 @@
 export const CRON_LABELS = {
   sync_rapida:           'Sync PanamaCompra',
-  categorizar_pendientes:'Categorización IA',
+  categorizar_pendientes:'Categorización',
   adjudicaciones_v3:     'Adjudicaciones V3',
   adjudicaciones_v2:     'Adjudicaciones V2',
   run_acp_vigentes:      'ACP vigentes',
