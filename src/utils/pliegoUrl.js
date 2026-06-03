@@ -8,6 +8,21 @@
 // El token es el último segmento de url_fuente (guardado en BD). Para LV, además,
 // hay que cambiar el campo `tp` del token a '3': el token guardado trae tp=16
 // (procesoVistaPliego) pero el endpoint de solicitud-de-cotizacion exige tp=3.
+//
+// Cache-busting: PanamaCompra es una SPA y el iframe carga el documento
+// `.../Inicio/` (todo lo que va antes del `#`); el navegador lo cachea por esa
+// URL e ignora el fragmento. Para forzar siempre la versión fresca añadimos un
+// parámetro `t={Date.now()}` a la query — que SÍ va antes del `#`, de modo que
+// el navegador lo incluye en la petición del documento y no reutiliza la caché.
+function conCacheBust(u) {
+  if (!u) return u
+  const hashIdx = u.indexOf('#')
+  const base = hashIdx === -1 ? u : u.slice(0, hashIdx)
+  const hash = hashIdx === -1 ? '' : u.slice(hashIdx)
+  const sep = base.includes('?') ? '&' : '?'
+  return `${base}${sep}t=${Date.now()}${hash}`
+}
+
 export function pliegoIframeUrl(lic) {
   const url = lic?.url_fuente || ''
   if (!url) return url
@@ -19,11 +34,11 @@ export function pliegoIframeUrl(lic) {
       const decoded = JSON.parse(atob(padded))
       decoded.tp = '3'  // LV requiere tp=3 en el endpoint de cotización
       const nuevo = btoa(JSON.stringify(decoded)).replace(/=+$/, '')
-      return `https://www.panamacompra.gob.pa/Inicio/#/solicitud-de-cotizacion/${nuevo}`
+      return conCacheBust(`https://www.panamacompra.gob.pa/Inicio/#/solicitud-de-cotizacion/${nuevo}`)
     } catch {
       // Token no decodificable: usar el token tal cual antes que romper el iframe.
-      return `https://www.panamacompra.gob.pa/Inicio/#/solicitud-de-cotizacion/${token}`
+      return conCacheBust(`https://www.panamacompra.gob.pa/Inicio/#/solicitud-de-cotizacion/${token}`)
     }
   }
-  return url
+  return conCacheBust(url)
 }
