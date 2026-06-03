@@ -6,6 +6,7 @@ import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import CuadroCotizaciones from '../components/CuadroCotizaciones'
 import { useTrack } from '../hooks/useTrack'
+import { pliegoIframeUrl } from '../utils/pliegoUrl'
 
 function ClaseBadge({ clase }) {
   const esAdj = clase === 'adjudicada'
@@ -153,13 +154,13 @@ function ModalDetalle({ lic, onClose, onPipeline, onEliminar, onEstudio, enPipel
               esFuenteACP(lic)
                 ? <PanelAdjudicacionACP adj={lic} />
                 : lic.url_fuente
-                  ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                  ? <iframe src={pliegoIframeUrl(lic)} style={{ width: '100%', height: '100%', border: 'none' }} />
                   : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
             ) : (
               esFuenteACP(lic)
                 ? <PanelLicitacionACP lic={lic} />
                 : lic.url_fuente
-                  ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                  ? <iframe src={pliegoIframeUrl(lic)} style={{ width: '100%', height: '100%', border: 'none' }} />
                   : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
             )}
           </div>

@@ -6,6 +6,7 @@ import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionAC
 import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import { useTrack } from '../hooks/useTrack'
+import { pliegoIframeUrl } from '../utils/pliegoUrl'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
@@ -117,7 +118,7 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
             {esFuenteACP(lic)
               ? <PanelLicitacionACP lic={lic} />
               : lic.url_fuente
-                ? <iframe src={lic.url_fuente} style={{ width: '100%', height: '100%', border: 'none' }} />
+                ? <iframe src={pliegoIframeUrl(lic)} style={{ width: '100%', height: '100%', border: 'none' }} />
                 : <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#aaa' }}>Sin URL disponible</div>
             }
           </div>
