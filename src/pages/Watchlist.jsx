@@ -7,6 +7,7 @@ import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/Resu
 import CuadroCotizaciones from '../components/CuadroCotizaciones'
 import { useTrack } from '../hooks/useTrack'
 import { pliegoIframeUrl } from '../utils/pliegoUrl'
+import SelectorEmpresa from '../components/SelectorEmpresa'
 
 function ClaseBadge({ clase }) {
   const esAdj = clase === 'adjudicada'
@@ -270,7 +271,10 @@ export default function Watchlist() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Watchlist</h1>
-        <span style={{ fontSize: 13, color: '#888' }}>{licitaciones.length} items</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <SelectorEmpresa />
+          <span style={{ fontSize: 13, color: '#888' }}>{licitaciones.length} items</span>
+        </div>
       </div>
 
       {/* Añadir por número de licitación */}

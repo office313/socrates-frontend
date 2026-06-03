@@ -8,6 +8,7 @@ import CuadroCotizaciones from '../components/CuadroCotizaciones'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import { useTrack } from '../hooks/useTrack'
 import { pliegoIframeUrl } from '../utils/pliegoUrl'
+import SelectorEmpresa from '../components/SelectorEmpresa'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtCompacto = (v) => {
@@ -668,7 +669,10 @@ export default function Analytics({ usuario }) {
 
   return (
     <div style={{ padding: 24 }}>
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Explorer</h1>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Explorer</h1>
+        <SelectorEmpresa />
+      </div>
       <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb', marginBottom: 20 }}>
         <button style={tabStyle('historico')} onClick={() => setTab('historico')}>Estudio de Mercado</button>
         <button style={tabStyle('sdi')} onClick={() => setTab('sdi')}>SDI</button>

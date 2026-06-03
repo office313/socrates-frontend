@@ -3,6 +3,7 @@ import axios from 'axios'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import TrackFormulario from '../components/TrackFormulario'
+import SelectorEmpresa from '../components/SelectorEmpresa'
 
 
 // Convierte 'YYYY-MM-DD' a 'DD-MM-YYYY' para mostrar
@@ -550,6 +551,7 @@ export default function Pipeline({ usuario }) {
               de pestañas de la columna derecha vía topRightControls. */}
           {!compact && renderAlcanceYAñadir()}
         </div>
+        <SelectorEmpresa />
       </div>
 
       {/* Buscador SIEMPRE visible (en ambas vistas). En modo Formulario,

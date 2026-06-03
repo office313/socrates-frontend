@@ -487,6 +487,51 @@ function RadarAvanzado({ ss, ts, is, ls, bs, mostrarMsg }) {
 
 const chipStyle = { background: '#eef2f7', color: '#445', padding: '3px 9px', borderRadius: 12, fontSize: 12, fontWeight: 500 }
 
+// Multiempresa: el supervisor da a un usuario de su empresa acceso a otra de sus
+// empresas. Solo se muestra si el supervisor tiene acceso a más de una empresa.
+function VincularUsuarioEmpresa({ usuario, usuarios, mostrarMsg }) {
+  const otras = (usuario?.empresas || []).filter(e => !e.activa)
+  const [usuarioId, setUsuarioId] = useState('')
+  const [empresaId, setEmpresaId] = useState('')
+  const [loading, setLoading] = useState(false)
+  if (otras.length === 0) return null
+  const dar = () => {
+    if (!usuarioId || !empresaId) { mostrarMsg('Elegí usuario y empresa destino', false); return }
+    setLoading(true)
+    axios.post(`/api/usuarios/${usuarioId}/vincular-empresa`, { empresa_id: Number(empresaId) })
+      .then(r => {
+        if (r.data?.error) { mostrarMsg(r.data.error, false); return }
+        mostrarMsg(r.data?.ya_existia ? 'El usuario ya tenía acceso a esa empresa' : 'Acceso concedido')
+        setUsuarioId(''); setEmpresaId('')
+      })
+      .catch(() => mostrarMsg('Error al dar acceso', false))
+      .finally(() => setLoading(false))
+  }
+  const is = { padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }
+  return (
+    <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
+      <p style={{ fontSize: 13, color: '#666', marginBottom: 10, lineHeight: 1.6 }}>
+        Dar a un usuario de esta empresa acceso a otra de tus empresas. Podrá alternar entre ellas desde el selector de empresa de la cabecera.
+      </p>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+        <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)} style={is}>
+          <option value="">Usuario…</option>
+          {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre} ({u.email})</option>)}
+        </select>
+        <span style={{ fontSize: 13, color: '#888' }}>→</span>
+        <select value={empresaId} onChange={e => setEmpresaId(e.target.value)} style={is}>
+          <option value="">Empresa destino…</option>
+          {otras.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+        </select>
+        <button onClick={dar} disabled={loading}
+          style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', opacity: loading ? 0.6 : 1 }}>
+          {loading ? 'Dando acceso…' : 'Dar acceso'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 export default function Settings({ usuario }) {
   const tieneTrack = useTrack()
   const [nombre, setNombre] = useState(usuario?.nombre || '')
@@ -740,6 +785,7 @@ export default function Settings({ usuario }) {
               </tbody>
             </table>
           )}
+          <VincularUsuarioEmpresa usuario={usuario} usuarios={usuarios} mostrarMsg={mostrarMsg} />
         </div>
       )}
 

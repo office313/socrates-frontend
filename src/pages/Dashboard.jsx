@@ -7,6 +7,7 @@ import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import { useTrack } from '../hooks/useTrack'
 import { pliegoIframeUrl } from '../utils/pliegoUrl'
+import SelectorEmpresa from '../components/SelectorEmpresa'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
@@ -372,6 +373,7 @@ export default function Dashboard({ usuario }) {
             </h1>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <SelectorEmpresa />
             {ultimaSync && (
               <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'white', padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
                 Ultima sync: {ultimaSync}
