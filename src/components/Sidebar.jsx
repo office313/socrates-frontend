@@ -1,6 +1,61 @@
+import { useState } from 'react'
 import { NavLink, useNavigate } from 'react-router-dom'
+import axios from 'axios'
 import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-icono-rojo.svg'
+
+// Selector de empresa activa (multiempresa). Solo se muestra si el usuario tiene
+// acceso a más de una empresa. Al cambiar, persiste en backend y recarga la app
+// para que todos los módulos carguen datos de la nueva empresa.
+function SelectorEmpresa({ usuario }) {
+  const empresas = usuario?.empresas || []
+  const [abierto, setAbierto] = useState(false)
+  const [cambiando, setCambiando] = useState(null)
+  if (empresas.length <= 1) return null
+  const activa = empresas.find(e => e.activa) || empresas[0]
+
+  const cambiar = (emp) => {
+    if (emp.id === activa.id) { setAbierto(false); return }
+    setAbierto(false)
+    setCambiando(emp.nombre)
+    axios.post('/api/cambiar-empresa', { empresa_id: emp.id })
+      .then(() => window.location.reload())
+      .catch(() => setCambiando(null))
+  }
+
+  return (
+    <div style={{ width: '100%', padding: '0 8px', marginBottom: 18, position: 'relative' }}>
+      <button onClick={() => setAbierto(o => !o)} title={activa.nombre}
+        style={{ width: '100%', background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.18)',
+                 borderRadius: 8, padding: '6px 4px', cursor: 'pointer', display: 'flex', flexDirection: 'column',
+                 alignItems: 'center', gap: 2 }}>
+        <span style={{ fontSize: 8, color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Empresa</span>
+        <span style={{ fontSize: 10, color: 'white', fontWeight: 600, lineHeight: 1.15, textAlign: 'center', wordBreak: 'break-word' }}>
+          {activa.nombre} <span style={{ opacity: 0.7 }}>▾</span>
+        </span>
+      </button>
+      {abierto && (
+        <div style={{ position: 'absolute', top: '100%', left: 8, marginTop: 4, minWidth: 210,
+                      background: 'white', borderRadius: 8, boxShadow: '0 8px 28px rgba(0,0,0,0.3)', zIndex: 200, overflow: 'hidden' }}>
+          {empresas.map(e => (
+            <button key={e.id} onClick={() => cambiar(e)}
+              style={{ display: 'block', width: '100%', textAlign: 'left', padding: '9px 12px', border: 'none',
+                       borderBottom: '1px solid #f0f0f0', background: e.activa ? '#eef2ff' : 'white', color: '#222',
+                       fontSize: 12.5, fontWeight: e.activa ? 700 : 500, cursor: 'pointer' }}>
+              {e.nombre} <span style={{ color: '#999', fontWeight: 400, fontSize: 11 }}>· {e.rol}</span>{e.activa ? ' ✓' : ''}
+            </button>
+          ))}
+        </div>
+      )}
+      {cambiando && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,45,87,0.88)', zIndex: 2000,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: 15, fontWeight: 600 }}>
+          Cambiando a {cambiando}…
+        </div>
+      )}
+    </div>
+  )
+}
 
 const getNavItems = (usuario) => {
   const items = [
@@ -48,6 +103,8 @@ export default function Sidebar({ usuario }) {
       zIndex: 100,
     }}>
       <img src={iconoSocrates} alt="Socrates Pro" width="48" height="48" style={{ display: 'block', marginBottom: 24 }} />
+
+      <SelectorEmpresa usuario={usuario} />
 
       {esCatplan ? (
         <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, width: '100%', padding: '0 8px' }}>

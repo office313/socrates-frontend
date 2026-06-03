@@ -3,6 +3,50 @@ import axios from 'axios'
 
 const ROLES = ['usuario', 'supervisor']
 
+// Vincular un usuario existente (por email) a una empresa. Si el email no existe,
+// el backend crea el usuario con email de bienvenida; si ya existe, solo le añade
+// el acceso a esta empresa (sin email).
+function VincularUsuario({ empresaId, onResult }) {
+  const [email, setEmail] = useState('')
+  const [rol, setRol] = useState('usuario')
+  const [loading, setLoading] = useState(false)
+  const vincular = () => {
+    const e = email.trim()
+    if (!e) return
+    setLoading(true)
+    axios.post(`/api/admin/empresa/${empresaId}/vincular-usuario`, { email: e, rol })
+      .then(r => {
+        const d = r.data || {}
+        if (d.error) { onResult('Error: ' + d.error); return }
+        if (d.ya_existia) onResult('El usuario ya tenía acceso a esta empresa')
+        else if (d.creado) onResult(d.email_enviado
+          ? 'Usuario creado y vinculado (email de bienvenida enviado)'
+          : `Usuario creado y vinculado. Contraseña provisional: ${d.password_provisional}`)
+        else onResult('Usuario existente vinculado a esta empresa')
+        setEmail('')
+      })
+      .catch(() => onResult('Error al vincular usuario'))
+      .finally(() => setLoading(false))
+  }
+  const is = { padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12 }
+  return (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 12, flexWrap: 'wrap', background: '#f8f9fa', padding: 10, borderRadius: 8 }}>
+      <span style={{ fontSize: 11, color: '#888', fontWeight: 600 }}>Vincular usuario existente:</span>
+      <input type="email" placeholder="email@empresa.com" value={email}
+        onChange={ev => setEmail(ev.target.value)}
+        onKeyDown={ev => { if (ev.key === 'Enter') vincular() }}
+        style={{ ...is, flex: 1, minWidth: 180 }} />
+      <select value={rol} onChange={ev => setRol(ev.target.value)} style={is}>
+        {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+      </select>
+      <button onClick={vincular} disabled={loading}
+        style={{ padding: '6px 14px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', opacity: loading ? 0.6 : 1 }}>
+        {loading ? 'Vinculando…' : 'Vincular usuario'}
+      </button>
+    </div>
+  )
+}
+
 function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
   const esNuevo = !usuarioEditar?.id
   const [form, setForm] = useState(usuarioEditar || { nombre: '', email: '', password: '', confirmar: '', rol: 'usuario', telefono: '' })
@@ -297,6 +341,7 @@ export default function Clientes() {
                       </tbody>
                     </table>
                   )}
+                  <VincularUsuario empresaId={e.id} onResult={(m) => { mostrarMsg(m); cargarUsuarios() }} />
                 </div>
               )}
             </div>
