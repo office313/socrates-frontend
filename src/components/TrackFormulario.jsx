@@ -155,16 +155,53 @@ export default function TrackFormulario({
     }
   }, [item?.id])
 
-  // Confirma con el usuario que perderá cambios sin guardar. Usado por prev/next/close.
+  // Confirma con el usuario que perderá cambios sin guardar. Usado por close/Esc;
+  // la navegación entre licitaciones usa el modal de 3 opciones de abajo.
   const confirmarSiDirty = () => !dirty || window.confirm('Tienes cambios sin guardar. ¿Descartar?')
 
-  const irAnterior = () => { if (hasPrev && confirmarSiDirty()) onIndexChange(currentIdx - 1) }
-  const irSiguiente = () => { if (hasNext && confirmarSiDirty()) onIndexChange(currentIdx + 1) }
+  // Navegación entre licitaciones con detección de cambios. Si el form difiere
+  // del snapshot inicial, se abre un modal (Guardar/Descartar/Cancelar); si no,
+  // se navega directo. navTarget guarda la acción de navegación pendiente.
+  const [navTarget, setNavTarget] = useState(null)
+  const [guardandoNav, setGuardandoNav] = useState(false)
+  const [navError, setNavError] = useState(null)
+
+  const intentarNavegar = (accion) => {
+    if (dirty) { setNavError(null); setNavTarget(() => accion) }
+    else accion()
+  }
+  const irAnterior = () => { if (hasPrev) intentarNavegar(() => onIndexChange(currentIdx - 1)) }
+  const irSiguiente = () => { if (hasNext) intentarNavegar(() => onIndexChange(currentIdx + 1)) }
   const cerrar = () => { if (confirmarSiDirty()) onClose() }
+
+  const cancelarNav = () => { setNavTarget(null); setNavError(null) }
+  const descartarYContinuar = () => {
+    const accion = navTarget
+    setNavTarget(null); setNavError(null)
+    if (accion) accion()
+  }
+  const guardarYContinuar = async () => {
+    setGuardandoNav(true); setNavError(null)
+    try {
+      // Mismo endpoint que el botón Guardar (PUT/POST /api/pipeline, como onSave).
+      if (form.id) await axios.put(`/api/pipeline/${form.id}`, form)
+      else await axios.post('/api/pipeline', form)
+      snapshotRef.current = JSON.stringify(form)
+      if (onReload) onReload()           // refresca el listado del padre (= cargar)
+      const accion = navTarget
+      setGuardandoNav(false); setNavTarget(null)
+      if (accion) accion()               // navega solo tras guardar con éxito
+    } catch {
+      setGuardandoNav(false)
+      setNavError('No se pudo guardar. Inténtalo de nuevo.')
+    }
+  }
 
   // Keyboard nav: ← → para navegar, Esc para cerrar (con prompt si dirty).
   useEffect(() => {
     const handler = (e) => {
+      // Con el modal de cambios sin guardar abierto: Esc cancela, ignorar el resto.
+      if (navTarget) { if (e.key === 'Escape') cancelarNav(); return }
       const enInput = ['INPUT', 'TEXTAREA', 'SELECT'].includes(e.target.tagName)
       if (enInput) return
       if (e.key === 'ArrowLeft' && hasPrev) irAnterior()
@@ -588,6 +625,53 @@ export default function TrackFormulario({
           onConfirm={() => vincularDerivado(true)}
         />
       )}
+
+      {/* Modal: cambios sin guardar al navegar entre licitaciones */}
+      {navTarget && (
+        <ModalNavSinGuardar
+          guardando={guardandoNav}
+          error={navError}
+          onGuardar={guardarYContinuar}
+          onDescartar={descartarYContinuar}
+          onCancelar={cancelarNav}
+        />
+      )}
+    </div>
+  )
+}
+
+// Modal de 3 opciones cuando se navega con cambios sin guardar. Mismo estilo
+// visual que ModalConfirmVinc (overlay + card centrada).
+function ModalNavSinGuardar({ guardando, error, onGuardar, onDescartar, onCancelar }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'white', borderRadius: 12, padding: 24, width: '90%', maxWidth: 460, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#e65100', display: 'flex', alignItems: 'center', gap: 8 }}>
+          ⚠️ Cambios sin guardar
+        </h3>
+        <div style={{ fontSize: 13, lineHeight: 1.7, color: '#333', marginBottom: error ? 12 : 20 }}>
+          Tienes cambios sin guardar en esta licitación. ¿Qué querés hacer antes de continuar?
+        </div>
+        {error && (
+          <div style={{ background: '#ffebee', border: '1px solid #ffcdd2', color: '#c62828', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 16 }}>
+            {error}
+          </div>
+        )}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={onCancelar} disabled={guardando}
+            style={{ padding: '8px 16px', background: 'white', color: '#666', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: guardando ? 'default' : 'pointer' }}>
+            Cancelar
+          </button>
+          <button onClick={onDescartar} disabled={guardando}
+            style={{ padding: '8px 16px', background: 'white', color: '#c62828', border: '1px solid #ffcdd2', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: guardando ? 'default' : 'pointer' }}>
+            Descartar y continuar
+          </button>
+          <button onClick={onGuardar} disabled={guardando}
+            style={{ padding: '8px 16px', background: guardando ? '#ccc' : 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: guardando ? 'wait' : 'pointer' }}>
+            {guardando ? 'Guardando…' : 'Guardar y continuar'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
