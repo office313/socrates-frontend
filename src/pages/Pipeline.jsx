@@ -417,17 +417,19 @@ export default function Pipeline({ usuario }) {
     return String(va).toLowerCase().localeCompare(String(vb).toLowerCase())
   }
 
-  // Búsqueda por sufijo: si appliedQuery empieza con '*', filtra por las filas
-  // cuyo numero_acto (o el derivado) TERMINA en el sufijo. Sin '*', búsqueda normal.
+  // Búsqueda con comodín: si appliedQuery contiene '*', se interpreta como
+  // patrón (* = cualquier cosa, en cualquier posición) y se matchea contra
+  // numero_acto / numero_acto_derivado. Sin '*', búsqueda normal (substring).
   const itemsBuscados = !appliedQuery
     ? items
-    : appliedQuery.startsWith('*')
+    : appliedQuery.includes('*')
       ? (() => {
-          const suf = appliedQuery.slice(1).trim().toLowerCase()
-          if (!suf) return items
+          const esc = appliedQuery.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '.*')
+          let re
+          try { re = new RegExp('^' + esc + '$', 'i') } catch { re = null }
+          if (!re) return items
           return items.filter(i =>
-            (i.numero_acto || '').toLowerCase().endsWith(suf) ||
-            (i.numero_acto_derivado || '').toLowerCase().endsWith(suf))
+            re.test(i.numero_acto || '') || re.test(i.numero_acto_derivado || ''))
         })()
       : items.filter(i => searchableText(i).includes(appliedQuery.toLowerCase()))
 
@@ -593,49 +595,53 @@ export default function Pipeline({ usuario }) {
           número". En móvil se apilan (flexWrap). En modo Formulario (compact) el
           buscador ocupa todo y no se muestra el alta por número. */}
       <div style={{ marginBottom: compact ? 0 : 12, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        {/* Mitad izquierda: buscador */}
-        <div style={{ flex: compact ? '1 1 100%' : '1 1 320px', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
-            🔍
-          </span>
-          <input
-            type="text"
-            value={query}
-            onChange={e => onQueryChange(e.target.value)}
-            onKeyDown={e => { if (e.key === 'Enter') aplicarBusqueda() }}
-            onFocus={() => setInputFocus(true)}
-            onBlur={() => setInputFocus(false)}
-            placeholder="Buscar en Track..."
-            style={{
-              width: '100%',
-              padding: '8px 110px 8px 44px',
-              border: `1px solid ${inputFocus ? 'var(--blue)' : '#e5e7eb'}`,
-              borderRadius: 12,
-              fontSize: 13,
-              outline: 'none',
-              background: 'white',
-              boxShadow: inputFocus ? '0 0 0 3px rgba(21, 101, 192, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
-              transition: 'border-color 0.15s, box-shadow 0.15s',
-              boxSizing: 'border-box',
-            }}
-          />
-          {query && (
-            <button onClick={limpiarBusqueda} title="Limpiar búsqueda"
+        {/* Mitad izquierda: buscador. El input + sus controles absolutos van en
+            un wrapper `relative` propio (altura = input) para que la lupa y el
+            botón Buscar centren bien; el tip va FUERA, debajo. */}
+        <div style={{ flex: compact ? '1 1 100%' : '1 1 320px' }}>
+          <div style={{ position: 'relative' }}>
+            <span style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', fontSize: 16, color: '#888', pointerEvents: 'none' }}>
+              🔍
+            </span>
+            <input
+              type="text"
+              value={query}
+              onChange={e => onQueryChange(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') aplicarBusqueda() }}
+              onFocus={() => setInputFocus(true)}
+              onBlur={() => setInputFocus(false)}
+              placeholder="Buscar en Track..."
               style={{
-                position: 'absolute', right: 96, top: '50%', transform: 'translateY(-50%)',
-                width: 24, height: 24, borderRadius: '50%', border: 'none',
-                background: '#e5e7eb', color: '#555', fontSize: 14, fontWeight: 600,
-                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
-              }}>×</button>
-          )}
-          <button onClick={aplicarBusqueda}
-            style={{
-              position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
-              padding: '6px 14px', background: 'var(--blue)', color: 'white',
-              border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
-            }}>Buscar</button>
+                width: '100%',
+                padding: '8px 110px 8px 44px',
+                border: `1px solid ${inputFocus ? 'var(--blue)' : '#e5e7eb'}`,
+                borderRadius: 12,
+                fontSize: 13,
+                outline: 'none',
+                background: 'white',
+                boxShadow: inputFocus ? '0 0 0 3px rgba(21, 101, 192, 0.12)' : '0 1px 2px rgba(0,0,0,0.03)',
+                transition: 'border-color 0.15s, box-shadow 0.15s',
+                boxSizing: 'border-box',
+              }}
+            />
+            {query && (
+              <button onClick={limpiarBusqueda} title="Limpiar búsqueda"
+                style={{
+                  position: 'absolute', right: 96, top: '50%', transform: 'translateY(-50%)',
+                  width: 24, height: 24, borderRadius: '50%', border: 'none',
+                  background: '#e5e7eb', color: '#555', fontSize: 14, fontWeight: 600,
+                  cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1,
+                }}>×</button>
+            )}
+            <button onClick={aplicarBusqueda}
+              style={{
+                position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)',
+                padding: '6px 14px', background: 'var(--blue)', color: 'white',
+                border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+              }}>Buscar</button>
+          </div>
           <div style={{ marginTop: 6, fontSize: 11, color: '#9aa0a6' }}>
-            Tip: usa * para buscar por sufijo (ej: *CL-034097)
+            Tip: usa * como comodín (ej: *CL-034097, 2026*, *CSS*)
           </div>
         </div>
 

@@ -372,6 +372,7 @@ export default function Analytics({ usuario }) {
   // Búsqueda por número
   const [numeroActo, setNumeroActo] = useState('')
   const [licitacionEncontrada, setLicitacionEncontrada] = useState(null)
+  const [resultadosMultiples, setResultadosMultiples] = useState([])  // búsqueda con comodín *
   const [buscandoNumero, setBuscandoNumero] = useState(false)
   const [msgNumero, setMsgNumero] = useState('')
 
@@ -577,12 +578,15 @@ export default function Analytics({ usuario }) {
     if (!numeroActo.trim()) return
     setBuscandoNumero(true)
     setLicitacionEncontrada(null)
+    setResultadosMultiples([])
     setMsgNumero('')
     try {
       const q = numeroActo.trim()
-      // Sufijo (q empieza con '*'): saltar el match local exacto y dejar que el
-      // backend resuelva por ILIKE '%sufijo' sobre toda la BD.
-      if (!q.startsWith('*')) {
+      // Comodín (q contiene '*'): saltar el match local exacto y dejar que el
+      // backend resuelva por ILIKE (* → %, en cualquier posición), devolviendo
+      // todos los matches.
+      const esComodin = q.includes('*')
+      if (!esComodin) {
         // Primero buscar en BD local
         const r = await axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500')
         const todas = r.data.resultados || []
@@ -592,9 +596,18 @@ export default function Analytics({ usuario }) {
           return
         }
       }
-      // Backend: número exacto en PanamaCompra, o sufijo en BD si q empieza con *
+      // Backend: número exacto en PanamaCompra, o comodín en BD si q tiene *
       const r2 = await axios.get(`/api/buscar-numero?numero=${encodeURIComponent(q)}`)
-      if (r2.data.resultado) {
+      if (esComodin) {
+        const lista = r2.data.resultados || []
+        if (lista.length === 0) {
+          setMsgNumero('No se encontró ninguna licitación con ese patrón')
+        } else if (lista.length === 1) {
+          setLicitacionEncontrada(lista[0])
+        } else {
+          setResultadosMultiples(lista)
+        }
+      } else if (r2.data.resultado) {
         setLicitacionEncontrada(r2.data.resultado)
       } else {
         setMsgNumero('No se encontró ninguna licitación con ese número')
@@ -1083,9 +1096,34 @@ export default function Analytics({ usuario }) {
               </button>
             </div>
             <div style={{ marginTop: 6, fontSize: 11, color: '#9aa0a6' }}>
-              Tip: usa * para buscar por sufijo (ej: *CL-034097)
+              Tip: usa * como comodín (ej: *CL-034097, 2026*, *CSS*)
             </div>
           </div>
+
+          {resultadosMultiples.length > 0 && !licitacionEncontrada && (
+            <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 16 }}>
+              <div style={{ padding: '10px 16px', background: 'var(--blue-light)', borderBottom: '1px solid #e5e7eb', fontSize: 12, fontWeight: 600, color: 'var(--blue)' }}>
+                {resultadosMultiples.length} resultados — haz click en uno para ver el detalle
+              </div>
+              {resultadosMultiples.map((l, i) => (
+                <div key={l.numero_acto + '-' + i} onClick={() => setLicitacionEncontrada(l)}
+                  style={{ padding: '10px 16px', borderBottom: '1px solid #f0f0f0', cursor: 'pointer', display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', background: i % 2 ? '#fafafa' : 'white' }}
+                  onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
+                  onMouseLeave={e => e.currentTarget.style.background = i % 2 ? '#fafafa' : 'white'}>
+                  <span style={{ color: 'var(--blue)', fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>{l.numero_acto}</span>
+                  <span style={{ color: '#666', fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.institucion || ''}</span>
+                  <span style={{ color: '#888', fontSize: 12, whiteSpace: 'nowrap' }}>{l.fecha_cierre || ''}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {licitacionEncontrada && resultadosMultiples.length > 1 && (
+            <button onClick={() => setLicitacionEncontrada(null)}
+              style={{ marginBottom: 12, padding: '6px 12px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              ← Volver a resultados
+            </button>
+          )}
 
           {msgNumero && (
             <div style={{ background: msgNumero.startsWith('✅') ? '#e8f5e9' : '#ffebee', color: msgNumero.startsWith('✅') ? '#2e7d32' : '#c62828', padding: '10px 16px', borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
