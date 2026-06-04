@@ -579,16 +579,21 @@ export default function Analytics({ usuario }) {
     setLicitacionEncontrada(null)
     setMsgNumero('')
     try {
-      // Primero buscar en BD local
-      const r = await axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500')
-      const todas = r.data.resultados || []
-      const encontrada = todas.find(l => l.numero_acto.toLowerCase() === numeroActo.trim().toLowerCase())
-      if (encontrada) {
-        setLicitacionEncontrada(encontrada)
-        return
+      const q = numeroActo.trim()
+      // Sufijo (q empieza con '*'): saltar el match local exacto y dejar que el
+      // backend resuelva por ILIKE '%sufijo' sobre toda la BD.
+      if (!q.startsWith('*')) {
+        // Primero buscar en BD local
+        const r = await axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500')
+        const todas = r.data.resultados || []
+        const encontrada = todas.find(l => l.numero_acto.toLowerCase() === q.toLowerCase())
+        if (encontrada) {
+          setLicitacionEncontrada(encontrada)
+          return
+        }
       }
-      // Si no está en BD local, buscar en PanamaCompra
-      const r2 = await axios.get(`/api/buscar-numero?numero=${encodeURIComponent(numeroActo.trim())}`)
+      // Backend: número exacto en PanamaCompra, o sufijo en BD si q empieza con *
+      const r2 = await axios.get(`/api/buscar-numero?numero=${encodeURIComponent(q)}`)
       if (r2.data.resultado) {
         setLicitacionEncontrada(r2.data.resultado)
       } else {
@@ -1076,6 +1081,9 @@ export default function Analytics({ usuario }) {
               <button onClick={buscarPorNumero} disabled={buscandoNumero} style={{ padding: '9px 24px', background: buscandoNumero ? '#ccc' : 'var(--red)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: buscandoNumero ? 'default' : 'pointer', border: 'none', whiteSpace: 'nowrap' }}>
                 {buscandoNumero ? 'Buscando...' : 'Buscar'}
               </button>
+            </div>
+            <div style={{ marginTop: 6, fontSize: 11, color: '#9aa0a6' }}>
+              Tip: usa * para buscar por sufijo (ej: *CL-034097)
             </div>
           </div>
 

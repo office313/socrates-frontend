@@ -417,9 +417,19 @@ export default function Pipeline({ usuario }) {
     return String(va).toLowerCase().localeCompare(String(vb).toLowerCase())
   }
 
-  const itemsBuscados = appliedQuery
-    ? items.filter(i => searchableText(i).includes(appliedQuery.toLowerCase()))
-    : items
+  // Búsqueda por sufijo: si appliedQuery empieza con '*', filtra por las filas
+  // cuyo numero_acto (o el derivado) TERMINA en el sufijo. Sin '*', búsqueda normal.
+  const itemsBuscados = !appliedQuery
+    ? items
+    : appliedQuery.startsWith('*')
+      ? (() => {
+          const suf = appliedQuery.slice(1).trim().toLowerCase()
+          if (!suf) return items
+          return items.filter(i =>
+            (i.numero_acto || '').toLowerCase().endsWith(suf) ||
+            (i.numero_acto_derivado || '').toLowerCase().endsWith(suf))
+        })()
+      : items.filter(i => searchableText(i).includes(appliedQuery.toLowerCase()))
 
   // Items dentro del alcance actual (Activas = solo estados activos).
   const itemsActivos = items.filter(i => ESTADOS_ACTIVOS.includes(i.estado))
@@ -624,6 +634,9 @@ export default function Pipeline({ usuario }) {
               padding: '6px 14px', background: 'var(--blue)', color: 'white',
               border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
             }}>Buscar</button>
+          <div style={{ marginTop: 6, fontSize: 11, color: '#9aa0a6' }}>
+            Tip: usa * para buscar por sufijo (ej: *CL-034097)
+          </div>
         </div>
 
         {/* Mitad derecha: añadir por número (busca BD→V3 y añade a Track). Solo
