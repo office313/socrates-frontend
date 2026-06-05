@@ -65,6 +65,25 @@ const renderCambio = (c) => {
   if (c.tipo === 'documento_nuevo') {
     return <>📄 {c.nuevo || 'Nuevos documentos detectados'}</>
   }
+  // Cambios en el acto derivado (SCM/CM/SCA) — scraper/seguimiento_derivados.py.
+  if (c.tipo === 'derivado_adjudicacion') {
+    return <>🏆 Adjudicación del derivado: <strong>{c.nuevo}</strong></>
+  }
+  if (c.tipo === 'derivado_orden_compra') {
+    return <>🧾 Orden de compra del derivado: <strong>{c.nuevo}</strong></>
+  }
+  if (c.tipo === 'derivado_contrato') {
+    return <>📑 Contrato del derivado: <strong>{c.nuevo}</strong></>
+  }
+  if (c.tipo === 'derivado_monto') {
+    return <>💰 Monto adjudicado: <strong>{fmtBalboa(c.anterior)}</strong> → <strong>{fmtBalboa(c.nuevo)}</strong></>
+  }
+  if (c.tipo === 'derivado_documento_nuevo') {
+    return <>📎 Derivado: {c.nuevo || 'documentos nuevos'}</>
+  }
+  if (c.tipo === 'derivado_estado') {
+    return <>🔔 Derivado: <strong>{c.nuevo}</strong></>
+  }
   return <>{c.nuevo || c.tipo}</>
 }
 

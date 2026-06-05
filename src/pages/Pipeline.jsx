@@ -268,6 +268,27 @@ const searchableText = (item) => {
   return (base + ' ' + der).toLowerCase()
 }
 
+// Etiquetas legibles de los tipo_cambio (CL y derivado SCM/CM/SCA) para el
+// tooltip informativo de la fila del listado.
+const ETIQUETAS_CAMBIO = {
+  fecha_cierre: 'fecha de cierre',
+  presupuesto: 'presupuesto',
+  documento_nuevo: 'documentos nuevos',
+  relanzamiento: 'relanzamiento',
+  derivado_adjudicacion: 'adjudicación',
+  derivado_orden_compra: 'orden de compra',
+  derivado_contrato: 'contrato',
+  derivado_monto: 'monto adjudicado',
+  derivado_documento_nuevo: 'documentos del derivado',
+  derivado_estado: 'estado del derivado',
+}
+const tooltipCambios = (cambios) => {
+  if (!cambios || !cambios.length) return undefined
+  const etiquetas = [...new Set(cambios.map(c => ETIQUETAS_CAMBIO[c.tipo] || c.tipo))]
+  const n = cambios.length
+  return `${n} cambio${n === 1 ? '' : 's'} desde tu última visita: ${etiquetas.join(', ')}`
+}
+
 export default function Pipeline({ usuario }) {
   const [items, setItems] = useState([])
   const [alcance, setAlcance] = useState('activas')  // 'activas' | 'todas'
@@ -817,7 +838,7 @@ export default function Pipeline({ usuario }) {
               const tieneCambios = cambiosPorActo[p.numero_acto]?.length > 0
               const baseBg = tieneCambios ? '#EFF6FF' : (i % 2 === 0 ? 'white' : '#fafafa')
               return (
-                <tr key={p.id} title={tieneCambios ? 'Cambios detectados desde tu última visita' : undefined}
+                <tr key={p.id} title={tieneCambios ? tooltipCambios(cambiosPorActo[p.numero_acto]) : undefined}
                   onClick={() => { setFormularioIdx(i); setVista('formulario') }} style={{ cursor: 'pointer', background: baseBg }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
                   onMouseLeave={e => e.currentTarget.style.background = baseBg}>
