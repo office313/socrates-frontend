@@ -329,7 +329,18 @@ export default function Watchlist() {
                   <tr key={l.numero_acto}
                     style={{ background: urgente ? '#fff3e0' : i % 2 === 0 ? 'white' : '#fafafa', borderLeft: urgente ? '3px solid #e65100' : '3px solid transparent', cursor: 'pointer' }}
                     onClick={() => setModalDetalle(l)}>
-                    <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 600 }}>{l.numero_acto}</td>
+                    <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 600 }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                        {/* Badge R (relanzamiento): R blanca sobre azul corporativo. */}
+                        {l.numero_convocatoria > 1 && (
+                          <span title={`Relanzamiento — Convocatoria #${l.numero_convocatoria}`}
+                            style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1, flexShrink: 0 }}>
+                            R
+                          </span>
+                        )}
+                        <span>{l.numero_acto}</span>
+                      </span>
+                    </td>
                     <td style={{ padding: '10px 16px' }}><ClaseBadge clase={l.clase} /></td>
                     <td style={{ padding: '10px 16px' }}>{(l.institucion || '-').substring(0, 25)}</td>
                     <td style={{ padding: '10px 16px', color: '#666' }}>{(l.descripcion || '-').substring(0, 40)}...</td>

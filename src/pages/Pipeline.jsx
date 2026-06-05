@@ -821,7 +821,19 @@ export default function Pipeline({ usuario }) {
                   onClick={() => { setFormularioIdx(i); setVista('formulario') }} style={{ cursor: 'pointer', background: baseBg }}
                   onMouseEnter={e => e.currentTarget.style.background = '#f0f4ff'}
                   onMouseLeave={e => e.currentTarget.style.background = baseBg}>
-                  <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>{numMostrado}</td>
+                  <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: 500 }}>
+                    <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                      {/* Badge R (relanzamiento) en Track-listado: solo si es
+                          relanzamiento Y el estado es "En Preparación". */}
+                      {p.numero_convocatoria > 1 && p.estado === 'En Preparación' && (
+                        <span title={`Relanzamiento — Convocatoria #${p.numero_convocatoria}`}
+                          style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1, flexShrink: 0 }}>
+                          R
+                        </span>
+                      )}
+                      <span>{numMostrado}</span>
+                    </span>
+                  </td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{fmtFecha(p.fecha_cierre)}</td>
                   <td style={{ padding: '10px 16px' }}>{(instMostrada || '-').substring(0, 25)}</td>
                   <td style={{ padding: '10px 16px', color: '#666' }}>{(descMostrada || '-').substring(0, 40)}...</td>

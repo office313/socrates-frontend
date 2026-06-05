@@ -560,15 +560,25 @@ export default function Dashboard({ usuario }) {
                   <tr key={l.numero_acto}
                     style={{ background: bg, borderLeft: '3px solid transparent', cursor: 'pointer' }}
                     onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}>
-                    <td style={{ padding: '10px 8px', textAlign: 'center' }}>
-                      {l.fecha_publicacion &&
-                       (l.fecha_publicacion || '').substring(0, 10) ===
-                       (l.fecha_cierre || '').substring(0, 10) ? (
-                        <span title="Publicada y cierra hoy"
-                          style={{ display: 'inline-block', padding: '2px 6px', background: 'var(--red, #d32f2f)', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
-                          ⚡
-                        </span>
-                      ) : null}
+                    <td style={{ padding: '10px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+                        {/* Badge R (relanzamiento): R blanca sobre azul corporativo,
+                            mismas dimensiones que el Flash. Coexisten lado a lado. */}
+                        {l.numero_convocatoria > 1 && (
+                          <span title={`Relanzamiento — Convocatoria #${l.numero_convocatoria}`}
+                            style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
+                            R
+                          </span>
+                        )}
+                        {l.fecha_publicacion &&
+                         (l.fecha_publicacion || '').substring(0, 10) ===
+                         (l.fecha_cierre || '').substring(0, 10) && (
+                          <span title="Publicada y cierra hoy"
+                            style={{ display: 'inline-block', padding: '2px 6px', background: 'var(--red, #d32f2f)', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
+                            ⚡
+                          </span>
+                        )}
+                      </span>
                     </td>
                     <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700 }}>{l.numero_acto}</td>
                     <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600 }}>{(l.institucion || '-').substring(0, 45)}</td>
