@@ -50,6 +50,26 @@ const fmtBalboa = (v) => {
   return isNaN(n) ? (v ?? '') : 'B/. ' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
 }
 
+// Etiquetas legibles en español de los campos importados (Fase 2). El backend
+// emite tipo_cambio con el nombre semántico; aquí se traduce a texto humano.
+// Nunca mostrar el nombre técnico al usuario.
+const ETIQUETAS_CAMPO_IMPORTADO = {
+  institucion: 'Institución',
+  unidad_compra: 'Unidad de compra',
+  descripcion: 'Descripción',
+  modalidad_adjudicacion: 'Modalidad de adjudicación',
+  termino_entrega: 'Término de entrega',
+  provincia_entrega: 'Provincia de entrega',
+  contacto: 'Contacto',
+  email_contacto: 'Email de contacto',
+  telefono_contacto: 'Teléfono de contacto',
+}
+// Trunca valores largos (p.ej. descripción) en el bloque de cambios.
+const _truncCambio = (v) => {
+  const s = String(v ?? '')
+  return s.length > 70 ? s.slice(0, 70) + '…' : s
+}
+
 // Renderiza una línea del bloque de cambios detectados (notificaciones Track)
 // según su tipo. Las fechas llegan como YYYY-MM-DD; fmtFecha → DD-MM-YYYY.
 const renderCambio = (c) => {
@@ -57,7 +77,10 @@ const renderCambio = (c) => {
     return <>📅 Fecha de cierre: <strong>{fmtFecha(c.anterior)}</strong> → <strong>{fmtFecha(c.nuevo)}</strong></>
   }
   if (c.tipo === 'presupuesto') {
-    return <>💰 Presupuesto: <strong>{fmtBalboa(c.anterior)}</strong> → <strong>{fmtBalboa(c.nuevo)}</strong></>
+    return <>💰 Precio de referencia: <strong>{fmtBalboa(c.anterior)}</strong> → <strong>{fmtBalboa(c.nuevo)}</strong></>
+  }
+  if (ETIQUETAS_CAMPO_IMPORTADO[c.tipo]) {
+    return <>✏️ {ETIQUETAS_CAMPO_IMPORTADO[c.tipo]}: <strong>{_truncCambio(c.anterior)}</strong> → <strong>{_truncCambio(c.nuevo)}</strong></>
   }
   if (c.tipo === 'relanzamiento') {
     return <>⟲ Relanzamiento (publicación): <strong>{fmtFecha(c.anterior)}</strong> → <strong>{fmtFecha(c.nuevo)}</strong></>

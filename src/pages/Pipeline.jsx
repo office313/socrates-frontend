@@ -272,9 +272,19 @@ const searchableText = (item) => {
 // tooltip informativo de la fila del listado.
 const ETIQUETAS_CAMBIO = {
   fecha_cierre: 'fecha de cierre',
-  presupuesto: 'presupuesto',
+  presupuesto: 'precio de referencia',
   documento_nuevo: 'documentos nuevos',
   relanzamiento: 'relanzamiento',
+  // Fase 2: campos importados actualizados desde la fuente.
+  institucion: 'institución',
+  unidad_compra: 'unidad de compra',
+  descripcion: 'descripción',
+  modalidad_adjudicacion: 'modalidad de adjudicación',
+  termino_entrega: 'término de entrega',
+  provincia_entrega: 'provincia de entrega',
+  contacto: 'contacto',
+  email_contacto: 'email de contacto',
+  telefono_contacto: 'teléfono de contacto',
   derivado_adjudicacion: 'adjudicación',
   derivado_orden_compra: 'orden de compra',
   derivado_contrato: 'contrato',
