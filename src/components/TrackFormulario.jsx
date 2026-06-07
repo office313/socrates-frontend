@@ -646,7 +646,7 @@ export default function TrackFormulario({
 
             {tab === 'post_adj' && (
               <TabPostAdj
-                form={form} set={set} input={input}
+                form={form} set={set} input={input} viewField={viewField}
                 llamadas={llamadas} nuevaLlamada={nuevaLlamada} setNuevaLlamada={setNuevaLlamada}
                 agregarLlamada={agregarLlamada} eliminarLlamada={eliminarLlamada}
                 numDerivadoInput={numDerivadoInput} setNumDerivadoInput={setNumDerivadoInput}
@@ -964,7 +964,7 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
 }
 
 function TabPostAdj({
-  form, set, input,
+  form, set, input, viewField,
   llamadas, nuevaLlamada, setNuevaLlamada, agregarLlamada, eliminarLlamada,
   numDerivadoInput, setNumDerivadoInput, vincLoading, vincError,
   vincularDerivado, desvincularDerivado,
@@ -1036,10 +1036,14 @@ function TabPostAdj({
           {input('Fecha Orden Compra', 'fecha_orden_compra', 'date')}
           {input('Nº Orden Compra', 'numero_orden_compra')}
           {input('Nº Contrato', 'numero_contrato')}
-          {input('Duración Días', 'duracion_dias', 'number')}
+          {input('Días Naturales', 'duracion_dias', 'number')}
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 18px' }}>
-          {input('Duración Contrato', 'duracion_contrato')}
+          {/* "Término de Entrega" (read-only) en lugar del antiguo input
+              "Duración Contrato" (texto libre, mal usado: guardaba fechas).
+              Idéntico al viewField de General; la columna duracion_contrato
+              permanece en BD pero ya no se edita desde la UI. */}
+          {viewField('Término de Entrega', form.termino_entrega_v3)}
           {input('Forma de Pago', 'forma_pago')}
           {input('Término de Pago', 'termino_pago')}
         </div>

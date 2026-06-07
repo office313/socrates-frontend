@@ -527,7 +527,11 @@ export default function Pipeline({ usuario }) {
   // Controles "Activas/Todas" + "+ Añadir a Track". En Listado viven en el
   // header izquierdo; en Formulario se inyectan en la fila de pestañas de la
   // columna derecha (topRightControls) y se omiten del header compact.
-  const renderAlcanceYAñadir = () => (
+  // conAñadir: muestra el botón "+ Añadir a Track" (que abre ModalManual). En
+  // modo Listado se pasa false porque el alta es redundante con el buscador
+  // "Añadir por número" de la fila superior; en modo Formulario se pasa true,
+  // donde el botón+modal es la ÚNICA vía de alta (el buscador es solo Listado).
+  const renderAlcanceYAñadir = (conAñadir = true) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
         {[['activas', 'Activas'], ['todas', 'Todas']].map(([val, label]) => (
@@ -544,10 +548,12 @@ export default function Pipeline({ usuario }) {
           </span>
         ))}
       </div>
-      <button onClick={() => setModalManual(true)}
-        style={{ padding: '6px 14px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-        + Añadir a Track
-      </button>
+      {conAñadir && (
+        <button onClick={() => setModalManual(true)}
+          style={{ padding: '6px 14px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          + Añadir a Track
+        </button>
+      )}
     </div>
   )
 
@@ -603,8 +609,10 @@ export default function Pipeline({ usuario }) {
             ))}
           </select>
           {/* En modo Formulario (compact) estos controles se mueven a la fila
-              de pestañas de la columna derecha vía topRightControls. */}
-          {!compact && renderAlcanceYAñadir()}
+              de pestañas de la columna derecha vía topRightControls. En Listado
+              el botón "+ Añadir a Track" se omite (conAñadir=false): es redundante
+              con el buscador "Añadir por número" de abajo. */}
+          {!compact && renderAlcanceYAñadir(false)}
         </div>
         {/* Selector de empresa solo en vista Listado (no en Formulario/compact). */}
         {!compact && <SelectorEmpresa />}
