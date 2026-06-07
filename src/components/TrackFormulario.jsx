@@ -154,6 +154,12 @@ export default function TrackFormulario({
   const [nuevaLlamada, setNuevaLlamada] = useState({ fecha: '', hora: '', observaciones: '' })
   const [focusedField, setFocusedField] = useState(null)
   const [clOrigenAbierto, setClOrigenAbierto] = useState(false)
+  // Campos importados (fuente PanamaCompra/ACP) que el usuario ha desbloqueado
+  // explícitamente en esta licitación para rellenarlos a mano (estaban vacíos).
+  // Se resetea al navegar a otra lic. confirmImport = {key,label} mientras se
+  // espera la confirmación del modal de advertencia.
+  const [camposConfirmados, setCamposConfirmados] = useState(new Set())
+  const [confirmImport, setConfirmImport] = useState(null)
 
   // Vinculación CL → SCM/CM/SCA
   const [numDerivadoInput, setNumDerivadoInput] = useState('')
@@ -202,6 +208,8 @@ export default function TrackFormulario({
     setVincPreview(null)
     setVincError(null)
     setClOrigenAbierto(false)
+    setCamposConfirmados(new Set())
+    setConfirmImport(null)
   }, [item?.id])
 
   useEffect(() => {
@@ -406,6 +414,43 @@ export default function TrackFormulario({
       }}>{value || '-'}</div>
     </div>
   )
+
+  // Campo IMPORTADO (fuente PanamaCompra/ACP). Regla híbrida:
+  //  - si trae valor de la fuente → solo lectura (viewField);
+  //  - si está vacío → editable, pero el usuario debe confirmar en un modal de
+  //    advertencia antes de poder escribir (al rellenarlo a mano una futura
+  //    sincronización podría sobrescribirlo y, una vez guardado, queda bloqueado).
+  // Para currency/number, un 0 se considera vacío (presupuesto sin capturar).
+  const campoImportado = (label, key, type = 'text', opts = {}) => {
+    const v = form[key]
+    const vacio = v === undefined || v === null || String(v).trim() === '' ||
+      ((type === 'currency' || type === 'number') && Number(v) === 0)
+    if (!vacio) {
+      const display = type === 'currency' ? `US$ ${formatCurrency(v)}` : v
+      return viewField(label, display)
+    }
+    if (camposConfirmados.has(key)) return input(label, key, type, opts)
+    return (
+      <div style={{ marginBottom: 14 }} key={key}>
+        <Label>{label}</Label>
+        <button type="button" onClick={() => setConfirmImport({ key, label })}
+          title="Dato de la fuente, vacío — clic para rellenarlo a mano"
+          style={{
+            width: '100%', padding: '10px 12px', border: '1px dashed var(--border)',
+            borderRadius: 10, fontSize: 14, background: '#fafafa', color: '#9aa0a6',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            cursor: 'pointer', textAlign: 'left',
+          }}>
+          <span>Vacío — clic para rellenar</span>
+          <span style={{ fontSize: 13 }}>🔒</span>
+        </button>
+      </div>
+    )
+  }
+  const confirmarEdicionImportado = () => {
+    if (confirmImport) setCamposConfirmados(s => new Set(s).add(confirmImport.key))
+    setConfirmImport(null)
+  }
 
   // ─── Render ────────────────────────────────────────────────────────────
   if (!item) {
@@ -638,6 +683,7 @@ export default function TrackFormulario({
             {tab === 'general' && (
               <TabGeneral
                 form={form} set={set} input={input} viewField={viewField}
+                campoImportado={campoImportado}
                 socratesCtx={socratesCtx}
                 clOrigenAbierto={clOrigenAbierto}
                 onToggleClOrigen={() => setClOrigenAbierto(v => !v)}
@@ -722,6 +768,42 @@ export default function TrackFormulario({
           onCancelar={cancelarNav}
         />
       )}
+
+      {/* Modal: advertencia al rellenar a mano un campo importado vacío */}
+      {confirmImport && (
+        <ModalConfirmImportado
+          label={confirmImport.label}
+          onCancel={() => setConfirmImport(null)}
+          onConfirm={confirmarEdicionImportado}
+        />
+      )}
+    </div>
+  )
+}
+
+// Modal de advertencia al desbloquear un campo importado (fuente PanamaCompra/
+// ACP) que está vacío para rellenarlo a mano. Mismo estilo que ModalNavSinGuardar.
+function ModalConfirmImportado({ label, onCancel, onConfirm }) {
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.55)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'white', borderRadius: 12, padding: 24, width: '90%', maxWidth: 460, boxShadow: '0 10px 30px rgba(0,0,0,0.2)' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 15, color: '#e65100', display: 'flex', alignItems: 'center', gap: 8 }}>
+          ⚠️ Editar campo importado{label ? `: ${label}` : ''}
+        </h3>
+        <div style={{ fontSize: 13, lineHeight: 1.7, color: '#333', marginBottom: 20 }}>
+          Este dato normalmente proviene de PanamaCompra/ACP y está vacío. Si lo rellenás manualmente, podría ser sobrescrito en una futura sincronización, y una vez guardado quedará bloqueado. ¿Continuar?
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
+          <button onClick={onCancel}
+            style={{ padding: '8px 16px', background: 'white', color: '#666', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Cancelar
+          </button>
+          <button onClick={onConfirm}
+            style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            Continuar
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -792,7 +874,7 @@ function Seccion({ titulo, children, accion }) {
   )
 }
 
-function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto, onToggleClOrigen }) {
+function TabGeneral({ form, set, input, viewField, campoImportado, socratesCtx, clOrigenAbierto, onToggleClOrigen }) {
   const vinc = !!form.numero_acto_derivado
 
   return (
@@ -817,12 +899,12 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
             </>
           ) : (
             <>
-              {input('No. Acto', 'numero_acto', 'text', { bold: true })}
+              {campoImportado('No. Acto', 'numero_acto', 'text', { bold: true })}
               {input('Estado', 'estado', 'text', { select: true, options: ESTADOS, bold: true })}
               {input('# Requisición', 'acto_css')}
               {input('Agente', 'agente')}
-              {input('Institución', 'institucion', 'text', { bold: true })}
-              {input('Unidad de Compra', 'unidad_compra', 'text', { bold: true })}
+              {campoImportado('Institución', 'institucion', 'text', { bold: true })}
+              {campoImportado('Unidad de Compra', 'unidad_compra', 'text', { bold: true })}
               {viewField('Modalidad de Adjudicación', form.modalidad_adjudicacion)}
               {viewField('Término de Entrega', form.termino_entrega_v3)}
               {viewField('Provincia de Entrega', form.provincia_entrega)}
@@ -880,7 +962,7 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
 
       <Seccion titulo="Precios">
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '0 18px' }}>
-          {input('Precio Referencia', 'precio_referencia', 'currency')}
+          {campoImportado('Precio Referencia', 'precio_referencia', 'currency')}
           {input('Precio Ofertado', 'precio_ofertado', 'currency', { bold: true })}
           {input('ITBMS', 'itbms_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
           {input('Retención', 'retencion_si_no', 'text', { select: true, options: ['NO', 'SI'] })}
@@ -901,9 +983,9 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
             </>
           ) : (
             <>
-              {input('Contacto', 'contacto')}
-              {input('Teléfono', 'telefono_contacto')}
-              {input('Email', 'email_contacto')}
+              {campoImportado('Contacto', 'contacto')}
+              {campoImportado('Teléfono', 'telefono_contacto')}
+              {campoImportado('Email', 'email_contacto')}
             </>
           )}
         </div>
@@ -912,7 +994,7 @@ function TabGeneral({ form, set, input, viewField, socratesCtx, clOrigenAbierto,
       <Seccion titulo="Descripción & Notas">
         {vinc
           ? viewField('Descripción', form.derivado?.descripcion || form.descripcion)
-          : input('Descripción', 'descripcion', 'text', { textarea: true, rows: 3, bold: true })}
+          : campoImportado('Descripción', 'descripcion', 'text', { textarea: true, rows: 3, bold: true })}
         {input('Observaciones', 'observaciones', 'text', { textarea: true, rows: 4 })}
         {vinc && (form.derivado?.items_texto || form.items_texto) && (
           viewField('Renglones / Items', form.derivado?.items_texto || form.items_texto)
