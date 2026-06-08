@@ -100,7 +100,7 @@ export default function SoporteWidget() {
         aria-label="Sócrates te ayuda"
         title="Sócrates te ayuda"
         style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 300,
+          position: 'fixed', bottom: 96, right: 24, zIndex: 300,
           width: 56, height: 56, borderRadius: '50%', border: 'none',
           background: AZUL, color: 'white', cursor: 'pointer',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
@@ -116,8 +116,8 @@ export default function SoporteWidget() {
       {/* === Panel de chat === */}
       {abierto && (
         <div style={{
-          position: 'fixed', bottom: 92, right: 24, zIndex: 300,
-          width: 'min(380px, calc(100vw - 48px))', height: 'min(560px, calc(100vh - 132px))',
+          position: 'fixed', bottom: 164, right: 24, zIndex: 300,
+          width: 'min(380px, calc(100vw - 48px))', height: 'min(560px, calc(100vh - 204px))',
           background: 'white', borderRadius: 16, overflow: 'hidden',
           display: 'flex', flexDirection: 'column',
           boxShadow: '0 12px 40px rgba(15,45,87,0.25)', border: '1px solid #e5e7eb',

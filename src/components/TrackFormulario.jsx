@@ -1149,7 +1149,11 @@ function TabPostAdj({
               Idéntico al viewField de General; la columna duracion_contrato
               permanece en BD pero ya no se edita desde la UI. */}
           {viewField('Término de Entrega', form.termino_entrega_v3)}
-          {input('Forma de Pago', 'forma_pago')}
+          {/* "Fecha fin orden/contrato": vencimiento de la orden/contrato (suele
+              venir en la orden de compra), a partir del cual corren las multas.
+              Reemplaza en la UI a "Forma de Pago", cuya columna queda muerta en
+              BD (no se borra), como hicimos con duracion_contrato. */}
+          {input('Fecha fin orden/contrato', 'fecha_fin_orden_contrato', 'date')}
           {input('Término de Pago', 'termino_pago')}
         </div>
       </Seccion>
@@ -1160,6 +1164,12 @@ function TabPostAdj({
           {input('Fecha Factura', 'fecha_factura', 'date')}
           {input('Fecha Gestión Cobro', 'fecha_gestion_cobro', 'date')}
           {input('Cobrado', 'cobrado', 'text', { select: true, options: ['NO', 'SI'] })}
+        </div>
+        <h4 style={{ margin: '8px 0 12px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.3, textTransform: 'uppercase' }}>Contacto de Tesorería</h4>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0 18px' }}>
+          {input('Nombre', 'tesoreria_nombre')}
+          {input('Teléfono', 'tesoreria_telefono')}
+          {input('Email', 'tesoreria_email')}
         </div>
         <h4 style={{ margin: '8px 0 12px', fontSize: 12, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 0.3, textTransform: 'uppercase' }}>Seguimiento de Llamadas</h4>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr auto', gap: 8, marginBottom: 12 }}>
