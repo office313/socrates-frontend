@@ -1,5 +1,6 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
+import SoporteWidget from './SoporteWidget'
 
 const CATPLAN_ID = 2
 
@@ -34,6 +35,9 @@ export default function Layout({ usuario, loading, children }) {
       }}>
         {children}
       </main>
+      {/* "Sócrates te ayuda" — soporte flotante en todas las pantallas del
+          cliente. Se oculta para CATPLAN (admin interno, no cliente). */}
+      {!esCatplan && <SoporteWidget />}
     </div>
   )
 }
