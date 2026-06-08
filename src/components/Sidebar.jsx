@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList } from 'lucide-react'
+import { Radar, GitCommit, Key, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList, Ticket } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-icono-rojo.svg'
 
 const getNavItems = (usuario) => {
@@ -59,6 +59,12 @@ export default function Sidebar({ usuario }) {
             <NavLink to="/panel-control" style={({ isActive }) => linkStyle(isActive)}>
               <LayoutDashboard size={20} />
               <span style={{ fontSize: 11 }}>Panel</span>
+            </NavLink>
+          )}
+          {usuario?.rol === 'superadmin' && (
+            <NavLink to="/tickets" style={({ isActive }) => linkStyle(isActive)}>
+              <Ticket size={20} />
+              <span style={{ fontSize: 11 }}>Tickets</span>
             </NavLink>
           )}
           {usuario?.rol === 'superadmin' && (

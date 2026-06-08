@@ -1,7 +1,6 @@
 import ScraperMonitor from '../components/ScraperMonitor'
 import CronAgenda from '../components/CronAgenda'
 import ScraperErrores from '../components/ScraperErrores'
-import TicketsManager from '../components/TicketsManager'
 
 // Panel de Control superadmin. Estructura por secciones, lista para crecer:
 // agenda de crons (siempre visible), monitor "casi-vivo" de la corrida activa,
@@ -23,9 +22,7 @@ export default function PanelControl() {
         <section>
           <ScraperErrores />
         </section>
-        <section>
-          <TicketsManager />
-        </section>
+        {/* Tickets de soporte movidos a su propia página /tickets (no técnico). */}
         {/* Próximas secciones: salud de la DB, métricas de leads, etc. */}
       </div>
     </div>
