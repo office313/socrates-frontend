@@ -256,6 +256,8 @@ export default function Analytics({ usuario }) {
   const [sdiInstOpts, setSdiInstOpts] = useState([])
   const [sdiUnidOpts, setSdiUnidOpts] = useState([])
   const [pacInstOpts, setPacInstOpts] = useState([])
+  // Instituciones de adjudicaciones (autocompletado del filtro del Explorer).
+  const [instOptsAdj, setInstOptsAdj] = useState([])
   const [sdiResultados, setSdiResultados] = useState([])
   const [sdiTotal, setSdiTotal] = useState(0)
   const [sdiLoading, setSdiLoading] = useState(false)
@@ -326,6 +328,7 @@ export default function Analytics({ usuario }) {
   useEffect(() => {
     axios.get('/api/instituciones?fuente=sdi').then(r => setSdiInstOpts(r.data.instituciones || [])).catch(() => {})
     axios.get('/api/instituciones?fuente=pac').then(r => setPacInstOpts(r.data.instituciones || [])).catch(() => {})
+    axios.get('/api/instituciones?fuente=adjudicaciones').then(r => setInstOptsAdj(r.data.instituciones || [])).catch(() => {})
   }, [])
   // Unidades de la institución SDI seleccionada (se recargan al cambiarla).
   useEffect(() => {
@@ -729,7 +732,10 @@ export default function Analytics({ usuario }) {
               </div>
               <div>
                 <label style={ls}>Institución / Comprador</label>
-                <input value={institucion} onChange={e => setInstitucion(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscar()} placeholder="Ministerio de Salud..." style={is} />
+                <input value={institucion} onChange={e => setInstitucion(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscar()} placeholder="Ministerio de Salud..." style={is} list="inst-datalist" />
+                <datalist id="inst-datalist">
+                  {instOptsAdj.map(i => <option key={i} value={i} />)}
+                </datalist>
               </div>
               <div>
                 <label style={ls}>Adjudicatario / Proveedor</label>
