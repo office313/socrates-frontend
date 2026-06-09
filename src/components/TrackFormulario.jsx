@@ -427,13 +427,13 @@ export default function TrackFormulario({
     </div>
   )
 
-  const viewField = (label, value) => (
+  const viewField = (label, value, bold = false) => (
     <div style={{ marginBottom: 14 }}>
       <Label>{label}</Label>
       <div style={{
         padding: '10px 12px', border: '1px solid #f0f0f0', borderRadius: 10, fontSize: 14,
         background: '#fafafa', color: '#333', minHeight: 20, lineHeight: 1.4,
-        whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+        whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontWeight: bold ? 600 : 400,
       }}>{value || '-'}</div>
     </div>
   )
@@ -450,7 +450,10 @@ export default function TrackFormulario({
       ((type === 'currency' || type === 'number') && Number(v) === 0)
     if (!vacio) {
       const display = type === 'currency' ? `US$ ${formatCurrency(v)}` : v
-      return viewField(label, display)
+      // boldView (opt-in, distinto de opts.bold del input) → negrita en el
+      // viewField. Solo lo activa la Descripción; los demás importados con
+      // bold:true (No. Acto/Institución/Unidad) NO lo llevan → siguen normales.
+      return viewField(label, display, opts.boldView)
     }
     if (camposConfirmados.has(key)) return input(label, key, type, opts)
     return (
@@ -656,7 +659,7 @@ export default function TrackFormulario({
             {/* Descripción */}
             {descripcionMostrada && (
               <div style={{ paddingTop: 8, borderTop: '1px dashed var(--border)' }}>
-                <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.45 }}>
+                <div style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.45, fontWeight: 600 }}>
                   {descripcionMostrada}
                 </div>
               </div>
@@ -1016,8 +1019,8 @@ function TabGeneral({ form, set, input, viewField, campoImportado, socratesCtx, 
 
       <Seccion titulo="Descripción & Notas">
         {vinc
-          ? viewField('Descripción', form.derivado?.descripcion || form.descripcion)
-          : campoImportado('Descripción', 'descripcion', 'text', { textarea: true, rows: 3, bold: true })}
+          ? viewField('Descripción', form.derivado?.descripcion || form.descripcion, true)
+          : campoImportado('Descripción', 'descripcion', 'text', { textarea: true, rows: 3, bold: true, boldView: true })}
         {input('Observaciones', 'observaciones', 'text', { textarea: true, rows: 4 })}
         {vinc && (form.derivado?.items_texto || form.items_texto) && (
           viewField('Renglones / Items', form.derivado?.items_texto || form.items_texto)
@@ -1042,7 +1045,7 @@ function TabGeneral({ form, set, input, viewField, campoImportado, socratesCtx, 
               {viewField('Unidad de Compra', form.unidad_compra)}
               {viewField('Fecha de publicación', fmtFecha(form.fecha_publicacion))}
               {viewField('Fecha de cierre', fmtFecha(form.fecha_cierre))}
-              <div style={{ gridColumn: '1/-1' }}>{viewField('Descripción', form.descripcion)}</div>
+              <div style={{ gridColumn: '1/-1' }}>{viewField('Descripción', form.descripcion, true)}</div>
               {form.items_texto && (
                 <div style={{ gridColumn: '1/-1' }}>{viewField('Renglones / Items', form.items_texto)}</div>
               )}

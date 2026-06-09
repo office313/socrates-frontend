@@ -122,7 +122,7 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
       }}>
       <div style={{
         fontSize: 12, color: '#455a64', marginBottom: 12, fontWeight: 500,
-        lineHeight: 1.3, minHeight: '2.6em',
+        lineHeight: 1.3, minHeight: '3.9em',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>{estado}</div>
       <div style={{ fontSize: 24, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
