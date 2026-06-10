@@ -9,8 +9,25 @@ import { useTrack } from '../hooks/useTrack'
 import PliegoIframe from '../components/PliegoIframe'
 import SelectorEmpresa from '../components/SelectorEmpresa'
 
+// Mapeo clase -> {label, colores}. La 'clase' la deriva el endpoint del
+// estado REAL de la licitacion (vigente/cerrada/historica) o 'adjudicada'
+// para las que vienen de la tabla de adjudicaciones. Antes el badge era
+// binario (todo lo que no fuera 'adjudicada' se pintaba 'Vigente'), lo que
+// mostraba como Vigente licitaciones que en BD estaban Cerrada.
+const CLASE_BADGE = {
+  vigente:    { label: 'Vigente',    bg: '#e8f5e9', color: '#2e7d32', border: '#c8e6c9' },
+  cerrada:    { label: 'Cerrada',    bg: '#fdecea', color: '#c62828', border: '#f5c6cb' },
+  historica:  { label: 'Histórica',  bg: '#eceff1', color: '#546e7a', border: '#cfd8dc' },
+  adjudicada: { label: 'Adjudicada', bg: '#ede7f6', color: '#5e35b1', border: '#d1c4e9' },
+}
+
 function ClaseBadge({ clase }) {
-  const esAdj = clase === 'adjudicada'
+  // Default seguro: un valor inesperado NO se pinta 'Vigente'; se muestra el
+  // propio texto capitalizado en gris neutro.
+  const c = CLASE_BADGE[clase] || {
+    label: clase ? clase.charAt(0).toUpperCase() + clase.slice(1) : '—',
+    bg: '#eceff1', color: '#546e7a', border: '#cfd8dc',
+  }
   return (
     <span style={{
       display: 'inline-block',
@@ -20,12 +37,12 @@ function ClaseBadge({ clase }) {
       fontWeight: 600,
       letterSpacing: 0.2,
       textTransform: 'uppercase',
-      background: esAdj ? '#ede7f6' : '#e8f5e9',
-      color: esAdj ? '#5e35b1' : '#2e7d32',
-      border: `1px solid ${esAdj ? '#d1c4e9' : '#c8e6c9'}`,
+      background: c.bg,
+      color: c.color,
+      border: `1px solid ${c.border}`,
       whiteSpace: 'nowrap',
     }}>
-      {esAdj ? 'Adjudicada' : 'Vigente'}
+      {c.label}
     </span>
   )
 }
