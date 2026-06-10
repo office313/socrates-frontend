@@ -598,7 +598,7 @@ export default function Settings({ usuario }) {
     if (tieneWhatsapp) {
       // Validaciones espejo del servidor (POST /api/cuenta).
       if (whatsappOptin && !telefonoCelular) {
-        mostrarMsg('Introduce tu número de celular para activar las alertas.', false); return
+        mostrarMsg('Introduzca su número de celular para activar las alertas.', false); return
       }
       if (telefonoCelular && telefonoPais === '+507' && telefonoCelular.length !== 8) {
         mostrarMsg('Para Panamá (+507) el celular debe tener 8 dígitos', false); return
@@ -627,7 +627,7 @@ export default function Settings({ usuario }) {
 
   const cambiarOptin = (checked) => {
     if (checked && !telefonoCelular) {
-      mostrarMsg('Introduce tu número de celular para activar las alertas.', false)
+      mostrarMsg('Introduzca su número de celular para activar las alertas.', false)
       return
     }
     setWhatsappOptin(checked)
@@ -733,7 +733,7 @@ export default function Settings({ usuario }) {
               Deseo recibir alertas de licitaciones por WhatsApp
             </label>
             <p style={{ fontSize: 11, color: '#999', margin: '6px 0 0 24px' }}>
-              Recibirás un resumen diario (días laborables, 10:30 AM) con las licitaciones nuevas que coinciden con tus criterios.
+              Recibirá un resumen diario (días laborables, 10:30 AM) con las licitaciones nuevas que coinciden con sus criterios.
             </p>
           </div>
         )}
