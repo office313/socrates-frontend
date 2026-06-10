@@ -5,6 +5,19 @@ import { useTrack } from '../hooks/useTrack'
 
 const ROLES = ['usuario', 'supervisor', 'superadmin']
 
+// Alertas WhatsApp: Panamá primero y por defecto, resto alfabético (brief).
+// El value del select es el prefijo (es lo que guarda el backend); los países
+// que comparten +1 muestran la primera entrada al recargar — cosmético.
+const PAISES_WHATSAPP = [
+  ['Panamá', '+507'],
+  ['Argentina', '+54'], ['Bolivia', '+591'], ['Brasil', '+55'], ['Canadá', '+1'],
+  ['Chile', '+56'], ['Colombia', '+57'], ['Costa Rica', '+506'], ['Cuba', '+53'],
+  ['Ecuador', '+593'], ['El Salvador', '+503'], ['España', '+34'],
+  ['Estados Unidos', '+1'], ['Guatemala', '+502'], ['Honduras', '+504'],
+  ['México', '+52'], ['Nicaragua', '+505'], ['Paraguay', '+595'], ['Perú', '+51'],
+  ['República Dominicana', '+1'], ['Uruguay', '+598'], ['Venezuela', '+58'],
+]
+
 function ModalUsuario({ usuarioActual, usuarioEditar, empresas, onClose, onSave }) {
   const esNuevo = !usuarioEditar?.id
   const [form, setForm] = useState(usuarioEditar || { nombre: '', email: '', password: '', confirmar: '', rol: 'usuario', empresa_id: usuarioActual?.empresa_id || '' })
@@ -537,6 +550,12 @@ export default function Settings({ usuario }) {
   const [nombre, setNombre] = useState(usuario?.nombre || '')
   const [passwordActual, setPasswordActual] = useState('')
   const [passwordNuevo, setPasswordNuevo] = useState('')
+  // Alertas WhatsApp — bloque visible solo si la empresa tiene el módulo
+  // (invisible si no, misma regla que Track).
+  const tieneWhatsapp = Boolean(usuario?.modulos?.whatsapp)
+  const [telefonoPais, setTelefonoPais] = useState(usuario?.telefono_pais || '+507')
+  const [telefonoCelular, setTelefonoCelular] = useState(usuario?.telefono_celular || '')
+  const [whatsappOptin, setWhatsappOptin] = useState(Boolean(usuario?.whatsapp_optin))
   const [modo, setModo] = useState('amplio')
   const [modoKeywords, setModoKeywords] = useState('compartido')
   const [totp, setTotp] = useState(false)
@@ -575,11 +594,43 @@ export default function Settings({ usuario }) {
   }
 
   const guardarCuenta = () => {
-    axios.post('/api/cuenta', { nombre, password_actual: passwordActual, password_nuevo: passwordNuevo })
+    const payload = { nombre, password_actual: passwordActual, password_nuevo: passwordNuevo }
+    if (tieneWhatsapp) {
+      // Validaciones espejo del servidor (POST /api/cuenta).
+      if (whatsappOptin && !telefonoCelular) {
+        mostrarMsg('Introduce tu número de celular para activar las alertas.', false); return
+      }
+      if (telefonoCelular && telefonoPais === '+507' && telefonoCelular.length !== 8) {
+        mostrarMsg('Para Panamá (+507) el celular debe tener 8 dígitos', false); return
+      }
+      if (telefonoCelular && telefonoPais !== '+507' && (telefonoCelular.length < 6 || telefonoCelular.length > 15)) {
+        mostrarMsg('El celular debe tener entre 6 y 15 dígitos', false); return
+      }
+      payload.telefono_pais = telefonoPais
+      payload.telefono_celular = telefonoCelular
+      payload.whatsapp_optin = whatsappOptin
+    }
+    axios.post('/api/cuenta', payload)
       .then(r => {
         if (r.data.ok) { mostrarMsg('Datos actualizados'); setPasswordActual(''); setPasswordNuevo('') }
         else mostrarMsg(r.data.error || 'Error', false)
       })
+      .catch(e => mostrarMsg(e.response?.data?.detail || 'Error al guardar', false))
+  }
+
+  const cambiarCelular = (v) => {
+    const soloDigitos = v.replace(/\D/g, '').slice(0, 15)
+    setTelefonoCelular(soloDigitos)
+    // Borrar el número con la casilla activa → desactivarla automáticamente.
+    if (!soloDigitos && whatsappOptin) setWhatsappOptin(false)
+  }
+
+  const cambiarOptin = (checked) => {
+    if (checked && !telefonoCelular) {
+      mostrarMsg('Introduce tu número de celular para activar las alertas.', false)
+      return
+    }
+    setWhatsappOptin(checked)
   }
 
   const guardarModo = (nuevoModo) => {
@@ -662,6 +713,30 @@ export default function Settings({ usuario }) {
           <div><label style={ls}>Contraseña actual</label><input type="password" value={passwordActual} onChange={e => setPasswordActual(e.target.value)} style={is} /></div>
           <div><label style={ls}>Nueva contraseña</label><input type="password" value={passwordNuevo} onChange={e => setPasswordNuevo(e.target.value)} style={is} /></div>
         </div>
+        {tieneWhatsapp && (
+          <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16, marginBottom: 16 }}>
+            <div style={{ fontSize: 13, fontWeight: 600, color: '#444', marginBottom: 12 }}>Alertas por WhatsApp</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 12 }}>
+              <div>
+                <label style={ls}>País</label>
+                <select value={telefonoPais} onChange={e => setTelefonoPais(e.target.value)} style={is}>
+                  {PAISES_WHATSAPP.map(([n, p]) => <option key={n} value={p}>{n} {p}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={ls}>Número de celular</label>
+                <input value={telefonoCelular} onChange={e => cambiarCelular(e.target.value)} placeholder="6XXX-XXXX" inputMode="numeric" style={is} autoComplete="off" />
+              </div>
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#333', cursor: 'pointer' }}>
+              <input type="checkbox" checked={whatsappOptin} onChange={e => cambiarOptin(e.target.checked)} />
+              Deseo recibir alertas de licitaciones por WhatsApp
+            </label>
+            <p style={{ fontSize: 11, color: '#999', margin: '6px 0 0 24px' }}>
+              Recibirás un resumen diario (días laborables, 10:30 AM) con las licitaciones nuevas que coinciden con tus criterios.
+            </p>
+          </div>
+        )}
         <button onClick={guardarCuenta} style={bs}>Guardar cambios</button>
       </div>
 
