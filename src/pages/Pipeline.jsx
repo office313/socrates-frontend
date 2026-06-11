@@ -43,6 +43,19 @@ const ESTADOS_CARDS = [
 // Estados restantes, accesibles vía el dropdown "Otros estados".
 const ESTADOS_DROPDOWN = ESTADOS.filter(e => !ESTADOS_CARDS.includes(e))
 
+// KPI/tarjeta-filtro "Pendiente de cobro": licitaciones ENTREGADAS (parcial o
+// material ok) que aún NO se han cobrado. Definición cerrada contra la BD real
+// (jun-2026): los dos estados de entrega exactos son 'Entregado parcialmente' y
+// 'Entregado Material OK'. "No cobrado" = cobrado distinto de 'SI' — incluye
+// NULL y 'NO' (el grueso de las filas; cobrado='NO' a secas dejaría fuera las
+// históricas con NULL). FILTRO_PENDIENTE_COBRO es un valor sentinela para el
+// estado `filtro` (no es un estado real, por eso no aparece en ESTADOS_DROPDOWN).
+const ESTADOS_PENDIENTE_COBRO = ['Entregado parcialmente', 'Entregado Material OK']
+const FILTRO_PENDIENTE_COBRO = '__pendiente_cobro__'
+const esPendienteCobro = (it) =>
+  ESTADOS_PENDIENTE_COBRO.includes(it.estado) &&
+  (it.cobrado || '').toUpperCase().trim() !== 'SI'
+
 // Ranking del orden POR DEFECTO de Track: trabajo activo arriba, cerradas
 // abajo. Índice = prioridad. Los estados no listados (No Mejor Oferta,
 // En Litigio, No Adjudicada, Cancelada, Desierta, Limbo) reciben 99 → al fondo.
@@ -471,12 +484,23 @@ export default function Pipeline({ usuario }) {
   // Suma de precio_ofertado de una lista de items.
   const sumarOfertado = (lista) => lista.reduce((s, it) => s + (Number(it.precio_ofertado) || 0), 0)
 
+  // Pendientes de cobro: entregados (parcial o material ok) y no cobrados. Se
+  // calcula sobre el mismo array `items` que alimenta las demás cards y el
+  // listado (GET /api/pipeline) → respeta automáticamente el scope
+  // compartido/individual de la empresa. El monto suma precio_ofertado (lo que
+  // el cliente espera cobrar), nunca precio_referencia.
+  const itemsPendienteCobro = items.filter(esPendienteCobro)
+
   const filtrados = (() => {
     // Búsqueda activa: resultados globales (ignora alcance y estado fino),
     // preservando el comportamiento previo del buscador.
     let lista
     if (appliedQuery) {
       lista = itemsBuscados
+    } else if (filtro === FILTRO_PENDIENTE_COBRO) {
+      // Filtro compuesto de la card "Pendiente de cobro": entregados y no
+      // cobrados. Como el resto de filtros finos, ignora el alcance.
+      lista = itemsPendienteCobro
     } else if (filtro) {
       // Filtro fino (card o dropdown): sobre TODO el pipeline, ignora el alcance.
       lista = items.filter(i => i.estado === filtro)
@@ -709,7 +733,7 @@ export default function Pipeline({ usuario }) {
 
       {/* Cards de estado — conteo y monto sobre todo el pipeline. En columna
           estrecha (compact) van en grid de 3; a ancho completo, los 7 en fila. */}
-      <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(3, 1fr)' : 'repeat(7, 1fr)', gap: compact ? 8 : 10, marginBottom: compact ? 0 : 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(3, 1fr)' : `repeat(${ESTADOS_CARDS.length + 1}, 1fr)`, gap: compact ? 8 : 10, marginBottom: compact ? 0 : 12 }}>
         {(compact ? ESTADOS_CARDS.filter(e => e !== 'Entregado parcialmente') : ESTADOS_CARDS).map(estado => {
           const delEstado = items.filter(it => it.estado === estado)
           return (
@@ -722,6 +746,15 @@ export default function Pipeline({ usuario }) {
             />
           )
         })}
+        {/* KPI "Pendiente de cobro": siempre la última card a la derecha. Es a la
+            vez tarjeta-filtro (toggle + exclusiva, reusa cambiarFiltroEstado). */}
+        <CardEstado
+          estado="Pendiente de cobro"
+          count={itemsPendienteCobro.length}
+          monto={sumarOfertado(itemsPendienteCobro)}
+          seleccionada={!appliedQuery && filtro === FILTRO_PENDIENTE_COBRO}
+          onClick={() => cambiarFiltroEstado(FILTRO_PENDIENTE_COBRO)}
+        />
       </div>
     </>
   )
