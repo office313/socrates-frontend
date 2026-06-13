@@ -65,7 +65,7 @@ export default function OnboardingModal({ usuario }) {
           <div style={{ textAlign: 'center' }}>
             <img src={logo} alt="Socrates Pro" width="190" style={{ display: 'block', margin: '0 auto 16px', height: 'auto' }} />
             <h1 style={h1}>Bienvenido a Socrates Pro, {usuario.nombre?.split(' ')[0] || ''}.</h1>
-            <p style={sub}>Vamos a dejar tu cuenta lista en un minuto.</p>
+            <p style={sub}>Vamos a dejar su cuenta lista en un minuto.</p>
             <div style={{ marginTop: 24 }}>
               <button style={btnPrimary()} onClick={() => ir('2fa')}>Empezar</button>
             </div>
@@ -78,7 +78,7 @@ export default function OnboardingModal({ usuario }) {
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{numero}</div>
             <h1 style={h1}>Modo de búsqueda</h1>
-            <p style={sub}>Cómo buscamos licitaciones que encajen con tus palabras clave. Podrás cambiarlo cuando quieras en Ajustes.</p>
+            <p style={sub}>Cómo buscamos licitaciones que encajen con sus palabras clave. Podrá cambiarlo cuando quiera en Ajustes.</p>
             <div style={{ marginTop: 16 }}>
               <Opcion sel={modoBusqueda === 'amplio'} onClick={() => setModoBusqueda('amplio')} titulo="Amplio (recomendado)">
                 Encuentra también variantes y similares (tolera tildes y plurales). Más resultados.
@@ -95,7 +95,7 @@ export default function OnboardingModal({ usuario }) {
           <div>
             <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{numero}</div>
             <h1 style={h1}>Keywords y Track</h1>
-            <p style={sub}>Cómo se comparten las palabras clave y el seguimiento (Track) entre los usuarios de tu empresa. Editable luego en Ajustes.</p>
+            <p style={sub}>Cómo se comparten las palabras clave y el seguimiento (Track) entre los usuarios de su empresa. Editable luego en Ajustes.</p>
             <div style={{ marginTop: 16 }}>
               <Opcion sel={modoKeywords === 'compartido'} onClick={() => setModoKeywords('compartido')} titulo="Compartido (recomendado)">
                 Todos los usuarios de la empresa ven las mismas keywords y el mismo Track (trabajo en equipo).
@@ -135,7 +135,7 @@ function Paso2FA({ onSiguiente, numero }) {
       const blob = await r.blob()
       setQr(URL.createObjectURL(blob))
       setFase('qr')
-    } catch { setError('No se pudo generar el código. Inténtalo más tarde.') }
+    } catch { setError('No se pudo generar el código. Inténtelo más tarde.') }
     finally { setLoading(false) }
   }
 
@@ -147,7 +147,7 @@ function Paso2FA({ onSiguiente, numero }) {
         body: JSON.stringify({ codigo }),
       })
       if (r.ok) { onSiguiente() }
-      else { setError('Código incorrecto. Revisa tu app de autenticación.') }
+      else { setError('Código incorrecto. Revise su app de autenticación.') }
     } catch { setError('Error de conexión.') }
     finally { setLoading(false) }
   }
@@ -155,12 +155,12 @@ function Paso2FA({ onSiguiente, numero }) {
   return (
     <div>
       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{numero}</div>
-      <h1 style={h1}>Protege tu cuenta</h1>
+      <h1 style={h1}>Proteja su cuenta</h1>
       {error && <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, margin: '8px 0' }}>{error}</div>}
 
       {fase === 'intro' && (
         <>
-          <p style={sub}>Te recomendamos activar la verificación en dos pasos para proteger tu cuenta y tus datos. Es opcional y puedes hacerlo más tarde desde Ajustes.</p>
+          <p style={sub}>Le recomendamos activar la verificación en dos pasos para proteger su cuenta y sus datos. Es opcional y puede hacerlo más tarde desde Ajustes.</p>
           <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
             <button style={btnPrimary(!loading)} disabled={loading} onClick={activar}>{loading ? 'Generando...' : 'Activar 2FA'}</button>
             <button style={btnGhost} onClick={onSiguiente}>Más tarde</button>
@@ -170,7 +170,7 @@ function Paso2FA({ onSiguiente, numero }) {
 
       {fase === 'qr' && (
         <>
-          <p style={sub}>Escanea este código con tu app de autenticación (Google Authenticator, Authy…) e introduce el código de 6 dígitos.</p>
+          <p style={sub}>Escanee este código con su app de autenticación (Google Authenticator, Authy…) e introduzca el código de 6 dígitos.</p>
           {qr && <img src={qr} alt="QR 2FA" style={{ display: 'block', margin: '16px auto', width: 180, height: 180 }} />}
           <input style={{ ...is, textAlign: 'center', fontSize: 22, letterSpacing: 6, fontWeight: 700 }}
             value={codigo} onChange={e => setCodigo(e.target.value.replace(/\D/g, ''))}
@@ -228,7 +228,7 @@ function PasoKeywords({ onSiguiente, numero }) {
 
   const guardarYSeguir = async () => {
     const todas = parseKeywords(texto)
-    if (!todas.length) { setError('Escribe al menos una palabra clave.'); return }
+    if (!todas.length) { setError('Escriba al menos una palabra clave.'); return }
     setLoading(true); setError('')
     try {
       const r = await fetch('/api/keywords', {
@@ -244,10 +244,10 @@ function PasoKeywords({ onSiguiente, numero }) {
   return (
     <div>
       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>{numero}</div>
-      <h1 style={h1}>Tus palabras clave</h1>
+      <h1 style={h1}>Sus palabras clave</h1>
       <p style={sub}>
-        ¿Qué productos o servicios vendes al Estado? Escríbelas <strong>separadas por comas</strong>.
-        Si ya las tienes en otra herramienta, puedes copiarlas y pegarlas aquí directamente.
+        ¿Qué productos o servicios vende al Estado? Escríbalas <strong>separadas por comas</strong>.
+        Si ya las tiene en otra herramienta, puede copiarlas y pegarlas aquí directamente.
       </p>
       {error && <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, margin: '8px 0' }}>{error}</div>}
 
@@ -264,12 +264,12 @@ function PasoKeywords({ onSiguiente, numero }) {
         }}
       />
       <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-        Sepáralas por comas · <strong>{lista.length}</strong> {lista.length === 1 ? 'palabra clave' : 'palabras clave'} detectadas
+        Sepárelas por comas · <strong>{lista.length}</strong> {lista.length === 1 ? 'palabra clave' : 'palabras clave'} detectadas
       </div>
 
       {/* Sugerencia IA — acotada a UNA palabra */}
       <div style={{ marginTop: 16, background: 'var(--gray)', borderRadius: 10, padding: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>✨ ¿Quieres ideas? Variantes de una palabra</div>
+        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>✨ ¿Quiere ideas? Variantes de una palabra</div>
         <div style={{ display: 'flex', gap: 8 }}>
           <input style={is} value={aiTerm} onChange={e => setAiTerm(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); sugerirIA() } }}

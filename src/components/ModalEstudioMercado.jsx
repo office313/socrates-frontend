@@ -198,7 +198,7 @@ export default function ModalEstudioMercado({ keywords: keywordsInicial, numeroA
         <div style={{ flex: 1, overflow: 'auto', padding: 20 }}>
           {!kwString && (
             <div style={{ background: '#fff8e1', border: '1px solid #ffe082', color: '#a06200', borderRadius: 8, padding: '10px 14px', fontSize: 12, marginBottom: 14 }}>
-              No hay keywords disponibles para esta licitación. Introduce un término de búsqueda.
+              No hay keywords disponibles para esta licitación. Introduzca un término de búsqueda.
             </div>
           )}
 
@@ -312,14 +312,14 @@ export default function ModalEstudioMercado({ keywords: keywordsInicial, numeroA
 
           {vista === 'lista' && !buscado && !loading && (
             <div style={{ textAlign: 'center', padding: 50, color: '#aaa' }}>
-              <p style={{ fontSize: 15, marginBottom: 6 }}>Ingresa una búsqueda para ver adjudicaciones históricas</p>
-              <p style={{ fontSize: 12 }}>Busca por producto, institución o proveedor</p>
+              <p style={{ fontSize: 15, marginBottom: 6 }}>Ingrese una búsqueda para ver adjudicaciones históricas</p>
+              <p style={{ fontSize: 12 }}>Busque por producto, institución o proveedor</p>
             </div>
           )}
 
           {vista === 'overview' && !buscado && (
             <div style={{ textAlign: 'center', padding: 50, color: '#aaa' }}>
-              <p style={{ fontSize: 15, marginBottom: 6 }}>Realiza una búsqueda primero para ver el análisis de mercado.</p>
+              <p style={{ fontSize: 15, marginBottom: 6 }}>Realice una búsqueda primero para ver el análisis de mercado.</p>
               <p style={{ fontSize: 12 }}>Los rankings de compradores, vendedores y precios se calculan sobre los resultados de la búsqueda.</p>
             </div>
           )}

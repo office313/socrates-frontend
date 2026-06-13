@@ -35,8 +35,8 @@ function normalizarPlan(p) {
 }
 
 const ERRORES = {
-  token_invalido: 'El enlace de verificación no es válido o ya se usó. Vuelve a empezar el registro.',
-  token_expirado: 'El enlace de verificación caducó. Pide uno nuevo desde tu email o vuelve a registrarte.',
+  token_invalido: 'El enlace de verificación no es válido o ya se usó. Vuelva a empezar el registro.',
+  token_expirado: 'El enlace de verificación caducó. Pida uno nuevo desde su email o vuelva a registrarse.',
 }
 
 // Medidor simple de seguridad de la contraseña.
@@ -72,7 +72,7 @@ export default function Registro() {
       const r = await fetch(`/api/_staging/verify-url?email=${encodeURIComponent(form.email)}`)
       const d = await r.json().catch(() => ({}))
       if (r.ok && d.url) window.location.href = d.url
-      else setError('No se pudo continuar (pruebas). ¿Enviaste el paso anterior?')
+      else setError('No se pudo continuar (pruebas). ¿Envió el paso anterior?')
     } catch { setError('Error de conexión.') }
   }
 
@@ -107,7 +107,7 @@ export default function Registro() {
   // Al cargar: si venimos de la verificación de email (paso=2 & rt) → paso plan.
   useEffect(() => {
     const err = params.get('error')
-    if (err) setError(ERRORES[err] || 'Ha ocurrido un error. Inténtalo de nuevo.')
+    if (err) setError(ERRORES[err] || 'Ha ocurrido un error. Inténtelo de nuevo.')
     if (params.get('paso') === '2' && params.get('rt')) {
       setRt(params.get('rt'))
       setPaso('plan')
@@ -130,7 +130,7 @@ export default function Registro() {
   const fuerza = fuerzaPassword(form.password)
 
   const verificarRuc = async () => {
-    if (!form.ruc.trim() || !form.dv.trim()) { setRucCheck({ valido: false, mensaje: 'Escribe el RUC y su DV.' }); return }
+    if (!form.ruc.trim() || !form.dv.trim()) { setRucCheck({ valido: false, mensaje: 'Escriba el RUC y su DV.' }); return }
     setRucCheck('checking')
     try {
       const r = await fetch(`/api/registro/verificar-ruc?ruc=${encodeURIComponent(form.ruc)}&dv=${encodeURIComponent(form.dv)}`)
@@ -159,8 +159,8 @@ export default function Registro() {
     e.preventDefault()
     setError(''); setCuentaExiste(false)
     if (form.password !== password2) { setError('Las contraseñas no coinciden.'); return }
-    if (fuerza.nivel < 2) { setError('La contraseña es demasiado débil. Usa al menos 8 caracteres con mayúsculas, minúsculas y números.'); return }
-    if (!rucCheck || rucCheck === 'checking' || !rucCheck.valido) { setError('Verifica el RUC antes de continuar (botón "Verificar RUC").'); return }
+    if (fuerza.nivel < 2) { setError('La contraseña es demasiado débil. Use al menos 8 caracteres con mayúsculas, minúsculas y números.'); return }
+    if (!rucCheck || rucCheck === 'checking' || !rucCheck.valido) { setError('Verifique el RUC antes de continuar (botón "Verificar RUC").'); return }
     setLoading(true)
     try {
       const r = await fetch('/api/registro/paso1', {
@@ -171,13 +171,13 @@ export default function Registro() {
       if (r.ok) {
         setPaso('verifica')
       } else {
-        const detalle = data.detail || 'No pudimos crear la cuenta. Revisa los datos.'
+        const detalle = data.detail || 'No pudimos crear la cuenta. Revise los datos.'
         setError(detalle)
         // Cuenta ya existente (email activo o RUC de cliente activo) → ofrecer salida.
         setCuentaExiste(/inicia sesi[oó]n/i.test(detalle))
       }
     } catch {
-      setError('Error de conexión. Inténtalo de nuevo.')
+      setError('Error de conexión. Inténtelo de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -207,10 +207,10 @@ export default function Registro() {
         setResumen(data.resumen)
         setPaso('casi')
       } else {
-        setError(data.detail || 'No pudimos guardar tu plan. Inténtalo de nuevo.')
+        setError(data.detail || 'No pudimos guardar su plan. Inténtelo de nuevo.')
       }
     } catch {
-      setError('Error de conexión. Inténtalo de nuevo.')
+      setError('Error de conexión. Inténtelo de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -237,16 +237,16 @@ export default function Registro() {
         {/* PASO 1 — DATOS */}
         {paso === 'datos' && (
           <form onSubmit={enviarPaso1}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Crea tu cuenta</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Cree su cuenta</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 20 }}>
-              Plan seleccionado: <strong>{normalizarPlan(plan) === 'pro-plus' ? 'Pro+' : 'Pro'}</strong>. Podrás cambiarlo en el siguiente paso.
+              Plan seleccionado: <strong>{normalizarPlan(plan) === 'pro-plus' ? 'Pro+' : 'Pro'}</strong>. Podrá cambiarlo en el siguiente paso.
             </p>
 
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}><Campo label="Nombre"><input style={is} value={form.nombre} onChange={setF('nombre')} required /></Campo></div>
               <div style={{ flex: 1 }}><Campo label="Apellidos"><input style={is} value={form.apellido} onChange={setF('apellido')} required /></Campo></div>
             </div>
-            <Campo label="Email"><input type="email" style={is} value={form.email} onChange={setF('email')} placeholder="tu@email.com" required /></Campo>
+            <Campo label="Email"><input type="email" style={is} value={form.email} onChange={setF('email')} placeholder="nombre@empresa.com" required /></Campo>
 
             <Campo label="Contraseña">
               <input type="password" style={is} value={form.password} onChange={setF('password')} placeholder="Mínimo 8 caracteres" minLength={8} required />
@@ -309,7 +309,7 @@ export default function Registro() {
               {loading ? 'Creando...' : 'Continuar'}
             </button>
             <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 14 }}>
-              ¿Ya tienes cuenta? <a href="/app/login" style={{ color: 'var(--blue)', fontWeight: 600 }}>Inicia sesión</a>
+              ¿Ya tiene cuenta? <a href="/app/login" style={{ color: 'var(--blue)', fontWeight: 600 }}>Inicie sesión</a>
             </p>
           </form>
         )}
@@ -318,13 +318,13 @@ export default function Registro() {
         {paso === 'verifica' && (
           <div style={{ textAlign: 'center' }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>📧</div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 8px' }}>Verifica tu email</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 8px' }}>Verifique su email</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6 }}>
-              Te enviamos un email a <strong>{form.email || 'tu correo'}</strong> con un enlace para confirmar tu dirección.
-              Ábrelo para continuar y elegir tu plan.
+              Le enviamos un email a <strong>{form.email || 'su correo'}</strong> con un enlace para confirmar su dirección.
+              Ábralo para continuar y elegir su plan.
             </p>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 20 }}>
-              ¿No te llegó?{' '}
+              ¿No le llegó?{' '}
               <button onClick={reenviar} disabled={loading} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', fontSize: 12 }}>
                 Reenviar email
               </button>
@@ -341,7 +341,7 @@ export default function Registro() {
         {/* PASO 2 — PLAN + PACKS */}
         {paso === 'plan' && (
           <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Elige tu plan</h1>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Elija su plan</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 14 }}>
               Pro y Pro+ incluyen 5 usuarios (ampliables con paquetes de +5); Lite es para 1 usuario.
             </p>
@@ -463,13 +463,13 @@ export default function Registro() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 12, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8 }}>
               <span style={{ fontSize: 18 }}>🎁</span>
               <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                <strong>Hoy no se te cobra nada.</strong> Tu prueba gratuita de 3 días empieza ahora; el primer cobro será al terminarla y puedes cancelar antes sin coste.
+                <strong>Hoy no se le cobra nada.</strong> Su prueba gratuita de 3 días empieza ahora; el primer cobro será al terminarla y puede cancelar antes sin coste.
               </div>
             </div>
             <div style={{ display: 'flex', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8 }}>
               <span style={{ fontSize: 18 }}>🔒</span>
               <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                <strong>SocratesPro no almacena datos de pago.</strong> El cobro se realiza por Yappy: apruebas el pago desde tu propia app de Yappy.
+                <strong>SocratesPro no almacena datos de pago.</strong> El cobro se realiza por Yappy: aprueba el pago desde su propia app de Yappy.
               </div>
             </div>
 
@@ -479,7 +479,7 @@ export default function Registro() {
                   {loading ? 'Activando...' : 'Simular pago y entrar (pruebas)'}
                 </button>
                 <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                  Entorno de pruebas: el cobro por Yappy aún no está conectado; esto simula la confirmación y te lleva al onboarding.
+                  Entorno de pruebas: el cobro por Yappy aún no está conectado; esto simula la confirmación y le lleva al onboarding.
                 </p>
               </>
             ) : (
@@ -488,7 +488,7 @@ export default function Registro() {
                   Ir al pago seguro (próximamente)
                 </button>
                 <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                  El cobro por Yappy se habilita en la Fase 2. Tu cuenta queda guardada hasta entonces.
+                  El cobro por Yappy se habilita en la Fase 2. Su cuenta queda guardada hasta entonces.
                 </p>
               </>
             )}

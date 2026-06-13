@@ -30,7 +30,7 @@ export default function Recuperar() {
       })
       setEnviado(true)
     } catch {
-      setError('No se pudo enviar. Revisa tu conexión e inténtalo de nuevo.')
+      setError('No se pudo enviar. Revise su conexión e inténtelo de nuevo.')
     } finally {
       setLoading(false)
     }
@@ -42,7 +42,7 @@ export default function Recuperar() {
       const r = await fetch(`/api/_staging/reset-url?email=${encodeURIComponent(email)}`)
       const d = await r.json().catch(() => ({}))
       if (r.ok && d.url) window.location.href = d.url
-      else setError('No se pudo continuar (pruebas). ¿Enviaste el enlace antes?')
+      else setError('No se pudo continuar (pruebas). ¿Envió el enlace antes?')
     } catch { setError('Error de conexión.') }
   }
 
@@ -59,13 +59,13 @@ export default function Recuperar() {
 
         {!enviado ? (
           <form onSubmit={enviar}>
-            <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>¿Olvidaste tu contraseña?</h2>
+            <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>¿Olvidó su contraseña?</h2>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
-              Escribe el email de tu cuenta y te enviaremos un enlace para crear una nueva contraseña.
+              Escriba el email de su cuenta y le enviaremos un enlace para crear una nueva contraseña.
             </p>
             <div style={{ marginBottom: 20 }}>
               <label style={ls}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" required autoFocus style={is} />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nombre@empresa.com" required autoFocus style={is} />
             </div>
             <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: loading ? '#ccc' : 'var(--red)', color: 'white', borderRadius: 8, fontSize: 14, fontWeight: 600, border: 'none', cursor: loading ? 'default' : 'pointer' }}>
               {loading ? 'Enviando...' : 'Enviar enlace'}
@@ -75,11 +75,11 @@ export default function Recuperar() {
           <div>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
               <div style={{ fontSize: 36, marginBottom: 8 }}>📧</div>
-              <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Revisa tu correo</h2>
+              <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Revise su correo</h2>
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, textAlign: 'center' }}>
-              Si hay una cuenta con <strong>{email}</strong>, te hemos enviado un enlace para
-              restablecer tu contraseña. Revisa también la carpeta de spam. El enlace caduca en 1 hora.
+              Si hay una cuenta con <strong>{email}</strong>, le hemos enviado un enlace para
+              restablecer su contraseña. Revise también la carpeta de spam. El enlace caduca en 1 hora.
             </p>
             {esStaging && (
               <button type="button" onClick={continuarStaging}

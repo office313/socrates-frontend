@@ -900,14 +900,14 @@ export default function Analytics({ usuario }) {
           )}
           {vista === 'lista' && !buscado && !loading && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>Ingresa una búsqueda para ver adjudicaciones históricas</p>
-              <p style={{ fontSize: 13 }}>Busca por producto, institución o proveedor</p>
+              <p style={{ fontSize: 16, marginBottom: 8 }}>Ingrese una búsqueda para ver adjudicaciones históricas</p>
+              <p style={{ fontSize: 13 }}>Busque por producto, institución o proveedor</p>
             </div>
           )}
 
           {vista === 'overview' && !buscado && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>Realiza una búsqueda primero para ver el análisis de mercado.</p>
+              <p style={{ fontSize: 16, marginBottom: 8 }}>Realice una búsqueda primero para ver el análisis de mercado.</p>
               <p style={{ fontSize: 13 }}>Los rankings de compradores, vendedores y precios se calculan sobre los resultados de la búsqueda.</p>
             </div>
           )}
@@ -1189,8 +1189,8 @@ export default function Analytics({ usuario }) {
 
           {!licitacionEncontrada && !buscandoNumero && !msgNumero && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>Introduce el número de licitación</p>
-              <p style={{ fontSize: 13 }}>{tieneTrack ? 'Busca una licitación vigente por su número exacto para añadirla a Track o Watchlist' : 'Busca una licitación vigente por su número exacto para añadirla al Watchlist'}</p>
+              <p style={{ fontSize: 16, marginBottom: 8 }}>Introduzca el número de licitación</p>
+              <p style={{ fontSize: 13 }}>{tieneTrack ? 'Busque una licitación vigente por su número exacto para añadirla a Track o Watchlist' : 'Busque una licitación vigente por su número exacto para añadirla al Watchlist'}</p>
             </div>
           )}
         </div>

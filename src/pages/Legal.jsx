@@ -79,7 +79,7 @@ export default function Legal() {
           setRespuesta({ texto: d.respuesta || '', cacheada: !!d.cacheada })
         }
       })
-      .catch(() => setErrorConsulta('Sócrates no pudo responder. Inténtalo de nuevo en unos momentos.'))
+      .catch(() => setErrorConsulta('Sócrates no pudo responder. Inténtelo de nuevo en unos momentos.'))
       .finally(() => setConsultando(false))
   }
 
@@ -161,10 +161,10 @@ export default function Legal() {
             <SocratesOrb pensando={consultando} />
           </div>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '12px 0 0' }}>
-            Hazle una consulta legal a Sócrates
+            Hágale una consulta legal a Sócrates
           </h2>
           <p style={{ fontSize: 13, color: '#7a8794', margin: '6px 0 0', maxWidth: 540 }}>
-            Pregunta en lenguaje natural. Sócrates responde leyendo los documentos de arriba
+            Pregunte en lenguaje natural. Sócrates responde leyendo los documentos de arriba
             y citando el artículo y la ley correspondiente.
           </p>
         </div>
@@ -189,7 +189,7 @@ export default function Legal() {
             value={pregunta}
             onChange={e => setPregunta(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) enviarConsulta() }}
-            placeholder="Escribe tu consulta legal aquí…"
+            placeholder="Escriba su consulta legal aquí…"
             rows={3}
             disabled={consultando}
             style={{
@@ -226,7 +226,7 @@ export default function Legal() {
               marginTop: 18, padding: '14px 16px', borderRadius: 10,
               background: '#fbf7ec', border: '1px solid #ece0c3', color: '#8a6d2f', fontSize: 13,
             }}>
-              Tu empresa ha alcanzado el límite de consultas legales de este mes.
+              Su empresa ha alcanzado el límite de consultas legales de este mes.
             </div>
           )}
 

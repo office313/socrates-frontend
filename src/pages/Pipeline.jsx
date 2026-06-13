@@ -153,7 +153,7 @@ function ModalManual({ onClose, onAdded, usuario }) {
 
   const buscar = async () => {
     const num = numero.trim()
-    if (!num) { setError('Introduce un número de licitación'); return }
+    if (!num) { setError('Introduzca un número de licitación'); return }
     setBuscando(true); setError(''); setDatos(null)
     try {
       const r = await axios.get(`/api/pipeline/buscar-licitacion?numero_acto=${encodeURIComponent(num)}`)
@@ -309,7 +309,7 @@ const tooltipCambios = (cambios) => {
   if (!cambios || !cambios.length) return undefined
   const etiquetas = [...new Set(cambios.map(c => ETIQUETAS_CAMBIO[c.tipo] || c.tipo))]
   const n = cambios.length
-  return `${n} cambio${n === 1 ? '' : 's'} desde tu última visita: ${etiquetas.join(', ')}`
+  return `${n} cambio${n === 1 ? '' : 's'} desde su última visita: ${etiquetas.join(', ')}`
 }
 
 export default function Pipeline({ usuario }) {
@@ -704,7 +704,7 @@ export default function Pipeline({ usuario }) {
               }}>Buscar</button>
           </div>
           <div style={{ marginTop: 6, fontSize: 11, color: '#9aa0a6' }}>
-            Tip: usa * como comodín (ej: *CL-034097, 2026*, *CSS*)
+            Tip: use * como comodín (ej: *CL-034097, 2026*, *CSS*)
           </div>
         </div>
 

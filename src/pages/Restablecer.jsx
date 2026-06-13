@@ -44,7 +44,7 @@ export default function Restablecer() {
   const guardar = async (e) => {
     e.preventDefault()
     setError('')
-    if (fuerza.nivel < 2) { setError('La contraseña es demasiado débil. Usa al menos 8 caracteres con mayúsculas, minúsculas y números.'); return }
+    if (fuerza.nivel < 2) { setError('La contraseña es demasiado débil. Use al menos 8 caracteres con mayúsculas, minúsculas y números.'); return }
     if (password !== password2) { setError('Las contraseñas no coinciden.'); return }
     setLoading(true)
     try {
@@ -60,7 +60,7 @@ export default function Restablecer() {
         // (navegación completa para que la SPA cargue con la sesión nueva).
         setTimeout(() => { window.location.href = '/app' }, 1800)
       } else {
-        setError(d.detail || 'No se pudo restablecer. Solicita un enlace nuevo.')
+        setError(d.detail || 'No se pudo restablecer. Solicite un enlace nuevo.')
       }
     } catch {
       setError('Error de conexión.')
@@ -90,7 +90,7 @@ export default function Restablecer() {
         <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
         <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Enlace no válido o caducado</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
-          Este enlace ya se usó o ha expirado. Solicita uno nuevo desde "¿Olvidaste tu contraseña?".
+          Este enlace ya se usó o ha expirado. Solicite uno nuevo desde "¿Olvidó su contraseña?".
         </p>
         <button type="button" onClick={() => navigate('/recuperar')}
           style={{ width: '100%', padding: '12px', background: 'var(--red)', color: 'white', borderRadius: 8, fontSize: 14, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
@@ -106,7 +106,7 @@ export default function Restablecer() {
         <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
         <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Contraseña actualizada</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          Listo. Entrando a tu cuenta...
+          Listo. Entrando a su cuenta...
         </p>
       </div>
     )
@@ -115,9 +115,9 @@ export default function Restablecer() {
   // estado === 'ok'
   return card(
     <form onSubmit={guardar}>
-      <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Elige una nueva contraseña</h2>
+      <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Elija una nueva contraseña</h2>
       <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
-        Crea una contraseña segura para tu cuenta.
+        Cree una contraseña segura para su cuenta.
       </p>
 
       {error && (
