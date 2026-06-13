@@ -539,17 +539,38 @@ export default function Dashboard({ usuario }) {
               </tr>
             </thead>
             <tbody>
-              {licitacionesFiltradas.length === 0 && filtro === 'watchlist' ? (
+              {licitacionesFiltradas.length === 0 ? (
                 <tr>
                   <td colSpan={7} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 14, color: 'var(--text)' }}>No tienes licitaciones del Radar en tu Watchlist todavía.</span>
-                      <span style={{ fontSize: 12 }}>Márcalas con la estrella desde el listado completo para verlas aquí.</span>
-                      <button onClick={() => setFiltro('todas')}
-                        style={{ marginTop: 4, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                        Ver listado completo
-                      </button>
-                    </div>
+                    {filtro === 'watchlist' ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                        <span style={{ fontSize: 14, color: 'var(--text)' }}>No tienes licitaciones del Radar en tu Watchlist todavía.</span>
+                        <span style={{ fontSize: 12 }}>Márcalas con la estrella desde el listado completo para verlas aquí.</span>
+                        <button onClick={() => setFiltro('todas')}
+                          style={{ marginTop: 4, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                          Ver listado completo
+                        </button>
+                      </div>
+                    ) : filtro === 'hoy' ? (
+                      <span style={{ fontSize: 14, color: 'var(--text)' }}>Ninguna de tus coincidencias cierra hoy.</span>
+                    ) : filtro === 'noleidas' ? (
+                      <span style={{ fontSize: 14, color: 'var(--text)' }}>No tienes licitaciones sin leer.</span>
+                    ) : filtro === 'pipeline' ? (
+                      <span style={{ fontSize: 14, color: 'var(--text)' }}>Ninguna licitación del Radar está en tu Track todavía.</span>
+                    ) : (
+                      /* filtro 'todas': caso real de 0 coincidencias con las keywords */
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 30 }}>📡</span>
+                        <span style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600 }}>Aún no hay licitaciones vigentes para tus palabras clave</span>
+                        <span style={{ fontSize: 12.5, maxWidth: 440, lineHeight: 1.55 }}>
+                          En cuanto se publique una licitación vigente que coincida, aparecerá aquí automáticamente. El Radar se actualiza varias veces al día.
+                        </span>
+                        <button onClick={() => window.location.assign('/app/keywords')}
+                          style={{ marginTop: 6, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                          Revisar mis palabras clave
+                        </button>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : licitacionesFiltradas.map((l, i) => {

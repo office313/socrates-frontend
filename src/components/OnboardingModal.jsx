@@ -301,8 +301,9 @@ function PasoKeywords({ onSiguiente, numero }) {
 
 // --- Pantalla final: completar + "preparando tu Radar" ---
 function PasoFinal({ modoBusqueda, modoKeywords }) {
-  const [estado, setEstado] = useState('preparando') // preparando | listo | espera
-  const [info, setInfo] = useState({ licitaciones: 0 })
+  const [estado, setEstado] = useState('preparando') // preparando | listo | espera | error
+  const [info, setInfo] = useState({ total: 0, procesadas: 0, licitaciones: 0, matches: 0 })
+  const [transcurrido, setTranscurrido] = useState(0)  // segundos (≈, por el polling de 2s)
   const pollRef = useRef(null)
   const completarRef = useRef(false)
 
@@ -324,18 +325,24 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
       let intentos = 0
       pollRef.current = setInterval(async () => {
         intentos++
+        setTranscurrido(t => t + 2)
         try {
           const r = await fetch('/api/onboarding/estado-radar')
           const d = await r.json().catch(() => ({}))
           if (cancelado) return
+          // Progreso real (contador + barra), llegue o no a "listo" todavía.
+          setInfo({
+            total: d.total || 0, procesadas: d.procesadas || 0,
+            licitaciones: d.licitaciones || 0, matches: d.matches || 0,
+          })
           if (d.estado === 'listo') {
-            setInfo({ licitaciones: d.licitaciones || 0 })
-            setEstado('listo')
-            clearInterval(pollRef.current)
-          } else if (d.estado === 'error' || intentos > 30) {
-            // Respaldo: nunca dejar al usuario pensando que está roto.
-            setEstado('espera')
-            clearInterval(pollRef.current)
+            setEstado('listo'); clearInterval(pollRef.current)
+          } else if (d.estado === 'error') {
+            setEstado('error'); clearInterval(pollRef.current)
+          } else if (intentos > 150) {
+            // Tope de seguridad MUY holgado (~300 s): el match completo con PDF
+            // tarda ~60 s, así que en operación normal nunca se llega aquí.
+            setEstado('espera'); clearInterval(pollRef.current)
           }
         } catch { /* reintenta */ }
       }, 2000)
@@ -345,25 +352,51 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
   }, []) // eslint-disable-line
 
   const entrar = () => window.location.reload()
+  const pct = info.total > 0 ? Math.min(100, Math.round((info.procesadas / info.total) * 100)) : 0
 
   return (
     <div style={{ textAlign: 'center' }}>
       {estado === 'preparando' && (
         <>
           <img src={iconoCargando} alt="" width="84" height="84"
-            style={{ display: 'block', margin: '8px auto 20px' }} />
-          <h1 style={h1}>Tu Radar se está preparando</h1>
-          <p style={sub}>Estamos buscando las licitaciones vigentes que coinciden con tus palabras clave. Tardará unos segundos…</p>
+            style={{ display: 'block', margin: '8px auto 18px' }} />
+          {/* 1) Contexto — gestiona la expectativa, siempre visible */}
+          <h1 style={h1}>Preparando su Radar por primera vez</h1>
+          <p style={sub}>Esta búsqueda inicial es la más completa, por eso tarda un poco más; las siguientes serán casi instantáneas.</p>
+
+          {/* 2) Contador real — aparece en cuanto hay coincidencias */}
+          {info.licitaciones > 0 && (
+            <p style={{ ...sub, color: 'var(--blue)', fontWeight: 700, marginTop: 14 }}>
+              Ya hemos encontrado {info.licitaciones} {info.licitaciones === 1 ? 'licitación' : 'licitaciones'} para usted… seguimos buscando.
+            </p>
+          )}
+
+          {/* Barra de progreso real (vigentes procesadas / total) */}
+          {info.total > 0 && (
+            <div style={{ marginTop: 16 }}>
+              <div style={{ height: 8, borderRadius: 999, background: 'var(--gray)', overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${pct}%`, background: 'var(--blue)', transition: 'width 0.4s' }} />
+              </div>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                {info.procesadas} de {info.total} licitaciones vigentes revisadas
+              </div>
+            </div>
+          )}
+
+          {/* 3) Refuerzo a partir de ~60 s — coexiste con lo anterior */}
+          {transcurrido > 60 && (
+            <p style={{ ...sub, marginTop: 14, fontStyle: 'italic' }}>Casi listo, revisando hasta el último detalle de cada pliego…</p>
+          )}
         </>
       )}
       {estado === 'listo' && (
         <>
           <div style={{ fontSize: 44, marginBottom: 8 }}>✅</div>
-          <h1 style={h1}>¡Tu Radar está listo!</h1>
+          <h1 style={h1}>¡Su Radar está listo!</h1>
           <p style={sub}>
             {info.licitaciones > 0
-              ? `Encontramos ${info.licitaciones} licitaciones vigentes que coinciden con tus palabras clave.`
-              : 'No hay licitaciones vigentes que coincidan ahora mismo, pero tu Radar se actualiza varias veces al día.'}
+              ? `Hemos encontrado ${info.licitaciones} ${info.licitaciones === 1 ? 'licitación vigente que coincide' : 'licitaciones vigentes que coinciden'} con sus palabras clave.`
+              : 'Aún no hay licitaciones vigentes que coincidan con sus palabras clave; aparecerán en su Radar en cuanto se publique una que coincida.'}
           </p>
           <div style={{ marginTop: 20 }}><button style={btnPrimary()} onClick={entrar}>Entrar a Socrates Pro</button></div>
         </>
@@ -371,8 +404,16 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
       {estado === 'espera' && (
         <>
           <div style={{ fontSize: 44, marginBottom: 8 }}>🔎</div>
-          <h1 style={h1}>Estamos rastreando tus licitaciones</h1>
-          <p style={sub}>Estamos rastreando las licitaciones que coinciden con tus palabras clave. Tu Radar se actualiza varias veces al día; en las próximas horas verás resultados.</p>
+          <h1 style={h1}>Su Radar se está terminando de preparar</h1>
+          <p style={sub}>Puede entrar ya; las últimas coincidencias se completarán en unos segundos y aparecerán en su Radar.</p>
+          <div style={{ marginTop: 20 }}><button style={btnPrimary()} onClick={entrar}>Entrar a Socrates Pro</button></div>
+        </>
+      )}
+      {estado === 'error' && (
+        <>
+          <div style={{ fontSize: 44, marginBottom: 8 }}>⚠️</div>
+          <h1 style={h1}>Casi listo</h1>
+          <p style={sub}>Hubo un problema preparando su Radar, pero sus datos están guardados. Puede entrar; su Radar se completará en la próxima actualización.</p>
           <div style={{ marginTop: 20 }}><button style={btnPrimary()} onClick={entrar}>Entrar a Socrates Pro</button></div>
         </>
       )}
