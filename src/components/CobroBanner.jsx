@@ -37,8 +37,8 @@ export default function CobroBanner() {
     urgente = true
   } else if (suscripcion_estado === 'trialing' && diasTrial != null) {
     mensaje = diasTrial <= 0
-      ? 'Su prueba gratuita termina hoy.'
-      : `Su prueba gratuita termina en ${diasTrial} ${diasTrial === 1 ? 'día' : 'días'}.`
+      ? 'Su prueba termina hoy.'
+      : `Su prueba termina en ${diasTrial} ${diasTrial === 1 ? 'día' : 'días'}.`
   } else {
     return null
   }

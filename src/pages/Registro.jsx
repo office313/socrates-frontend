@@ -105,8 +105,10 @@ export default function Registro() {
   const [ciclo, setCiclo] = useState('anual') // 'mensual' | 'anual' (default: anual)
   const [yappyTel, setYappyTel] = useState('') // móvil Yappy = método de pago (paso 2)
 
-  // Paso 3
+  // Paso 3 (pago)
   const [resumen, setResumen] = useState(null)
+  const [cobro, setCobro] = useState(null)  // { ct, monto, modo, ordenCreada }
+  const [pagoOk, setPagoOk] = useState(false)
 
   // Al cargar: si venimos de la verificación de email (paso=2 & rt) → paso plan.
   useEffect(() => {
@@ -126,6 +128,22 @@ export default function Registro() {
       .then(d => { if (d?.planes) setPlanesMeta(d) })
       .catch(() => {})
   }, [paso])
+
+  // Paso de pago: sondea la confirmación de Yappy (movement==COMPLETED). Al confirmar
+  // la cuenta ya está activa → entra a la app. En staging (sin Yappy real) no sondea;
+  // el botón "simular" hace la confirmación.
+  useEffect(() => {
+    if (paso !== 'pago' || !cobro?.ct || esStaging) return
+    let vivo = true
+    const id = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/cobro/confirmar?ct=${encodeURIComponent(cobro.ct)}`)
+        const d = await r.json().catch(() => ({}))
+        if (vivo && d?.aplicado) { clearInterval(id); setPagoOk(true) }
+      } catch { /* reintenta */ }
+    }, 4000)
+    return () => { vivo = false; clearInterval(id) }
+  }, [paso, cobro]) // eslint-disable-line
 
   const setF = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   // Para RUC/DV: al cambiarlos se invalida la verificación previa.
@@ -204,19 +222,24 @@ export default function Registro() {
   const yappyTelDigitos = yappyTel.replace(/\D/g, '').replace(/^507/, '')
   const yappyTelOk = yappyTelDigitos.length === 8
 
-  // ---- Paso 2: elegir plan + packs + número Yappy (método de pago) ----
-  const enviarPaso2 = async () => {
+  // ---- Paso 2: elegir plan + número Yappy + DISPARAR EL COBRO INICIAL ----
+  //   modo 'trial'    → cobra $1 ("5 días por $1");
+  //   modo 'completo' → cobra el plan entero ("suscribirme ya").
+  // El backend crea la orden Yappy (cliente presente); pasamos al paso de pago a
+  // sondear la confirmación. La cuenta se activa SOLO al confirmar.
+  const enviarPaso2 = async (modo) => {
     if (!yappyTelOk) { setError('Indique su número de Yappy (móvil de Panamá, 8 dígitos).'); return }
     setError(''); setLoading(true)
     try {
       const r = await fetch('/api/registro/paso2', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rt, plan, packs, ciclo, metodo_pago: 'yappy', yappy_telefono: yappyTel }),
+        body: JSON.stringify({ rt, plan, packs, ciclo, metodo_pago: 'yappy', yappy_telefono: yappyTel, modo }),
       })
       const data = await r.json().catch(() => ({}))
       if (r.ok) {
         setResumen(data.resumen)
-        setPaso('casi')
+        setCobro({ ct: data.ct, monto: data.monto, modo: data.modo, ordenCreada: data.orden_creada })
+        setPaso('pago')
       } else {
         setError(data.detail || 'No pudimos guardar su plan. Inténtelo de nuevo.')
       }
@@ -437,71 +460,82 @@ export default function Registro() {
                 </div>
               </Campo>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -6 }}>
-                Su método de pago. <strong>Hoy no se le cobra nada:</strong> al terminar la prueba de 3 días
-                recibirá la solicitud de cobro en su app de Yappy y la aprueba con su PIN o huella.
+                Su método de pago. Recibirá la solicitud de cobro en su app de Yappy y la
+                aprueba con su PIN o huella.
               </div>
               {yappyTel && !yappyTelOk && (
                 <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>El número debe tener 8 dígitos.</div>
               )}
             </div>
 
-            <button type="button" onClick={enviarPaso2} disabled={loading || !yappyTelOk} style={btn(!loading && yappyTelOk)}>
-              {loading ? 'Guardando...' : 'Continuar'}
+            {/* Dos caminos: prueba "5 días por $1" (el $1 se descuenta del 1er pago) o alta directa. */}
+            <button type="button" onClick={() => enviarPaso2('trial')} disabled={loading || !yappyTelOk}
+              style={btn(!loading && yappyTelOk)}>
+              {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
+            </button>
+            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '8px 0 14px' }}>
+              El $1 valida su Yappy y se descuenta del primer pago al terminar la prueba.
+            </p>
+            <button type="button" onClick={() => enviarPaso2('completo')} disabled={loading || !yappyTelOk}
+              style={{
+                width: '100%', padding: '11px', background: 'white', color: 'var(--blue)',
+                border: '1px solid var(--blue)', borderRadius: 8, fontSize: 14, fontWeight: 600,
+                cursor: (loading || !yappyTelOk) ? 'default' : 'pointer', opacity: (loading || !yappyTelOk) ? 0.6 : 1,
+              }}>
+              Suscribirme ya (sin prueba)
             </button>
           </div>
         )}
 
-        {/* PASO 3 — YA CASI (resumen + mensajes + pago) */}
-        {paso === 'casi' && resumen && (
-          <div>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 16px' }}>Ya casi está</h1>
-
-            <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
-              <Linea label="Plan" valor={resumen.plan_nombre} />
-              <Linea label="Usuarios totales" valor={`${resumen.usuarios_total}`} />
-              {(() => {
-                const lanz = anual ? resumen.total_lanzamiento_anual_usd : resumen.total_lanzamiento_mensual_usd
-                const lista = anual ? resumen.total_anual_usd : resumen.total_mensual_usd
-                const total = lanz != null ? lanz : lista
-                return (
-                  <>
-                    <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${total}${sufijo}`} fuerte />
-                    {lanz != null && (
-                      <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>Promoción: Track incluido gratis los primeros {resumen.lanzamiento_meses} meses</div>
-                    )}
-                  </>
-                )
-              })()}
-            </div>
-
-            <div style={{ display: 'flex', gap: 10, marginBottom: 12, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8 }}>
-              <span style={{ fontSize: 18 }}>🎁</span>
-              <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                <strong>Hoy no se le cobra nada.</strong> Su prueba gratuita de 3 días empieza ahora; el primer cobro será al terminarla y puede cancelar antes sin coste.
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8 }}>
-              <span style={{ fontSize: 18 }}>🔒</span>
-              <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                <strong>SocratesPro no almacena datos de pago.</strong> El cobro se realiza por Yappy: aprueba el pago desde su propia app de Yappy.
-              </div>
-            </div>
-
-            {/* La prueba ya está activa (el plan se guardó en el paso anterior y la
-                sesión viene del alta): el CTA es ENTRAR, no pagar. El cobro es al día 3. */}
-            <button type="button" onClick={() => { window.location.href = '/app' }} style={btn(true)}>
-              Empezar a usar Socrates Pro
-            </button>
-            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-              Su prueba de 3 días está activa. Al terminarla recibirá la solicitud de cobro en su app de Yappy.
-            </p>
-            {esStaging && (
-              <button type="button" onClick={simularPago} disabled={loading} style={{
-                width: '100%', marginTop: 12, padding: '9px', background: 'white', color: 'var(--text-muted)',
-                border: '1px dashed var(--border)', borderRadius: 8, fontSize: 12, cursor: 'pointer',
-              }}>
-                {loading ? 'Simulando…' : 'Simular cobro confirmado (pruebas)'}
-              </button>
+        {/* PASO 3 — PAGO (aprobación en Yappy + confirmación) */}
+        {paso === 'pago' && cobro && (
+          <div style={{ textAlign: 'center' }}>
+            {pagoOk ? (
+              <>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
+                  {cobro.modo === 'completo' ? 'Suscripción activa' : 'Su prueba está activa'}
+                </h1>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
+                  {cobro.modo === 'completo'
+                    ? 'Pago confirmado. Ya puede empezar.'
+                    : 'Confirmamos su $1. Tiene 5 días completos; al terminar se cobra el plan menos ese $1.'}
+                </p>
+                <button type="button" onClick={() => { window.location.href = '/app' }} style={btn(true)}>
+                  Empezar a usar Socrates Pro
+                </button>
+              </>
+            ) : (
+              <>
+                <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
+                <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
+                  {cobro.modo === 'completo'
+                    ? `Apruebe el pago de $${cobro.monto} en Yappy`
+                    : 'Apruebe su $1 en Yappy'}
+                </h1>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16 }}>
+                  Le enviamos una solicitud a su app de Yappy. Apruébela con su PIN o huella;
+                  esta página continúa sola en cuanto se confirme.
+                  {cobro.modo !== 'completo' && ' Ese $1 se descuenta del primer pago.'}
+                </p>
+                <div style={{ display: 'flex', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8, textAlign: 'left' }}>
+                  <span style={{ fontSize: 18 }}>🔒</span>
+                  <div style={{ fontSize: 13, color: 'var(--text)' }}>
+                    <strong>Socrates Pro no almacena datos de pago.</strong> El cobro lo aprueba usted desde su propia app de Yappy.
+                  </div>
+                </div>
+                {esStaging ? (
+                  <button type="button" onClick={simularPago} disabled={loading} style={btn(!loading)}>
+                    {loading ? 'Simulando…' : 'Simular aprobación en Yappy (pruebas)'}
+                  </button>
+                ) : !cobro.ordenCreada ? (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    El cobro por Yappy se está habilitando. Su cuenta queda guardada; le avisaremos por correo.
+                  </p>
+                ) : (
+                  <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Esperando su confirmación en Yappy…</div>
+                )}
+              </>
             )}
           </div>
         )}
