@@ -55,7 +55,10 @@ function fuerzaPassword(p) {
 
 export default function Registro() {
   const params = new URLSearchParams(window.location.search)
-  const planInicial = normalizarPlan(params.get('plan'))
+  // Por defecto Pro+ (con ciclo anual); un ?plan= válido lo preselecciona, uno
+  // inválido cae a Pro (decisión previa). Sigue siendo cambiable en el paso 2.
+  const _planParam = params.get('plan')
+  const planInicial = _planParam ? normalizarPlan(_planParam) : 'pro-plus'
 
   const [paso, setPaso] = useState('datos') // datos | verifica | plan | casi
   const [rt, setRt] = useState('')
@@ -99,7 +102,7 @@ export default function Registro() {
   const [planesMeta, setPlanesMeta] = useState(PLANES_FALLBACK)
   const [plan, setPlan] = useState(planInicial)
   const [packs, setPacks] = useState(0)
-  const [ciclo, setCiclo] = useState('mensual') // 'mensual' | 'anual'
+  const [ciclo, setCiclo] = useState('anual') // 'mensual' | 'anual' (default: anual)
 
   // Paso 3
   const [resumen, setResumen] = useState(null)
@@ -375,23 +378,13 @@ export default function Registro() {
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>{p.nombre}</span>
-                      {pLanz != null ? (
-                        <span style={{ fontWeight: 700, fontSize: 15 }}>
-                          <span style={{ color: 'var(--text-muted)', fontWeight: 400, textDecoration: 'line-through', marginRight: 6 }}>${pLista}</span>
-                          ${pLanz}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
-                        </span>
-                      ) : (
-                        <span style={{ fontWeight: 700, fontSize: 15 }}>
-                          ${pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
-                        </span>
-                      )}
+                      <span style={{ fontWeight: 700, fontSize: 15 }}>
+                        ${pLanz != null ? pLanz : pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
+                      </span>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
                       Radar, Watchlist, Explorer, Legal, Sócrates IA{p.modulo_track ? ' + Track (CRM)' : ''}
                       {p.multiempresa === false && ' · 1 usuario'}
-                      {p.base_lanzamiento_usd != null && (
-                        <span style={{ color: 'var(--red)', fontWeight: 600 }}> · Promoción los primeros {p.lanzamiento_meses} meses</span>
-                      )}
                     </div>
                   </button>
                 )
@@ -414,16 +407,7 @@ export default function Registro() {
 
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
-              {totalLanzamiento != null ? (
-                <>
-                  <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${totalLanzamiento}${sufijo}`} fuerte />
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Precio de lanzamiento los primeros {cfg.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${totalLista}{sufijo}</span>
-                  </div>
-                </>
-              ) : (
-                <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${totalLista}${sufijo}`} fuerte />
-              )}
+              <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${totalLanzamiento != null ? totalLanzamiento : totalLista}${sufijo}`} fuerte />
               {anual && (
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Equivale a 2 meses gratis frente al pago mensual.</div>
               )}
@@ -446,16 +430,8 @@ export default function Registro() {
               {(() => {
                 const lanz = anual ? resumen.total_lanzamiento_anual_usd : resumen.total_lanzamiento_mensual_usd
                 const lista = anual ? resumen.total_anual_usd : resumen.total_mensual_usd
-                return lanz != null ? (
-                  <>
-                    <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${lanz}${sufijo}`} fuerte />
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                      Precio de lanzamiento los primeros {resumen.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${lista}{sufijo}</span>
-                    </div>
-                  </>
-                ) : (
-                  <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${lista}${sufijo}`} fuerte />
-                )
+                const total = lanz != null ? lanz : lista
+                return <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${total}${sufijo}`} fuerte />
               })()}
             </div>
 
