@@ -1,6 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import SoporteWidget from './SoporteWidget'
+import OnboardingModal from './OnboardingModal'
 
 const CATPLAN_ID = 2
 
@@ -14,6 +15,12 @@ export default function Layout({ usuario, loading, children }) {
   )
 
   if (!usuario) return <Navigate to="/login" replace />
+
+  // Asistente de bienvenida: solo para el admin de una empresa que aún no lo
+  // completó (una vez por empresa). Al terminar recarga y entra a la app.
+  if (usuario.es_admin && usuario.onboarding_completado === false) {
+    return <OnboardingModal usuario={usuario} />
+  }
 
   // CATPLAN solo puede ver /clientes, /settings, /panel-control, /pac, /tickets (superadmin)
   const esCatplan = usuario.empresa_id === CATPLAN_ID

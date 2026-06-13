@@ -70,7 +70,7 @@ export default function Login() {
       <div style={{ background: 'white', borderRadius: 16, padding: 40, width: '100%', maxWidth: 400, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <img src={iconoSocrates} alt="Socrates Pro" width="220" style={{ display: 'block', margin: '0 auto', height: 'auto' }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>Inteligencia de Licitaciones</p>
+          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>El flujo continuo de oportunidades a ingresos</p>
         </div>
 
         {error && (
@@ -90,6 +90,12 @@ export default function Login() {
             <button type="submit" disabled={loading} style={{ width: '100%', padding: '12px', background: loading ? '#ccc' : 'var(--red)', color: 'white', borderRadius: 8, fontSize: 14, fontWeight: 600, border: 'none', cursor: loading ? 'default' : 'pointer' }}>
               {loading ? 'Verificando...' : 'Entrar'}
             </button>
+            <div style={{ textAlign: 'center', marginTop: 16 }}>
+              <button type="button" onClick={() => navigate('/recuperar')}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+                ¿Olvidaste tu contraseña?
+              </button>
+            </div>
           </form>
         ) : (
           <form onSubmit={handleTotp}>
