@@ -131,11 +131,13 @@ export default function Registro() {
 
   const verificarRuc = async () => {
     if (!form.ruc.trim() || !form.dv.trim()) { setRucCheck({ valido: false, mensaje: 'Escriba el RUC y su DV.' }); return }
-    setRucCheck('checking')
+    setRucCheck('checking'); setCuentaExiste(false)
     try {
       const r = await fetch(`/api/registro/verificar-ruc?ruc=${encodeURIComponent(form.ruc)}&dv=${encodeURIComponent(form.dv)}`)
       const d = await r.json().catch(() => ({ valido: false, mensaje: 'No se pudo verificar.' }))
       setRucCheck(d)
+      // Cuenta real ya existente → ofrecer salida (iniciar sesión / recuperar).
+      setCuentaExiste(!!d.cuenta_existente)
     } catch { setRucCheck({ valido: false, mensaje: 'No se pudo verificar ahora.' }) }
   }
 
@@ -227,12 +229,7 @@ export default function Registro() {
         {error && (
           <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: cuentaExiste ? 8 : 16 }}>{error}</div>
         )}
-        {cuentaExiste && (
-          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-            <a href="/app/login" style={{ flex: 1, textAlign: 'center', padding: '9px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Iniciar sesión</a>
-            <a href="/app/recuperar" style={{ flex: 1, textAlign: 'center', padding: '9px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Recuperar contraseña</a>
-          </div>
-        )}
+        {cuentaExiste && error && <AccionesCuenta />}
 
         {/* PASO 1 — DATOS */}
         {paso === 'datos' && (
@@ -289,6 +286,8 @@ export default function Registro() {
                 {rucCheck.valido ? '✓ ' : '✗ '}{rucCheck.mensaje}
               </div>
             )}
+            {/* Cuenta ya existente detectada al verificar el RUC → acciones de salida */}
+            {cuentaExiste && rucCheck && rucCheck !== 'checking' && !rucCheck.valido && <AccionesCuenta />}
 
             <Campo label="Dirección"><input style={is} value={form.direccion} onChange={setF('direccion')} required /></Campo>
             <div style={{ display: 'flex', gap: 12 }}>
@@ -495,6 +494,16 @@ export default function Registro() {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// Acciones de salida cuando el RUC/email ya pertenece a una cuenta real.
+function AccionesCuenta() {
+  return (
+    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <a href="/app/login" style={{ flex: 1, textAlign: 'center', padding: '9px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Iniciar sesión</a>
+      <a href="/app/recuperar" style={{ flex: 1, textAlign: 'center', padding: '9px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Recuperar contraseña</a>
     </div>
   )
 }
