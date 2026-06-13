@@ -177,6 +177,9 @@ export default function Registro() {
   // Anual = mensual × meses ("2 meses gratis").
   const totalLista = anual ? mensualLista * meses : mensualLista
   const totalLanzamiento = mensualLanz != null ? (anual ? mensualLanz * meses : mensualLanz) : null
+  // ITBMS (7%): los precios son la BASE; se muestra el impuesto aparte (cliente B2B).
+  const itbmsRate = planesMeta.itbms_rate || 0.07
+  const itbmsDe = (base) => Math.round(base * itbmsRate * 100) / 100
 
   // ---- Paso 1: enviar datos ----
   const enviarPaso1 = async (e) => {
@@ -408,7 +411,7 @@ export default function Registro() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>{p.nombre}</span>
                       <span style={{ fontWeight: 700, fontSize: 15 }}>
-                        ${pLanz != null ? pLanz : pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
+                        ${pLanz != null ? pLanz : pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo} + ITBMS</span>
                       </span>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -441,7 +444,17 @@ export default function Registro() {
 
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
-              <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${totalLanzamiento != null ? totalLanzamiento : totalLista}${sufijo}`} fuerte />
+              {(() => {
+                const base = totalLanzamiento != null ? totalLanzamiento : totalLista
+                const itbms = itbmsDe(base)
+                return (
+                  <>
+                    <Linea label={anual ? 'Subtotal anual' : 'Subtotal mensual'} valor={`$${base}${sufijo}`} />
+                    <Linea label="ITBMS (7%)" valor={`$${itbms.toFixed(2)}`} />
+                    <Linea label="Total a pagar" valor={`$${(base + itbms).toFixed(2)}${sufijo}`} fuerte />
+                  </>
+                )
+              })()}
               {totalLanzamiento != null && (
                 <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>Promoción: Track incluido gratis los primeros {cfg.lanzamiento_meses} meses</div>
               )}
@@ -474,7 +487,7 @@ export default function Registro() {
               {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
             </button>
             <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '8px 0 14px' }}>
-              El $1 valida su Yappy y se descuenta del primer pago al terminar la prueba.
+              $1 + ITBMS (se cobran ${(1 + itbmsDe(1)).toFixed(2)}). Valida su Yappy y se descuenta del primer pago al terminar la prueba.
             </p>
             <button type="button" onClick={() => enviarPaso2('completo')} disabled={loading || !yappyTelOk}
               style={{
@@ -509,10 +522,12 @@ export default function Registro() {
               <>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
-                  {cobro.modo === 'completo'
-                    ? `Apruebe el pago de $${cobro.monto} en Yappy`
-                    : 'Apruebe su $1 en Yappy'}
+                  Apruebe el pago de ${cobro.monto?.toFixed(2)} en Yappy
                 </h1>
+                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px' }}>
+                  ${cobro.base?.toFixed(2)} + ITBMS ${cobro.itbms?.toFixed(2)}
+                  {cobro.modo !== 'completo' && ' · prueba de 5 días'}
+                </p>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16 }}>
                   Le enviamos una solicitud a su app de Yappy. Apruébela con su PIN o huella;
                   esta página continúa sola en cuanto se confirme.
