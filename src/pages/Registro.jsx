@@ -17,19 +17,21 @@ const btn = (enabled = true) => ({
 // Fallback de precios si /api/registro/planes no responde. El servidor es la
 // fuente de verdad (api/planes.py); esto solo evita una pantalla vacía.
 const PLANES_FALLBACK = {
-  usuarios_base: 5, usuarios_por_pack: 5, max_packs: 20,
+  usuarios_por_pack: 5, meses_anual: 10, plan_default: 'pro',
   planes: {
-    'pro': { id: 'pro', nombre: 'Pro', base_usd: 60, pack_usd: 10, modulo_track: false },
-    'pro-plus': { id: 'pro-plus', nombre: 'Pro+', base_usd: 100, pack_usd: 20, modulo_track: true, base_lanzamiento_usd: 60, lanzamiento_meses: 12 },
+    'lite': { id: 'lite', nombre: 'Lite', base_usd: 45, pack_usd: 0, usuarios_base: 1, max_packs: 0, multiempresa: false, modulo_track: false, total_anual_usd: 450 },
+    'pro': { id: 'pro', nombre: 'Pro', base_usd: 70, pack_usd: 10, usuarios_base: 5, max_packs: 20, multiempresa: true, modulo_track: false, total_anual_usd: 700 },
+    'pro-plus': { id: 'pro-plus', nombre: 'Pro+', base_usd: 100, pack_usd: 20, usuarios_base: 5, max_packs: 20, multiempresa: true, modulo_track: true, total_anual_usd: 1000, base_lanzamiento_usd: 70, lanzamiento_meses: 12, total_lanzamiento_anual_usd: 700 },
   },
 }
 
 function normalizarPlan(p) {
-  if (!p) return 'pro-plus'
+  if (!p) return 'pro'
   const s = String(p).toLowerCase().replace('_', '-')
-  if (['pro-plus', 'proplus', 'pro+'].includes(s)) return 'pro-plus'
+  if (s === 'lite') return 'lite'
   if (s === 'pro') return 'pro'
-  return 'pro-plus'
+  if (['pro-plus', 'proplus', 'pro+'].includes(s)) return 'pro-plus'
+  return 'pro'
 }
 
 const ERRORES = {
@@ -94,6 +96,7 @@ export default function Registro() {
   const [planesMeta, setPlanesMeta] = useState(PLANES_FALLBACK)
   const [plan, setPlan] = useState(planInicial)
   const [packs, setPacks] = useState(0)
+  const [ciclo, setCiclo] = useState('mensual') // 'mensual' | 'anual'
 
   // Paso 3
   const [resumen, setResumen] = useState(null)
@@ -134,9 +137,19 @@ export default function Registro() {
   }
 
   const cfg = planesMeta.planes[plan] || PLANES_FALLBACK.planes[plan]
-  const usuariosTotal = planesMeta.usuarios_base + planesMeta.usuarios_por_pack * packs
-  const totalMensual = cfg.base_usd + cfg.pack_usd * packs
-  const totalLanzamiento = cfg.base_lanzamiento_usd != null ? cfg.base_lanzamiento_usd + cfg.pack_usd * packs : null
+  const meses = planesMeta.meses_anual || 10
+  const anual = ciclo === 'anual'
+  const sufijo = anual ? '/año' : '/mes'
+  const maxPacks = cfg.max_packs || 0
+  const permitePacks = maxPacks > 0           // Lite (max_packs=0) -> sin paquetes
+  // Usuarios = base del plan + 5 por paquete. (Lite = 1, sin packs.)
+  const usuariosTotal = (cfg.usuarios_base || 0) + (planesMeta.usuarios_por_pack || 0) * packs
+  // Mensual de lista y de lanzamiento (base del plan + packs). Números siempre.
+  const mensualLista = (cfg.base_usd || 0) + (cfg.pack_usd || 0) * packs
+  const mensualLanz = cfg.base_lanzamiento_usd != null ? cfg.base_lanzamiento_usd + (cfg.pack_usd || 0) * packs : null
+  // Anual = mensual × meses ("2 meses gratis").
+  const totalLista = anual ? mensualLista * meses : mensualLista
+  const totalLanzamiento = mensualLanz != null ? (anual ? mensualLanz * meses : mensualLanz) : null
 
   // ---- Paso 1: enviar datos ----
   const enviarPaso1 = async (e) => {
@@ -317,31 +330,54 @@ export default function Registro() {
         {paso === 'plan' && (
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Elige tu plan</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 16 }}>Cada plan incluye 5 usuarios. Añade paquetes de +5 si necesitas más.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 14 }}>
+              Pro y Pro+ incluyen 5 usuarios (ampliables con paquetes de +5); Lite es para 1 usuario.
+            </p>
+
+            {/* Conmutador Mensual / Anual ("2 meses gratis") */}
+            <div style={{ display: 'inline-flex', padding: 3, borderRadius: 999, background: 'var(--gray)', marginBottom: 16 }}>
+              {[['mensual', 'Mensual'], ['anual', 'Anual']].map(([val, label]) => (
+                <button key={val} type="button" onClick={() => setCiclo(val)} style={{
+                  padding: '6px 16px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 13,
+                  fontWeight: ciclo === val ? 700 : 500,
+                  color: ciclo === val ? 'var(--blue)' : 'var(--text-muted)',
+                  background: ciclo === val ? 'white' : 'transparent',
+                  boxShadow: ciclo === val ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
+                }}>
+                  {label}{val === 'anual' && <span style={{ color: 'var(--red)', fontWeight: 700, marginLeft: 6 }}>2 meses gratis</span>}
+                </button>
+              ))}
+            </div>
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
               {Object.values(planesMeta.planes).map((p) => {
                 const sel = plan === p.id
+                // Precio mostrado según ciclo (anual = base × meses, "2 meses gratis").
+                const pLista = anual ? (p.total_anual_usd != null ? p.total_anual_usd : p.base_usd * meses) : p.base_usd
+                const pLanz = p.base_lanzamiento_usd != null
+                  ? (anual ? (p.total_lanzamiento_anual_usd != null ? p.total_lanzamiento_anual_usd : p.base_lanzamiento_usd * meses) : p.base_lanzamiento_usd)
+                  : null
                 return (
-                  <button key={p.id} type="button" onClick={() => setPlan(p.id)} style={{
+                  <button key={p.id} type="button" onClick={() => { setPlan(p.id); setPacks(pk => Math.min(pk, p.max_packs || 0)) }} style={{
                     textAlign: 'left', border: `2px solid ${sel ? 'var(--blue)' : 'var(--border)'}`,
                     background: sel ? 'var(--blue-light)' : 'white', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>{p.nombre}</span>
-                      {p.base_lanzamiento_usd != null ? (
+                      {pLanz != null ? (
                         <span style={{ fontWeight: 700, fontSize: 15 }}>
-                          <span style={{ color: 'var(--text-muted)', fontWeight: 400, textDecoration: 'line-through', marginRight: 6 }}>${p.base_usd}</span>
-                          ${p.base_lanzamiento_usd}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mes</span>
+                          <span style={{ color: 'var(--text-muted)', fontWeight: 400, textDecoration: 'line-through', marginRight: 6 }}>${pLista}</span>
+                          ${pLanz}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
                         </span>
                       ) : (
                         <span style={{ fontWeight: 700, fontSize: 15 }}>
-                          ${p.base_usd}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>/mes</span>
+                          ${pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
                         </span>
                       )}
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                      {p.modulo_track ? 'Incluye módulo Track' : 'Radar, Watchlist, Explorer, Legal'}
+                      Radar, Watchlist, Explorer, Legal, Sócrates IA{p.modulo_track ? ' + Track (CRM)' : ''}
+                      {p.multiempresa === false && ' · 1 usuario'}
                       {p.base_lanzamiento_usd != null && (
                         <span style={{ color: 'var(--red)', fontWeight: 600 }}> · Promoción los primeros {p.lanzamiento_meses} meses</span>
                       )}
@@ -351,29 +387,34 @@ export default function Registro() {
               })}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <div>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>Paquetes de +5 usuarios</div>
-                <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>+${cfg.pack_usd}/mes por paquete</div>
+            {permitePacks && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>Paquetes de +5 usuarios</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>+${anual ? cfg.pack_usd * meses : cfg.pack_usd}{sufijo} por paquete</div>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <Stepper onClick={() => setPacks(p => Math.max(0, p - 1))} disabled={packs <= 0}>−</Stepper>
+                  <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700, fontSize: 16 }}>{packs}</span>
+                  <Stepper onClick={() => setPacks(p => Math.min(maxPacks, p + 1))} disabled={packs >= maxPacks}>+</Stepper>
+                </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <Stepper onClick={() => setPacks(p => Math.max(0, p - 1))} disabled={packs <= 0}>−</Stepper>
-                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700, fontSize: 16 }}>{packs}</span>
-                <Stepper onClick={() => setPacks(p => Math.min(planesMeta.max_packs, p + 1))} disabled={packs >= planesMeta.max_packs}>+</Stepper>
-              </div>
-            </div>
+            )}
 
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
               {totalLanzamiento != null ? (
                 <>
-                  <Linea label="Total mensual" valor={`$${totalLanzamiento}/mes`} fuerte />
+                  <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${totalLanzamiento}${sufijo}`} fuerte />
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Precio de lanzamiento los primeros {cfg.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${totalMensual}/mes</span>
+                    Precio de lanzamiento los primeros {cfg.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${totalLista}{sufijo}</span>
                   </div>
                 </>
               ) : (
-                <Linea label="Total mensual" valor={`$${totalMensual}/mes`} fuerte />
+                <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${totalLista}${sufijo}`} fuerte />
+              )}
+              {anual && (
+                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Equivale a 2 meses gratis frente al pago mensual.</div>
               )}
             </div>
 
@@ -391,16 +432,20 @@ export default function Registro() {
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
               <Linea label="Plan" valor={resumen.plan_nombre} />
               <Linea label="Usuarios totales" valor={`${resumen.usuarios_total}`} />
-              {resumen.total_lanzamiento_usd != null ? (
-                <>
-                  <Linea label="Total mensual" valor={`$${resumen.total_lanzamiento_usd}/mes`} fuerte />
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Precio de lanzamiento los primeros {resumen.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${resumen.total_mensual_usd}/mes</span>
-                  </div>
-                </>
-              ) : (
-                <Linea label="Total mensual" valor={`$${resumen.total_mensual_usd}/mes`} fuerte />
-              )}
+              {(() => {
+                const lanz = anual ? resumen.total_lanzamiento_anual_usd : resumen.total_lanzamiento_mensual_usd
+                const lista = anual ? resumen.total_anual_usd : resumen.total_mensual_usd
+                return lanz != null ? (
+                  <>
+                    <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${lanz}${sufijo}`} fuerte />
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                      Precio de lanzamiento los primeros {resumen.lanzamiento_meses} meses · luego <span style={{ textDecoration: 'line-through' }}>${lista}{sufijo}</span>
+                    </div>
+                  </>
+                ) : (
+                  <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${lista}${sufijo}`} fuerte />
+                )
+              })()}
             </div>
 
             <div style={{ display: 'flex', gap: 10, marginBottom: 12, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8 }}>
@@ -412,7 +457,7 @@ export default function Registro() {
             <div style={{ display: 'flex', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8 }}>
               <span style={{ fontSize: 18 }}>🔒</span>
               <div style={{ fontSize: 13, color: 'var(--text)' }}>
-                <strong>SocratesPro no almacena los datos de tu tarjeta.</strong> El pago lo procesa Stripe de forma segura.
+                <strong>SocratesPro no almacena datos de pago.</strong> El cobro se realiza por Yappy: apruebas el pago desde tu propia app de Yappy.
               </div>
             </div>
 
@@ -422,7 +467,7 @@ export default function Registro() {
                   {loading ? 'Activando...' : 'Simular pago y entrar (pruebas)'}
                 </button>
                 <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                  Entorno de pruebas: el pago con Stripe aún no existe; esto simula la confirmación y te lleva al onboarding.
+                  Entorno de pruebas: el cobro por Yappy aún no está conectado; esto simula la confirmación y te lleva al onboarding.
                 </p>
               </>
             ) : (
@@ -431,7 +476,7 @@ export default function Registro() {
                   Ir al pago seguro (próximamente)
                 </button>
                 <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                  El pago con Stripe se habilita en la Fase 2. Tu cuenta queda guardada hasta entonces.
+                  El cobro por Yappy se habilita en la Fase 2. Tu cuenta queda guardada hasta entonces.
                 </p>
               </>
             )}
