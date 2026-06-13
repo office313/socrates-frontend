@@ -103,6 +103,7 @@ export default function Registro() {
   const [plan, setPlan] = useState(planInicial)
   const [packs, setPacks] = useState(0)
   const [ciclo, setCiclo] = useState('anual') // 'mensual' | 'anual' (default: anual)
+  const [yappyTel, setYappyTel] = useState('') // móvil Yappy = método de pago (paso 2)
 
   // Paso 3
   const [resumen, setResumen] = useState(null)
@@ -199,13 +200,18 @@ export default function Registro() {
     finally { setLoading(false) }
   }
 
-  // ---- Paso 2: elegir plan + packs ----
+  // Móvil Yappy = método de pago: 8 dígitos de Panamá (admite +507 / separadores).
+  const yappyTelDigitos = yappyTel.replace(/\D/g, '').replace(/^507/, '')
+  const yappyTelOk = yappyTelDigitos.length === 8
+
+  // ---- Paso 2: elegir plan + packs + número Yappy (método de pago) ----
   const enviarPaso2 = async () => {
+    if (!yappyTelOk) { setError('Indique su número de Yappy (móvil de Panamá, 8 dígitos).'); return }
     setError(''); setLoading(true)
     try {
       const r = await fetch('/api/registro/paso2', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rt, plan, packs }),
+        body: JSON.stringify({ rt, plan, packs, ciclo, metodo_pago: 'yappy', yappy_telefono: yappyTel }),
       })
       const data = await r.json().catch(() => ({}))
       if (r.ok) {
@@ -421,7 +427,25 @@ export default function Registro() {
               )}
             </div>
 
-            <button type="button" onClick={enviarPaso2} disabled={loading} style={btn(!loading)}>
+            {/* Método de pago: número Yappy (no se cobra ahora; se usa al fin de la prueba) */}
+            <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+              <Campo label="Su número de Yappy">
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>+507</span>
+                  <input style={{ ...is, flex: 1 }} value={yappyTel} onChange={e => setYappyTel(e.target.value)}
+                    inputMode="tel" placeholder="6123 4567" required />
+                </div>
+              </Campo>
+              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -6 }}>
+                Su método de pago. <strong>Hoy no se le cobra nada:</strong> al terminar la prueba de 3 días
+                recibirá la solicitud de cobro en su app de Yappy y la aprueba con su PIN o huella.
+              </div>
+              {yappyTel && !yappyTelOk && (
+                <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>El número debe tener 8 dígitos.</div>
+              )}
+            </div>
+
+            <button type="button" onClick={enviarPaso2} disabled={loading || !yappyTelOk} style={btn(!loading && yappyTelOk)}>
               {loading ? 'Guardando...' : 'Continuar'}
             </button>
           </div>
@@ -463,24 +487,21 @@ export default function Registro() {
               </div>
             </div>
 
-            {esStaging ? (
-              <>
-                <button type="button" onClick={simularPago} disabled={loading} style={btn(!loading)}>
-                  {loading ? 'Activando...' : 'Simular pago y entrar (pruebas)'}
-                </button>
-                <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                  Entorno de pruebas: el cobro por Yappy aún no está conectado; esto simula la confirmación y le lleva al onboarding.
-                </p>
-              </>
-            ) : (
-              <>
-                <button type="button" disabled style={{ ...btn(false), cursor: 'not-allowed' }}>
-                  Ir al pago seguro (próximamente)
-                </button>
-                <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
-                  El cobro por Yappy se habilita en la Fase 2. Su cuenta queda guardada hasta entonces.
-                </p>
-              </>
+            {/* La prueba ya está activa (el plan se guardó en el paso anterior y la
+                sesión viene del alta): el CTA es ENTRAR, no pagar. El cobro es al día 3. */}
+            <button type="button" onClick={() => { window.location.href = '/app' }} style={btn(true)}>
+              Empezar a usar Socrates Pro
+            </button>
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text-muted)', marginTop: 10 }}>
+              Su prueba de 3 días está activa. Al terminarla recibirá la solicitud de cobro en su app de Yappy.
+            </p>
+            {esStaging && (
+              <button type="button" onClick={simularPago} disabled={loading} style={{
+                width: '100%', marginTop: 12, padding: '9px', background: 'white', color: 'var(--text-muted)',
+                border: '1px dashed var(--border)', borderRadius: 8, fontSize: 12, cursor: 'pointer',
+              }}>
+                {loading ? 'Simulando…' : 'Simular cobro confirmado (pruebas)'}
+              </button>
             )}
           </div>
         )}

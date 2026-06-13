@@ -2,6 +2,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import SoporteWidget from './SoporteWidget'
 import OnboardingModal from './OnboardingModal'
+import CobroBanner from './CobroBanner'
 
 const CATPLAN_ID = 2
 
@@ -40,6 +41,7 @@ export default function Layout({ usuario, loading, children }) {
         minHeight: '100vh',
         background: 'var(--gray)',
       }}>
+        {!esCatplan && <CobroBanner />}
         {children}
       </main>
       {/* "Sócrates le ayuda" — soporte flotante en todas las pantallas del
