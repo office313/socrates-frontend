@@ -386,6 +386,11 @@ export default function Registro() {
                       Radar, Watchlist, Explorer, Legal, Sócrates IA{p.modulo_track ? ' + Track (CRM)' : ''}
                       {p.multiempresa === false && ' · 1 usuario'}
                     </div>
+                    {p.base_lanzamiento_usd != null && (
+                      <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>
+                        Promoción: Track incluido gratis los primeros {p.lanzamiento_meses} meses
+                      </div>
+                    )}
                   </button>
                 )
               })}
@@ -408,6 +413,9 @@ export default function Registro() {
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
               <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${totalLanzamiento != null ? totalLanzamiento : totalLista}${sufijo}`} fuerte />
+              {totalLanzamiento != null && (
+                <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>Promoción: Track incluido gratis los primeros {cfg.lanzamiento_meses} meses</div>
+              )}
               {anual && (
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Equivale a 2 meses gratis frente al pago mensual.</div>
               )}
@@ -431,7 +439,14 @@ export default function Registro() {
                 const lanz = anual ? resumen.total_lanzamiento_anual_usd : resumen.total_lanzamiento_mensual_usd
                 const lista = anual ? resumen.total_anual_usd : resumen.total_mensual_usd
                 const total = lanz != null ? lanz : lista
-                return <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${total}${sufijo}`} fuerte />
+                return (
+                  <>
+                    <Linea label={anual ? 'Total anual' : 'Total mensual'} valor={`$${total}${sufijo}`} fuerte />
+                    {lanz != null && (
+                      <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>Promoción: Track incluido gratis los primeros {resumen.lanzamiento_meses} meses</div>
+                    )}
+                  </>
+                )
               })()}
             </div>
 

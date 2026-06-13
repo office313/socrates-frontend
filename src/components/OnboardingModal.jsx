@@ -362,7 +362,7 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
             style={{ display: 'block', margin: '8px auto 18px' }} />
           {/* 1) Contexto — gestiona la expectativa, siempre visible */}
           <h1 style={h1}>Preparando su Radar por primera vez</h1>
-          <p style={sub}>Esta búsqueda inicial es la más completa, por eso tarda un poco más; las siguientes serán casi instantáneas.</p>
+          <p style={sub}>Estamos revisando las licitaciones vigentes que coinciden con sus palabras clave. Esto solo toma un momento.</p>
 
           {/* 2) Contador real — aparece en cuanto hay coincidencias */}
           {info.licitaciones > 0 && (
