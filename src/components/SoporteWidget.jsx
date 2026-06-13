@@ -1,4 +1,4 @@
-// "Sócrates te ayuda" — asistente de soporte flotante, accesible desde
+// "Sócrates le ayuda" — asistente de soporte flotante, accesible desde
 // todas las pantallas de la app (se monta una vez en Layout).
 //
 // Responde ÚNICAMENTE desde la base de conocimiento del backend
@@ -97,8 +97,8 @@ export default function SoporteWidget() {
       {/* === Botón flotante === */}
       <button
         onClick={() => setAbierto(a => !a)}
-        aria-label="Sócrates te ayuda"
-        title="Sócrates te ayuda"
+        aria-label="Sócrates le ayuda"
+        title="Sócrates le ayuda"
         style={{
           position: 'fixed', bottom: 96, right: 24, zIndex: 300,
           width: 56, height: 56, borderRadius: '50%', border: 'none',
@@ -134,7 +134,7 @@ export default function SoporteWidget() {
               <SocratesOrb pensando={cargando} />
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>Sócrates te ayuda</div>
+              <div style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.2 }}>Sócrates le ayuda</div>
               <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.7)' }}>Asistente de soporte</div>
             </div>
             <button onClick={() => setAbierto(false)} aria-label="Cerrar"

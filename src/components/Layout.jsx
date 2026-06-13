@@ -42,7 +42,7 @@ export default function Layout({ usuario, loading, children }) {
       }}>
         {children}
       </main>
-      {/* "Sócrates te ayuda" — soporte flotante en todas las pantallas del
+      {/* "Sócrates le ayuda" — soporte flotante en todas las pantallas del
           cliente. Se oculta para CATPLAN (admin interno, no cliente). */}
       {!esCatplan && <SoporteWidget />}
     </div>
