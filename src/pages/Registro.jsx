@@ -91,6 +91,9 @@ export default function Registro() {
   })
   const [password2, setPassword2] = useState('')
   const [rucCheck, setRucCheck] = useState(null) // null | {valido, mensaje} | 'checking'
+  // Cuando el alta choca con una cuenta YA existente (email o RUC de un cliente
+  // activo), mostramos acciones de salida (login / recuperar) en vez de un error seco.
+  const [cuentaExiste, setCuentaExiste] = useState(false)
 
   // Paso 2
   const [planesMeta, setPlanesMeta] = useState(PLANES_FALLBACK)
@@ -154,7 +157,7 @@ export default function Registro() {
   // ---- Paso 1: enviar datos ----
   const enviarPaso1 = async (e) => {
     e.preventDefault()
-    setError('')
+    setError(''); setCuentaExiste(false)
     if (form.password !== password2) { setError('Las contraseñas no coinciden.'); return }
     if (fuerza.nivel < 2) { setError('La contraseña es demasiado débil. Usa al menos 8 caracteres con mayúsculas, minúsculas y números.'); return }
     if (!rucCheck || rucCheck === 'checking' || !rucCheck.valido) { setError('Verifica el RUC antes de continuar (botón "Verificar RUC").'); return }
@@ -168,7 +171,10 @@ export default function Registro() {
       if (r.ok) {
         setPaso('verifica')
       } else {
-        setError(data.detail || 'No pudimos crear la cuenta. Revisa los datos.')
+        const detalle = data.detail || 'No pudimos crear la cuenta. Revisa los datos.'
+        setError(detalle)
+        // Cuenta ya existente (email activo o RUC de cliente activo) → ofrecer salida.
+        setCuentaExiste(/inicia sesi[oó]n/i.test(detalle))
       }
     } catch {
       setError('Error de conexión. Inténtalo de nuevo.')
@@ -219,7 +225,13 @@ export default function Registro() {
         </div>
 
         {error && (
-          <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>
+          <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: cuentaExiste ? 8 : 16 }}>{error}</div>
+        )}
+        {cuentaExiste && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+            <a href="/app/login" style={{ flex: 1, textAlign: 'center', padding: '9px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Iniciar sesión</a>
+            <a href="/app/recuperar" style={{ flex: 1, textAlign: 'center', padding: '9px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>Recuperar contraseña</a>
+          </div>
         )}
 
         {/* PASO 1 — DATOS */}
