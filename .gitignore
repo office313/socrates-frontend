@@ -41,3 +41,7 @@ dist-ssr
 
 # Builds (los regenera npm run build)
 node_modules/
+
+# Playwright e2e (artefactos de run, no se commitean)
+test-results/
+playwright-report/
