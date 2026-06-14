@@ -35,11 +35,18 @@ function YappyLogo({ width = 88 }) {
 
 export default function Pagar() {
   const ct = new URLSearchParams(window.location.search).get('ct') || ''
-  const [fase, setFase] = useState(ct ? 'inicio' : 'sin_token') // sin_token|inicio|esperando|ok|no_disponible|error
+  const [fase, setFase] = useState(ct ? 'inicio' : 'sin_token') // sin_token|inicio|esperando|ok|fallido|no_disponible|error
   const [error, setError] = useState('')
   // Contexto: null (sin saber aún) | 'sesion' (en-app) | 'token' (enlace de correo).
   const [ctx, setCtx] = useState(null)
   const [subEstado, setSubEstado] = useState(null)  // 'trialing' | 'active' | … (solo si hay sesión)
+  // Estado terminal del cobro cuando NO se aplicó (DECLINED/EXPIRED/…), para la pantalla
+  // 'fallido' — un no-op sobre la suscripción (la prueba/cuenta sigue intacta).
+  const [resultadoFallo, setResultadoFallo] = useState('')
+
+  // Solo entorno de pruebas (localhost). En producción (socratespro.lat) es false y
+  // estos atajos no se muestran ni existen en el backend (router gated por STAGING_MODE).
+  const esStaging = typeof window !== 'undefined' && window.location.hostname === 'localhost'
 
   // Detectar el contexto al entrar: ¿hay sesión activa? (banner) o ¿solo token? (correo).
   useEffect(() => {
@@ -55,7 +62,10 @@ export default function Pagar() {
     return () => { vivo = false }
   }, [])
 
-  // Mientras esperamos la aprobación en la app Yappy, sondeamos la confirmación.
+  // Mientras esperamos la aprobación en la app Yappy, sondeamos la confirmación con el
+  // MISMO /cobro/confirmar de producción. Resuelve a 'ok' si se aplicó (COMPLETED) o a
+  // 'fallido' si Yappy devolvió un estado terminal de error (DECLINED/EXPIRED/…) — en
+  // ese caso la suscripción NO se toca (no-op): la prueba/cuenta sigue como estaba.
   useEffect(() => {
     if (fase !== 'esperando') return
     let vivo = true
@@ -63,7 +73,12 @@ export default function Pagar() {
       try {
         const r = await fetch(`/api/cobro/confirmar?ct=${encodeURIComponent(ct)}`)
         const d = await r.json().catch(() => ({}))
-        if (vivo && d?.aplicado) { clearInterval(id); setFase('ok') }
+        if (!vivo) return
+        if (d?.aplicado) { clearInterval(id); setFase('ok'); return }
+        const est = String(d?.estado || '').toUpperCase()
+        if (['DECLINED', 'EXPIRED', 'REVERSED', 'FAILED'].includes(est)) {
+          clearInterval(id); setResultadoFallo(est); setFase('fallido')
+        }
       } catch { /* reintenta en el próximo tick */ }
     }, 4000)
     return () => { vivo = false; clearInterval(id) }
@@ -80,6 +95,21 @@ export default function Pagar() {
     } catch {
       setError('Error de conexión. Inténtelo de nuevo.'); setFase('error')
     }
+  }
+
+  // Atajo SOLO staging (rama `ct`): equivalente al "Simular aprobación" del registro,
+  // pero para la CONVERSIÓN ANTICIPADA. Reemplaza el paso de "crear la orden con Yappy"
+  // (que aquí no existe sin credenciales) por el simulador del backend, que deja la txn
+  // lista con una referencia 'staging-<resultado>'. Tras él entramos al MISMO sondeo de
+  // /cobro/confirmar que producción → la aprobación corre confirmar→activar real.
+  const simular = async (resultado) => {
+    setError('')
+    try {
+      const r = await fetch(`/api/_staging/cobro-simular?ct=${encodeURIComponent(ct)}&resultado=${resultado}`, { method: 'POST' })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d?.ok) { setFase('esperando') }
+      else { setError(d?.detail || 'No se pudo simular (pruebas).'); setFase('error') }
+    } catch { setError('Error de conexión (pruebas).'); setFase('error') }
   }
 
   const irApp = () => { window.location.href = '/app' }
@@ -130,7 +160,28 @@ export default function Pagar() {
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
               Al pulsar recibirá una solicitud de pago en su app de Yappy. Apruébela con su PIN o huella.
             </p>
-            <button type="button" onClick={pagar} style={btnPrimary(true)}>Pagar con Yappy</button>
+            {esStaging ? (
+              /* Pruebas: sin Botón de Yappy real (daría 503). Se simula el resultado del
+                 cobro; "Simular aprobación" corre el MISMO confirmar→activar que prod. */
+              <>
+                <button type="button" onClick={() => simular('COMPLETED')} style={btnPrimary(true)}>
+                  Simular aprobación en Yappy (pruebas)
+                </button>
+                <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Forzar estado de error (pruebas):</div>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                    {[['DECLINED', 'Rechazado'], ['EXPIRED', 'Expirado'], ['FAILED', 'Fallo']].map(([val, label]) => (
+                      <button key={val} type="button" onClick={() => simular(val)} style={{
+                        padding: '7px 12px', background: 'white', color: 'var(--red)',
+                        border: '1px solid var(--red)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                      }}>{label}</button>
+                    ))}
+                  </div>
+                </div>
+              </>
+            ) : (
+              <button type="button" onClick={pagar} style={btnPrimary(true)}>Pagar con Yappy</button>
+            )}
             {/* Tras un error, ofrecer también la salida contextual (no solo reintentar). */}
             {fase === 'error' && ctx === 'sesion' && (
               <button type="button" onClick={irApp} style={{ ...btnSecundario, marginTop: 8 }}>
@@ -174,6 +225,34 @@ export default function Pagar() {
             <button type="button" onClick={irApp} style={btnPrimary(true)}>
               Entrar a Socrates Pro
             </button>
+          </div>
+        )}
+
+        {fase === 'fallido' && (
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
+            <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>
+              {resultadoFallo === 'EXPIRED' ? 'La solicitud de pago expiró' : 'El pago no se completó'}
+            </h2>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+              {ctx === 'sesion'
+                ? 'No se le ha cobrado nada y su prueba sigue activa. Puede volver a intentarlo cuando quiera.'
+                : 'No se le ha cobrado nada. Puede volver a intentarlo o escríbanos si necesita ayuda.'}
+            </p>
+            {/* Reintentar reabre el inicio (en pruebas, los botones de simular). */}
+            <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <button type="button" onClick={() => { setError(''); setFase('inicio') }} style={btnSecundario}>
+                Reintentar el pago
+              </button>
+              {ctx === 'sesion' && (
+                <button type="button" onClick={irApp} style={btnPrimary(true)}>
+                  {subEstado === 'trialing' ? 'Seguir en mi prueba' : 'Volver a Socrates Pro'}
+                </button>
+              )}
+              <a href={`mailto:${SOPORTE_EMAIL}?subject=${encodeURIComponent('Ayuda con mi pago (Yappy)')}`} style={linkSoporte}>
+                ¿Necesita ayuda? Escríbanos
+              </a>
+            </div>
           </div>
         )}
 
