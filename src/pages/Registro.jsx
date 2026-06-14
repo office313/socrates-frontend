@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import iconoSocrates from '../assets/socratespro-logo-completo.svg'
+import yappyLogo from '../assets/yappy-logo.svg'
 import { PAISES } from '../utils/paises'
 
 // Estilos compartidos (coherentes con Login.jsx / Settings.jsx)
@@ -105,10 +106,17 @@ export default function Registro() {
   const [ciclo, setCiclo] = useState('anual') // 'mensual' | 'anual' (default: anual)
   const [yappyTel, setYappyTel] = useState('') // móvil Yappy = método de pago (paso 2)
 
+  // Paso 2: ¿este número de Yappy puede acogerse a la prueba de $1? (regla D). Si ya la
+  // gastó, ocultamos el botón de prueba y solo ofrecemos el pago completo.
+  const [trialElegible, setTrialElegible] = useState(true)
+
   // Paso 3 (pago)
   const [resumen, setResumen] = useState(null)
-  const [cobro, setCobro] = useState(null)  // { ct, monto, modo, ordenCreada }
-  const [pagoOk, setPagoOk] = useState(false)
+  const [cobro, setCobro] = useState(null)  // { ct, monto, base, itbms, modo, ordenCreada }
+  // Estado del pago: esperando | ok | rechazado | expirado | tecnico. Nunca un spinner
+  // eterno: el sondeo se rinde con timeout y los estados terminales de Yappy tienen salida.
+  const [pagoEstado, setPagoEstado] = useState('esperando')
+  const [cambiarTel, setCambiarTel] = useState(false)  // mostrar input para corregir el número
 
   // Al cargar: si venimos de la verificación de email (paso=2 & rt) → paso plan.
   useEffect(() => {
@@ -129,21 +137,67 @@ export default function Registro() {
       .catch(() => {})
   }, [paso])
 
+  // Interpreta la respuesta de /cobro/confirmar y fija el estado del pago. Único lugar
+  // que traduce el estado de Yappy a la UI; lo usan el sondeo y el atajo de staging, para
+  // que lo que se ve en pruebas pase por la MISMA lógica que producción. Devuelve true si
+  // el estado quedó resuelto (confirmado o terminal), false si sigue pendiente.
+  const aplicarConfirm = (d) => {
+    if (d?.aplicado) { setPagoEstado('ok'); return true }
+    const est = String(d?.estado || '').toUpperCase()
+    if (est === 'EXPIRED') { setPagoEstado('expirado'); return true }
+    if (['DECLINED', 'REVERSED', 'FAILED'].includes(est)) { setPagoEstado('rechazado'); return true }
+    return false
+  }
+
+  // Atajo SOLO staging: fuerza el estado terminal de la transacción y la lee con el mismo
+  // /cobro/confirmar para ver a ojo las pantallas de error (rechazado/expirado/técnico).
+  const simularCobro = async (estado) => {
+    setError('')
+    if (estado === 'TECNICO') { setPagoEstado('tecnico'); return }  // el técnico es un timeout de cliente
+    try {
+      await fetch(`/api/_staging/forzar-cobro-estado?rt=${encodeURIComponent(rt)}&estado=${estado}`, { method: 'POST' })
+      const r = await fetch(`/api/cobro/confirmar?ct=${encodeURIComponent(cobro.ct)}`)
+      const d = await r.json().catch(() => ({}))
+      aplicarConfirm(d)
+    } catch { setPagoEstado('tecnico') }
+  }
+
   // Paso de pago: sondea la confirmación de Yappy (movement==COMPLETED). Al confirmar
-  // la cuenta ya está activa → entra a la app. En staging (sin Yappy real) no sondea;
-  // el botón "simular" hace la confirmación.
+  // la cuenta ya está activa → entra a la app. NUNCA spinner eterno: si Yappy devuelve
+  // un estado terminal (rechazado/expirado) o se agota el tiempo, salimos a un estado
+  // con salidas claras. En staging (sin Yappy real) no sondea; los botones "simular"
+  // confirman. Si no hay orden creada (Yappy aún no habilitado) tampoco sondea.
   useEffect(() => {
-    if (paso !== 'pago' || !cobro?.ct || esStaging) return
+    if (paso !== 'pago' || !cobro?.ct || esStaging || !cobro?.ordenCreada) return
     let vivo = true
+    let intentos = 0
+    const MAX_INTENTOS = 45  // ~3 min a 4s; el alta es con el cliente presente
     const id = setInterval(async () => {
+      intentos++
       try {
         const r = await fetch(`/api/cobro/confirmar?ct=${encodeURIComponent(cobro.ct)}`)
         const d = await r.json().catch(() => ({}))
-        if (vivo && d?.aplicado) { clearInterval(id); setPagoOk(true) }
-      } catch { /* reintenta */ }
+        if (!vivo) return
+        if (aplicarConfirm(d)) { clearInterval(id); return }
+        if (intentos >= MAX_INTENTOS) { clearInterval(id); setPagoEstado('tecnico') }
+      } catch {
+        // Error de red: reintenta hasta el tope; agotado, lo tratamos como fallo técnico nuestro.
+        if (vivo && intentos >= MAX_INTENTOS) { clearInterval(id); setPagoEstado('tecnico') }
+      }
     }, 4000)
     return () => { vivo = false; clearInterval(id) }
   }, [paso, cobro]) // eslint-disable-line
+
+  // Comprobar elegibilidad de la prueba de $1 cuando el número de Yappy es válido (regla D).
+  useEffect(() => {
+    if (paso !== 'plan' || !yappyTelOk) { setTrialElegible(true); return }
+    let vivo = true
+    fetch(`/api/registro/trial-elegible?yappy_telefono=${encodeURIComponent(yappyTel)}`)
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (vivo && d) setTrialElegible(d.elegible !== false) })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [yappyTel, paso]) // eslint-disable-line
 
   const setF = (k) => (e) => setForm({ ...form, [k]: e.target.value })
   // Para RUC/DV: al cambiarlos se invalida la verificación previa.
@@ -177,9 +231,9 @@ export default function Registro() {
   // Anual = mensual × meses ("2 meses gratis").
   const totalLista = anual ? mensualLista * meses : mensualLista
   const totalLanzamiento = mensualLanz != null ? (anual ? mensualLanz * meses : mensualLanz) : null
-  // ITBMS (7%): los precios son la BASE; se muestra el impuesto aparte (cliente B2B).
-  const itbmsRate = planesMeta.itbms_rate || 0.07
-  const itbmsDe = (base) => Math.round(base * itbmsRate * 100) / 100
+  // Nota: los precios mostrados durante el flujo son la BASE (sin ITBMS), con un discreto
+  // "+ ITBMS". El desglose con impuesto y el total real se muestran SOLO en la pantalla de
+  // pago, con los importes que devuelve el backend (cobro.base/itbms/monto).
 
   // ---- Paso 1: enviar datos ----
   const enviarPaso1 = async (e) => {
@@ -187,7 +241,12 @@ export default function Registro() {
     setError(''); setCuentaExiste(false)
     if (form.password !== password2) { setError('Las contraseñas no coinciden.'); return }
     if (fuerza.nivel < 2) { setError('La contraseña es demasiado débil. Use al menos 8 caracteres con mayúsculas, minúsculas y números.'); return }
-    if (!rucCheck || rucCheck === 'checking' || !rucCheck.valido) { setError('Verifique el RUC antes de continuar (botón "Verificar RUC").'); return }
+    // C (el RUC avisa, no bloquea): solo frenamos si la verificación sigue en curso o si
+    // el RUC es de una CUENTA ACTIVA existente (ahí mostramos login/recuperar). Un formato
+    // dudoso o un fallo técnico NO bloquean: se puede continuar (paso1 revalida en servidor).
+    if (rucCheck === 'checking') { setError('Espere a que termine la verificación del RUC.'); return }
+    if (!rucCheck) { setError('Verifique el RUC antes de continuar (botón "Verificar RUC").'); return }
+    if (rucCheck.cuenta_existente) { setError(rucCheck.mensaje || 'Esta empresa ya tiene una cuenta. Inicie sesión o recupere su contraseña.'); return }
     setLoading(true)
     try {
       const r = await fetch('/api/registro/paso1', {
@@ -232,7 +291,7 @@ export default function Registro() {
   // sondear la confirmación. La cuenta se activa SOLO al confirmar.
   const enviarPaso2 = async (modo) => {
     if (!yappyTelOk) { setError('Indique su número de Yappy (móvil de Panamá, 8 dígitos).'); return }
-    setError(''); setLoading(true)
+    setError(''); setLoading(true); setCambiarTel(false); setPagoEstado('esperando')
     try {
       const r = await fetch('/api/registro/paso2', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -241,8 +300,13 @@ export default function Registro() {
       const data = await r.json().catch(() => ({}))
       if (r.ok) {
         setResumen(data.resumen)
-        setCobro({ ct: data.ct, monto: data.monto, modo: data.modo, ordenCreada: data.orden_creada })
+        setCobro({ ct: data.ct, monto: data.monto, base: data.base, itbms: data.itbms, modo: data.modo, ordenCreada: data.orden_creada })
         setPaso('pago')
+      } else if (r.status === 409 && /trial_no_elegible/.test(data.detail || '')) {
+        // Regla D: este número ya gastó su prueba de $1 → ocultar la prueba y ofrecer
+        // solo el pago completo, con un mensaje claro (sin el prefijo técnico).
+        setTrialElegible(false)
+        setError('Ya disfrutó la prueba de $1 con este número de Yappy. Puede suscribirse directamente con "Suscribirme ya".')
       } else {
         setError(data.detail || 'No pudimos guardar su plan. Inténtelo de nuevo.')
       }
@@ -316,11 +380,19 @@ export default function Registro() {
             }}>
               {rucCheck === 'checking' ? 'Verificando...' : 'Verificar RUC'}
             </button>
-            {rucCheck && rucCheck !== 'checking' && (
-              <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color: rucCheck.valido ? '#27ae60' : 'var(--red)' }}>
-                {rucCheck.valido ? '✓ ' : '✗ '}{rucCheck.mensaje}
-              </div>
-            )}
+            {rucCheck && rucCheck !== 'checking' && (() => {
+              // Tres tonos: válido (verde ✓), cuenta activa existente (rojo ✗, bloquea con
+              // salida), y aviso suave no bloqueante (ámbar, formato dudoso o fallo técnico).
+              const suave = !rucCheck.valido && !rucCheck.cuenta_existente
+              const color = rucCheck.valido ? '#27ae60' : (suave ? '#b8860b' : 'var(--red)')
+              const icono = rucCheck.valido ? '✓ ' : (suave ? '⚠ ' : '✗ ')
+              return (
+                <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 8, color }}>
+                  {icono}{rucCheck.mensaje}
+                  {suave && <span style={{ display: 'block', fontWeight: 400, marginTop: 2 }}>Puede continuar; lo validaremos al crear su cuenta.</span>}
+                </div>
+              )
+            })()}
             {/* Cuenta ya existente detectada al verificar el RUC → acciones de salida */}
             {cuentaExiste && rucCheck && rucCheck !== 'checking' && !rucCheck.valido && <AccionesCuenta />}
 
@@ -445,14 +517,17 @@ export default function Registro() {
             <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
               <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
               {(() => {
+                // Precio BASE limpio mientras decide; el desglose con ITBMS y el total real
+                // se muestran SOLO en la pantalla de pago. (El ITBMS se sigue calculando
+                // por detrás igual — solo cambia dónde se enseña.)
                 const base = totalLanzamiento != null ? totalLanzamiento : totalLista
-                const itbms = itbmsDe(base)
                 return (
-                  <>
-                    <Linea label={anual ? 'Subtotal anual' : 'Subtotal mensual'} valor={`$${base}${sufijo}`} />
-                    <Linea label="ITBMS (7%)" valor={`$${itbms.toFixed(2)}`} />
-                    <Linea label="Total a pagar" valor={`$${(base + itbms).toFixed(2)}${sufijo}`} fuerte />
-                  </>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
+                    <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{anual ? 'Precio anual' : 'Precio mensual'}</span>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)' }}>
+                      ${base}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo} + ITBMS</span>
+                    </span>
+                  </div>
                 )
               })()}
               {totalLanzamiento != null && (
@@ -481,21 +556,36 @@ export default function Registro() {
               )}
             </div>
 
-            {/* Dos caminos: prueba "5 días por $1" (el $1 se descuenta del 1er pago) o alta directa. */}
-            <button type="button" onClick={() => enviarPaso2('trial')} disabled={loading || !yappyTelOk}
-              style={btn(!loading && yappyTelOk)}>
-              {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
-            </button>
-            <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '8px 0 14px' }}>
-              $1 + ITBMS (se cobran ${(1 + itbmsDe(1)).toFixed(2)}). Valida su Yappy y se descuenta del primer pago al terminar la prueba.
-            </p>
+            {/* Marca: que desde que elige se vea que el pago es por Yappy. */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '0 0 14px', fontSize: 13, color: 'var(--text-muted)' }}>
+              <span>Pago con</span>
+              <YappyLogo width={86} />
+            </div>
+
+            {/* Dos caminos: prueba "5 días por $1" (el $1 se descuenta del 1er pago) o alta directa.
+                Regla D: la prueba solo se ofrece si este número de Yappy no la gastó antes. */}
+            {trialElegible ? (
+              <>
+                <button type="button" onClick={() => enviarPaso2('trial')} disabled={loading || !yappyTelOk}
+                  style={btn(!loading && yappyTelOk)}>
+                  {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
+                </button>
+                <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '8px 0 14px' }}>
+                  $1 + ITBMS. Valida su Yappy y se descuenta del primer pago al terminar la prueba.
+                </p>
+              </>
+            ) : (
+              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', textAlign: 'center' }}>
+                Este número de Yappy ya disfrutó la prueba de $1. Puede suscribirse directamente:
+              </p>
+            )}
             <button type="button" onClick={() => enviarPaso2('completo')} disabled={loading || !yappyTelOk}
-              style={{
+              style={trialElegible ? {
                 width: '100%', padding: '11px', background: 'white', color: 'var(--blue)',
                 border: '1px solid var(--blue)', borderRadius: 8, fontSize: 14, fontWeight: 600,
                 cursor: (loading || !yappyTelOk) ? 'default' : 'pointer', opacity: (loading || !yappyTelOk) ? 0.6 : 1,
-              }}>
-              Suscribirme ya (sin prueba)
+              } : btn(!loading && yappyTelOk)}>
+              {trialElegible ? 'Suscribirme ya (sin prueba)' : (loading ? 'Un momento…' : 'Suscribirme ya')}
             </button>
           </div>
         )}
@@ -503,7 +593,7 @@ export default function Registro() {
         {/* PASO 3 — PAGO (aprobación en Yappy + confirmación) */}
         {paso === 'pago' && cobro && (
           <div style={{ textAlign: 'center' }}>
-            {pagoOk ? (
+            {pagoEstado === 'ok' ? (
               <>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
@@ -518,16 +608,77 @@ export default function Registro() {
                   Empezar a usar Socrates Pro
                 </button>
               </>
+            ) : (pagoEstado === 'rechazado' || pagoEstado === 'expirado' || pagoEstado === 'tecnico') ? (
+              <>
+                {/* Nunca un spinner eterno: estado claro + salidas (reenviar / cambiar número /
+                    volver). Distinguimos el fallo técnico NUESTRO del rechazo/expiración del cliente. */}
+                <div style={{ fontSize: 36, marginBottom: 8 }}>{pagoEstado === 'tecnico' ? '⚠️' : '🔁'}</div>
+                <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
+                  {pagoEstado === 'tecnico' ? 'No pudimos confirmar el pago'
+                    : pagoEstado === 'expirado' ? 'La solicitud de Yappy expiró'
+                    : 'El pago no se completó'}
+                </h1>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16 }}>
+                  {pagoEstado === 'tecnico'
+                    ? 'Fue un problema técnico de nuestro lado, no suyo. Su cuenta está guardada; vuelva a enviar la solicitud o inténtelo en un momento.'
+                    : pagoEstado === 'expirado'
+                      ? 'La solicitud no se aprobó a tiempo en su app de Yappy. Puede reenviarla, usar otro número o volver atrás.'
+                      : 'La solicitud fue rechazada en su app de Yappy. Puede reintentarla, usar otro número o volver atrás.'}
+                </p>
+                {cambiarTel && (
+                  <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 14, marginBottom: 14, textAlign: 'left' }}>
+                    <Campo label="Nuevo número de Yappy">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>+507</span>
+                        <input style={{ ...is, flex: 1 }} value={yappyTel} onChange={e => setYappyTel(e.target.value)}
+                          inputMode="tel" placeholder="6123 4567" />
+                      </div>
+                    </Campo>
+                    {yappyTel && !yappyTelOk && (
+                      <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>El número debe tener 8 dígitos.</div>
+                    )}
+                  </div>
+                )}
+                <button type="button" onClick={() => enviarPaso2(cobro.modo)} disabled={loading || !yappyTelOk} style={btn(!loading && yappyTelOk)}>
+                  {loading ? 'Reenviando…' : (cambiarTel ? 'Reenviar al nuevo número' : 'Reenviar la solicitud de pago')}
+                </button>
+                {!cambiarTel && (
+                  <button type="button" onClick={() => setCambiarTel(true)} style={{
+                    width: '100%', padding: '11px', marginTop: 8, background: 'white', color: 'var(--blue)',
+                    border: '1px solid var(--blue)', borderRadius: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+                  }}>
+                    Cambiar de número
+                  </button>
+                )}
+                <button type="button" onClick={() => { setPagoEstado('esperando'); setCambiarTel(false); setPaso('plan') }} style={{
+                  background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600,
+                  cursor: 'pointer', textDecoration: 'underline', marginTop: 12,
+                }}>
+                  Volver atrás
+                </button>
+              </>
             ) : (
               <>
                 <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
-                <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
+                <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 12px' }}>
                   Apruebe el pago de ${cobro.monto?.toFixed(2)} en Yappy
                 </h1>
-                <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px' }}>
-                  ${cobro.base?.toFixed(2)} + ITBMS ${cobro.itbms?.toFixed(2)}
-                  {cobro.modo !== 'completo' && ' · prueba de 5 días'}
-                </p>
+                {/* Logo oficial de Yappy: da confianza en el momento de aprobar el cobro. */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '0 0 16px', fontSize: 14, color: 'var(--text-muted)' }}>
+                  <span>Pago seguro con</span>
+                  <YappyLogo width={104} />
+                </div>
+                {/* Desglose completo y transparente SOLO aquí: es lo que se cobra de verdad. */}
+                <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '12px 16px', margin: '0 0 16px', textAlign: 'left' }}>
+                  <Linea label={cobro.modo === 'completo' ? 'Subtotal' : 'Prueba (5 días)'} valor={`$${cobro.base?.toFixed(2)}`} />
+                  <Linea label="ITBMS (7%)" valor={`$${cobro.itbms?.toFixed(2)}`} />
+                  <Linea label="Total a pagar" valor={`$${cobro.monto?.toFixed(2)}`} fuerte />
+                  {cobro.modo !== 'completo' && (
+                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
+                      Este $1 (+ ITBMS) se descuenta del primer pago al terminar la prueba.
+                    </div>
+                  )}
+                </div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16 }}>
                   Le enviamos una solicitud a su app de Yappy. Apruébela con su PIN o huella;
                   esta página continúa sola en cuanto se confirme.
@@ -540,9 +691,25 @@ export default function Registro() {
                   </div>
                 </div>
                 {esStaging ? (
-                  <button type="button" onClick={simularPago} disabled={loading} style={btn(!loading)}>
-                    {loading ? 'Simulando…' : 'Simular aprobación en Yappy (pruebas)'}
-                  </button>
+                  <>
+                    <button type="button" onClick={simularPago} disabled={loading} style={btn(!loading)}>
+                      {loading ? 'Simulando…' : 'Simular aprobación en Yappy (pruebas)'}
+                    </button>
+                    {/* Atajos de pruebas para ver a ojo las pantallas de error del pago. */}
+                    <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px dashed var(--border)' }}>
+                      <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Forzar estado de error (pruebas):</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center' }}>
+                        {[['DECLINED', 'Rechazado'], ['EXPIRED', 'Expirado'], ['TECNICO', 'Fallo técnico']].map(([val, label]) => (
+                          <button key={val} type="button" onClick={() => simularCobro(val)} style={{
+                            padding: '7px 12px', background: 'white', color: 'var(--red)',
+                            border: '1px solid var(--red)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer',
+                          }}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
                 ) : !cobro.ordenCreada ? (
                   <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
                     El cobro por Yappy se está habilitando. Su cuenta queda guardada; le avisaremos por correo.
@@ -556,6 +723,15 @@ export default function Registro() {
         )}
       </div>
     </div>
+  )
+}
+
+// Logo oficial de Yappy (kit a color, landscape 300×75 = 4:1). Ancho fijo y alto
+// automático para respetar la proporción y que NUNCA se deforme. Dejar aire alrededor.
+function YappyLogo({ width = 92 }) {
+  return (
+    <img src={yappyLogo} alt="Yappy" width={width}
+      style={{ height: 'auto', display: 'inline-block', verticalAlign: 'middle' }} />
   )
 }
 
