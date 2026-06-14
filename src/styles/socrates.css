@@ -118,17 +118,14 @@
   border-bottom: 1px solid rgba(91, 63, 191, 0.12);
 }
 
-/* === SÓCRATES EN EL MODAL DE TRACK (tab General) === */
-.seccion-socrates-pipeline {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #e5e7eb;  /* separador sutil con Observaciones */
-}
+/* === SÓCRATES EN LA BANDA FIJA DEL TRACK (columna izq., visible en las 3
+   pestañas) === Sin margen/padding/borde superior: la banda vive ahora pegada
+   bajo la navegación, no al fondo de la pestaña General (de donde viene el
+   nombre "pipeline"). El antiguo separador con Observaciones generaba el hueco
+   encima de "Análisis de Sócrates". */
+.seccion-socrates-pipeline {}
 
 .aviso-sin-datos-socrates {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid #e5e7eb;
   color: #6b7280;
   font-size: 13px;
   font-style: italic;

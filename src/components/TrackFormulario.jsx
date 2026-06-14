@@ -19,23 +19,6 @@ const ESTADOS = [
   'No Adjudicada', 'Entregado Material OK', 'Cancelada', 'Desierta', 'Limbo',
 ]
 
-const COLORES_ESTADO = {
-  'En Preparación': { bg: '#e3f2fd', color: '#1565c0' },
-  'Presentada': { bg: '#fff3e0', color: '#e65100' },
-  'Mejor Oferta': { bg: '#e8f5e9', color: '#2e7d32' },
-  'No Mejor Oferta': { bg: '#fff8e1', color: '#f57f17' },
-  'Adjudicada': { bg: '#1b5e20', color: 'white' },
-  'No Adjudicada': { bg: '#ffebee', color: '#c62828' },
-  'En Litigio': { bg: '#ff6f00', color: 'white' },
-  'Pte. Entrega Material': { bg: '#e0f7fa', color: '#006064' },
-  'Entregado parcialmente': { bg: '#b2dfdb', color: '#00695c' },
-  'Entregado en espera de Acta': { bg: '#4db6ac', color: 'white' },
-  'Entregado Material OK': { bg: '#00695c', color: 'white' },
-  'Cancelada': { bg: '#eceff1', color: '#455a64' },
-  'Desierta': { bg: '#eceff1', color: '#37474f' },
-  'Limbo': { bg: '#607d8b', color: 'white' },
-}
-
 const fmtFecha = (s) => {
   if (!s || typeof s !== 'string') return '-'
   const m = s.match(/^(\d{4})-(\d{2})-(\d{2})/)
@@ -146,17 +129,6 @@ function SocratesBloque({ ctx }) {
       <BotonResumenIA onClick={resumenIA.pedir} loading={resumenIA.estado.loading} />
       <PanelResumenIA estado={resumenIA.estado} onCerrar={resumenIA.cerrar} />
     </div>
-  )
-}
-
-function Chip({ estado }) {
-  const c = COLORES_ESTADO[estado] || { bg: '#eee', color: '#333' }
-  return (
-    <span style={{
-      display: 'inline-block', background: c.bg, color: c.color,
-      padding: '6px 14px', borderRadius: 999, fontSize: 13, fontWeight: 700,
-      whiteSpace: 'nowrap', letterSpacing: 0.2,
-    }}>{estado || '—'}</span>
   )
 }
 
@@ -616,10 +588,17 @@ export default function TrackFormulario({
               </div>
             )}
 
-            {/* ESTADO */}
+            {/* ESTADO — selector editable y NEUTRO (sin color por estado).
+                Movido aquí desde la pestaña General para quedar siempre visible
+                al cambiar de pestaña (esta columna no scrollea con las pestañas).
+                Reusa set('estado',v) → entra en el form y persiste con Guardar,
+                igual que cuando vivía en General. Lista canónica ESTADOS. */}
             <div style={{ marginBottom: 10 }}>
               <div style={labelStyle}>ESTADO</div>
-              <Chip estado={form.estado} />
+              <select value={form.estado ?? ''} onChange={e => set('estado', e.target.value)}
+                style={baseInputStyle({ fontWeight: 600, appearance: 'auto', padding: '8px 10px', fontSize: 13 })}>
+                {ESTADOS.map(o => <option key={o} value={o}>{o}</option>)}
+              </select>
               {form.fecha_cierre && (
                 <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
                   Cierre: <strong style={{ color: 'var(--text)' }}>{fmtFecha(form.fecha_cierre)}</strong>
@@ -910,7 +889,7 @@ function TabGeneral({ form, set, input, viewField, campoImportado, socratesCtx, 
           {vinc ? (
             <>
               {viewField('No. Acto (SCM)', form.numero_acto_derivado)}
-              {input('Estado', 'estado', 'text', { select: true, options: ESTADOS, bold: true })}
+              {/* Estado movido a la banda fija de la columna izquierda. */}
               {input('Agente', 'agente')}
               {viewField('Tipo de Proceso', form.derivado?.tipo_proceso || form.tipo_proceso)}
               {viewField('Fecha de adjudicación', fmtFecha(form.derivado?.fecha_adjudicacion))}
@@ -926,7 +905,7 @@ function TabGeneral({ form, set, input, viewField, campoImportado, socratesCtx, 
           ) : (
             <>
               {campoImportado('No. Acto', 'numero_acto', 'text', { bold: true })}
-              {input('Estado', 'estado', 'text', { select: true, options: ESTADOS, bold: true })}
+              {/* Estado movido a la banda fija de la columna izquierda. */}
               {input('# Requisición', 'acto_css')}
               {input('Agente', 'agente')}
               {campoImportado('Institución', 'institucion', 'text', { bold: true })}
