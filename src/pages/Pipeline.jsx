@@ -591,8 +591,30 @@ export default function Pipeline({ usuario }) {
     </div>
   )
 
-  const renderControles = (compact) => (
-    <>
+  // Desplegable "Otros estados" (filtro fino). Extraído para reusarlo: en
+  // Listado vive en la cabecera; en Formulario se inyecta a la derecha, en la
+  // fila de pestañas (topRightControls), junto a Activas/Todas.
+  const renderOtrosEstados = () => (
+    <select
+      value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
+      onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
+      style={{
+        padding: '6px 10px', border: '1px solid #e0e0e0',
+        borderRadius: 8, background: 'white', fontSize: 12, color: '#37474f', cursor: 'pointer',
+      }}>
+      <option value="">Otros estados</option>
+      {ESTADOS_DROPDOWN.map(estado => (
+        <option key={estado} value={estado}>
+          {estado} ({items.filter(it => it.estado === estado).length})
+        </option>
+      ))}
+    </select>
+  )
+
+  // Cabecera: título Track + toggle de vista. En Listado lleva además "Otros
+  // estados", Activas/Todas y SelectorEmpresa; en Formulario (compact) esos se
+  // mueven a la fila de pestañas de la derecha (topRightControls).
+  const renderHeaderRow = (compact) => (
       <div style={{
         marginBottom: compact ? 0 : 14, display: 'flex', justifyContent: 'space-between',
         alignItems: 'center', gap: 12, flexWrap: 'wrap',
@@ -628,20 +650,9 @@ export default function Pipeline({ usuario }) {
           </div>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          <select
-            value={(!appliedQuery && ESTADOS_DROPDOWN.includes(filtro)) ? filtro : ''}
-            onChange={e => { setFiltro(e.target.value); if (appliedQuery) limpiarBusqueda() }}
-            style={{
-              padding: '6px 10px', border: '1px solid #e0e0e0',
-              borderRadius: 8, background: 'white', fontSize: 12, color: '#37474f', cursor: 'pointer',
-            }}>
-            <option value="">Otros estados</option>
-            {ESTADOS_DROPDOWN.map(estado => (
-              <option key={estado} value={estado}>
-                {estado} ({items.filter(it => it.estado === estado).length})
-              </option>
-            ))}
-          </select>
+          {/* "Otros estados" solo en Listado. En Formulario (compact) se mueve a
+              la fila de pestañas de la derecha (topRightControls). */}
+          {!compact && renderOtrosEstados()}
           {/* En modo Formulario (compact) estos controles se mueven a la fila
               de pestañas de la columna derecha vía topRightControls. En Listado
               el botón "+ Añadir a Track" se omite (conAñadir=false): es redundante
@@ -651,12 +662,11 @@ export default function Pipeline({ usuario }) {
         {/* Selector de empresa solo en vista Listado (no en Formulario/compact). */}
         {!compact && <SelectorEmpresa />}
       </div>
+  )
 
-      {/* Buscador SIEMPRE visible (en ambas vistas). En modo Formulario,
-          al aplicar búsqueda, formularioIdx se resetea a 0 vía useEffect. */}
-      {/* Fila superior en dos mitades: izquierda buscador, derecha "añadir por
-          número". En móvil se apilan (flexWrap). En modo Formulario (compact) el
-          buscador ocupa todo y no se muestra el alta por número. */}
+  // Buscador (visible en ambas vistas) + alta "Añadir por número" (solo Listado).
+  // En Formulario (compact) el buscador ocupa todo el ancho.
+  const renderBuscadorRow = (compact) => (
       <div style={{ marginBottom: compact ? 0 : 12, display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-start' }}>
         {/* Mitad izquierda: buscador. El input + sus controles absolutos van en
             un wrapper `relative` propio (altura = input) para que la lupa y el
@@ -730,9 +740,12 @@ export default function Pipeline({ usuario }) {
           </div>
         )}
       </div>
+  )
 
-      {/* Cards de estado — conteo y monto sobre todo el pipeline. En columna
-          estrecha (compact) van en grid de 3; a ancho completo, los 7 en fila. */}
+  // Cards de estado — conteo y monto sobre todo el pipeline. En Formulario
+  // (compact) van 6 en grid 3×2 (sin "Pendiente de cobro"); en Listado, las 7
+  // en fila.
+  const renderCards = (compact) => (
       <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(3, 1fr)' : `repeat(${ESTADOS_CARDS.length + 1}, 1fr)`, gap: compact ? 8 : 10, marginBottom: compact ? 0 : 12 }}>
         {(compact ? ESTADOS_CARDS.filter(e => e !== 'Entregado parcialmente') : ESTADOS_CARDS).map(estado => {
           const delEstado = items.filter(it => it.estado === estado)
@@ -746,16 +759,30 @@ export default function Pipeline({ usuario }) {
             />
           )
         })}
-        {/* KPI "Pendiente de cobro": siempre la última card a la derecha. Es a la
-            vez tarjeta-filtro (toggle + exclusiva, reusa cambiarFiltroEstado). */}
-        <CardEstado
-          estado="Pendiente de cobro"
-          count={itemsPendienteCobro.length}
-          monto={sumarOfertado(itemsPendienteCobro)}
-          seleccionada={!appliedQuery && filtro === FILTRO_PENDIENTE_COBRO}
-          onClick={() => cambiarFiltroEstado(FILTRO_PENDIENTE_COBRO)}
-        />
+        {/* KPI "Pendiente de cobro": última card a la derecha en Listado. Es a la
+            vez tarjeta-filtro (toggle + exclusiva, reusa cambiarFiltroEstado).
+            Oculta en Formulario (compact) para dejar 6 cards en grid 3×2; su
+            lógica y filtro siguen intactos en Listado. */}
+        {!compact && (
+          <CardEstado
+            estado="Pendiente de cobro"
+            count={itemsPendienteCobro.length}
+            monto={sumarOfertado(itemsPendienteCobro)}
+            seleccionada={!appliedQuery && filtro === FILTRO_PENDIENTE_COBRO}
+            onClick={() => cambiarFiltroEstado(FILTRO_PENDIENTE_COBRO)}
+          />
+        )}
       </div>
+  )
+
+  // Compositor para Listado (ancho completo): cabecera + buscador + cards.
+  // En Formulario las 3 piezas se inyectan por separado para intercalarlas con
+  // los bloques de TrackFormulario (ver headerControls/buscadorControls/cardsControls).
+  const renderControles = (compact) => (
+    <>
+      {renderHeaderRow(compact)}
+      {renderBuscadorRow(compact)}
+      {renderCards(compact)}
     </>
   )
 
@@ -786,8 +813,11 @@ export default function Pipeline({ usuario }) {
 
   // ── MODO FORMULARIO: dos columnas a pantalla completa ──────────────────
   // Columna izquierda (controles + cabecera + Sócrates) y derecha (pestañas +
-  // contenido) viven dentro de TrackFormulario; aquí solo le pasamos los
-  // controles de Track como `topControls`.
+  // contenido) viven dentro de TrackFormulario. Las piezas de control se pasan
+  // por separado (header, buscador, cards) para que TrackFormulario las
+  // intercale en el orden: header → buscador → nav → ficha → Sócrates → cards.
+  // "Otros estados" se mueve a la fila de pestañas de la derecha junto a
+  // Activas/Todas (topRightControls).
   if (esFormulario && filtrados.length > 0) {
     return (
       <>
@@ -805,8 +835,15 @@ export default function Pipeline({ usuario }) {
               keywords: [],
               numeroActo: form.numero_acto_derivado || form.numero_acto,
             })}
-            topControls={renderControles(true)}
-            topRightControls={renderAlcanceYAñadir()}
+            headerControls={renderHeaderRow(true)}
+            buscadorControls={renderBuscadorRow(true)}
+            cardsControls={renderCards(true)}
+            topRightControls={
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                {renderOtrosEstados()}
+                {renderAlcanceYAñadir()}
+              </div>
+            }
             numerosWatchlist={numerosWatchlist}
             onWatchlist={anadirWatchlist}
             cambiosPorActo={cambiosPorActo}

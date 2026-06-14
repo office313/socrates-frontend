@@ -135,7 +135,7 @@ function SocratesBloque({ ctx }) {
 export default function TrackFormulario({
   items, currentIdx, onIndexChange,
   onSave, onDelete, onReload, onClose, onEstudio,
-  topControls, topRightControls,
+  headerControls, buscadorControls, cardsControls, topRightControls,
   numerosWatchlist, onWatchlist,
   cambiosPorActo, onCambiosVistos,
 }) {
@@ -490,11 +490,13 @@ export default function TrackFormulario({
           display: 'flex', flexDirection: 'column', gap: 12,
           overflowY: 'auto', minHeight: 0,
         }}>
-          {/* 1-3. Controles de Track (cabecera + buscador + cards) inyectados
-              desde Pipeline.jsx. En Listado se renderizan a ancho completo. */}
-          {topControls}
+          {/* 1. Cabecera: Track + toggle Listado/Formulario (arriba del todo). */}
+          {headerControls}
 
-          {/* 4. Navegación Anterior / N de N / Siguiente */}
+          {/* 2. Buscador en Track (inyectado desde Pipeline.jsx). */}
+          {buscadorControls}
+
+          {/* 3. Navegación Anterior / N de N / Siguiente */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 8, flexWrap: 'wrap',
@@ -515,18 +517,12 @@ export default function TrackFormulario({
             </button>
           </div>
 
-          {/* 5. ANÁLISIS DE SÓCRATES (banda) — entre navegación y pastilla.
-              SocratesBloque ya trae su propio orb dinámico + título. */}
-          <div style={{ flexShrink: 0 }}>
-            <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
-          </div>
-
-          {/* 6. Pastilla identificativa: ocupa el espacio vertical disponible
-              entre Sócrates y el Tip, con scroll propio si su contenido excede. */}
+          {/* 4. Ficha identificativa: Nº Acto + Estado (sube tras la navegación).
+              Altura natural: el scroll lo gestiona la columna (overflowY:auto),
+              no la pastilla — así no hay doble scroll. */}
           <div style={{
             background: 'white', borderRadius: 14, border: '1px solid var(--border)',
             padding: '12px 14px',
-            flex: 1, minHeight: 0, overflowY: 'auto',
           }}>
             {dirty && (
               <span style={{
@@ -645,8 +641,20 @@ export default function TrackFormulario({
             )}
           </div>
 
+          {/* 5. ANÁLISIS DE SÓCRATES — bisagra: margin-top:auto lo empuja hacia
+              el centro del hueco; SocratesBloque trae su propio orb + título. */}
+          <div style={{ flexShrink: 0, marginTop: 'auto' }}>
+            <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
+          </div>
+
+          {/* 6. Cards KPI (6 en grid 3×2) — pegadas al fondo: un 2º margin-top:auto
+              reparte el hueco y las baja, ocupando el antiguo espacio muerto. */}
+          <div style={{ marginTop: 'auto' }}>
+            {cardsControls}
+          </div>
+
           {/* 7. Tip de teclado al fondo de la columna */}
-          <div style={{ marginTop: 'auto', paddingTop: 4, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
+          <div style={{ paddingTop: 4, fontSize: 11, color: 'var(--text-muted)', lineHeight: 1.4 }}>
             Tip: ← → para navegar · Esc para volver al Listado
           </div>
         </div>
