@@ -81,7 +81,7 @@ export default function Login() {
           <form onSubmit={handleCredenciales}>
             <div style={{ marginBottom: 16 }}>
               <label style={ls}>Email</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="tu@email.com" required style={is} />
+              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="nombre@empresa.com" required style={is} />
             </div>
             <div style={{ marginBottom: 24 }}>
               <label style={ls}>Contraseña</label>
@@ -121,7 +121,7 @@ export default function Login() {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ email })
                 })
-                alert('Si tu cuenta tiene 2FA activo, recibirás un email con instrucciones para desactivarlo.')
+                alert('Si su cuenta tiene 2FA activo, recibirá un email con instrucciones para desactivarlo.')
               }} style={{ background: 'none', border: 'none', color: '#aaa', fontSize: 11, cursor: 'pointer', textDecoration: 'underline' }}>
                 ¿Perdiste acceso a tu autenticador?
               </button>

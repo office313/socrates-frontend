@@ -900,8 +900,8 @@ export default function Analytics({ usuario }) {
           )}
           {vista === 'lista' && !buscado && !loading && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>Ingresa una búsqueda para ver adjudicaciones históricas</p>
-              <p style={{ fontSize: 13 }}>Busca por producto, institución o proveedor</p>
+              <p style={{ fontSize: 16, marginBottom: 8 }}>Ingrese una búsqueda para ver adjudicaciones históricas</p>
+              <p style={{ fontSize: 13 }}>Busque por producto, institución o proveedor</p>
             </div>
           )}
 
@@ -1109,7 +1109,7 @@ export default function Analytics({ usuario }) {
           {resultadosMultiples.length > 0 && !licitacionEncontrada && (
             <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden', marginBottom: 16 }}>
               <div style={{ padding: '10px 16px', background: 'var(--blue-light)', borderBottom: '1px solid #e5e7eb', fontSize: 12, fontWeight: 600, color: 'var(--blue)' }}>
-                {resultadosMultiples.length} resultados — haz click en uno para ver el detalle
+                {resultadosMultiples.length} resultados — haga clic en uno para ver el detalle
               </div>
               {resultadosMultiples.map((l, i) => (
                 <div key={l.numero_acto + '-' + i} onClick={() => setLicitacionEncontrada(l)}
@@ -1189,8 +1189,8 @@ export default function Analytics({ usuario }) {
 
           {!licitacionEncontrada && !buscandoNumero && !msgNumero && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>Introduce el número de licitación</p>
-              <p style={{ fontSize: 13 }}>{tieneTrack ? 'Busca una licitación vigente por su número exacto para añadirla a Track o Watchlist' : 'Busca una licitación vigente por su número exacto para añadirla al Watchlist'}</p>
+              <p style={{ fontSize: 16, marginBottom: 8 }}>Introduzca el número de licitación</p>
+              <p style={{ fontSize: 13 }}>{tieneTrack ? 'Busque una licitación vigente por su número exacto para añadirla a Track o Watchlist' : 'Busque una licitación vigente por su número exacto para añadirla al Watchlist'}</p>
             </div>
           )}
         </div>

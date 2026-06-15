@@ -232,7 +232,7 @@ export default function TrackFormulario({
 
   // Confirma con el usuario que perderá cambios sin guardar. Usado por close/Esc;
   // la navegación entre licitaciones usa el modal de 3 opciones de abajo.
-  const confirmarSiDirty = () => !dirty || window.confirm('Tienes cambios sin guardar. ¿Descartar?')
+  const confirmarSiDirty = () => !dirty || window.confirm('Tiene cambios sin guardar. ¿Descartar?')
 
   // Navegación entre licitaciones con detección de cambios. Si el form difiere
   // del snapshot inicial, se abre un modal (Guardar/Descartar/Cancelar); si no,
@@ -268,7 +268,7 @@ export default function TrackFormulario({
       if (accion) accion()               // navega solo tras guardar con éxito
     } catch {
       setGuardandoNav(false)
-      setNavError('No se pudo guardar. Inténtalo de nuevo.')
+      setNavError('No se pudo guardar. Inténtelo de nuevo.')
     }
   }
 
@@ -346,8 +346,8 @@ export default function TrackFormulario({
     } catch (e) {
       const status = e.response?.status
       const detail = e.response?.data?.detail
-      if (status === 404) setVincError({ tipo: 'no_encontrada', msg: 'SCM no encontrada en PanamaCompra. Verifica el número.' })
-      else if (status === 502) setVincError({ tipo: 'v3_no_disponible', msg: (detail && detail.detail) || 'PanamaCompra no responde, inténtalo en unos minutos.' })
+      if (status === 404) setVincError({ tipo: 'no_encontrada', msg: 'SCM no encontrada en PanamaCompra. Verifique el número.' })
+      else if (status === 502) setVincError({ tipo: 'v3_no_disponible', msg: (detail && detail.detail) || 'PanamaCompra no responde, inténtelo en unos minutos.' })
       else setVincError({ tipo: 'error', msg: 'Error: ' + (typeof detail === 'string' ? detail : (detail?.detail || e.message)) })
       setVincPreview(null)
     } finally {
@@ -815,7 +815,7 @@ function ModalConfirmImportado({ label, onCancel, onConfirm }) {
           ⚠️ Editar campo importado{label ? `: ${label}` : ''}
         </h3>
         <div style={{ fontSize: 13, lineHeight: 1.7, color: '#333', marginBottom: 20 }}>
-          Este dato normalmente proviene de PanamaCompra/ACP y está vacío. Si lo rellenás manualmente, podría ser sobrescrito en una futura sincronización, y una vez guardado quedará bloqueado. ¿Continuar?
+          Este dato normalmente proviene de PanamaCompra/ACP y está vacío. Si lo rellena manualmente, podría ser sobrescrito en una futura sincronización, y una vez guardado quedará bloqueado. ¿Continuar?
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8 }}>
           <button onClick={onCancel}
@@ -842,7 +842,7 @@ function ModalNavSinGuardar({ guardando, error, onGuardar, onDescartar, onCancel
           ⚠️ Cambios sin guardar
         </h3>
         <div style={{ fontSize: 13, lineHeight: 1.7, color: '#333', marginBottom: error ? 12 : 20 }}>
-          Tienes cambios sin guardar en esta licitación. ¿Qué querés hacer antes de continuar?
+          Tiene cambios sin guardar en esta licitación. ¿Qué desea hacer antes de continuar?
         </div>
         {error && (
           <div style={{ background: '#ffebee', border: '1px solid #ffcdd2', color: '#c62828', borderRadius: 8, padding: '8px 12px', fontSize: 12, marginBottom: 16 }}>
@@ -1233,7 +1233,7 @@ function ProveedorRow({ idx, value, onChange }) {
         <a
           href={linkUrl || undefined}
           target="_blank" rel="noreferrer"
-          title={linkUrl ? `Abrir ${linkUrl} ↗` : 'Introduce una URL'}
+          title={linkUrl ? `Abrir ${linkUrl} ↗` : 'Introduzca una URL'}
           onClick={e => { if (!linkUrl) e.preventDefault() }}
           style={{
             display: 'inline-flex', alignItems: 'center', justifyContent: 'center',

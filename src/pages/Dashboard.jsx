@@ -403,7 +403,7 @@ export default function Dashboard({ usuario }) {
           }}>
             <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>Licitaciones vigentes</div>
             <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.vigentes}</div>
-            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>con tus keywords</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>con sus keywords</div>
           </div>
 
           {/* Card naranja (urgencia real): Cierran hoy si >0; cae a neutral si =0 */}
@@ -480,7 +480,7 @@ export default function Dashboard({ usuario }) {
         <div onClick={() => navigate('/analytics?tab=sdi')}
           style={{ background: '#eef4fb', border: '1px solid #d6e4f5', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: 'var(--blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>📋</span>
-          <span>{sdiCount} estudio{sdiCount !== 1 ? 's' : ''} de mercado vigente{sdiCount !== 1 ? 's' : ''} con tus keywords</span>
+          <span>{sdiCount} estudio{sdiCount !== 1 ? 's' : ''} de mercado vigente{sdiCount !== 1 ? 's' : ''} con sus keywords</span>
           <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>Ver en Explorer →</span>
         </div>
       )}
@@ -543,8 +543,8 @@ export default function Dashboard({ usuario }) {
                 <tr>
                   <td colSpan={7} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                      <span style={{ fontSize: 14, color: 'var(--text)' }}>No tienes licitaciones del Radar en tu Watchlist todavía.</span>
-                      <span style={{ fontSize: 12 }}>Márcalas con la estrella desde el listado completo para verlas aquí.</span>
+                      <span style={{ fontSize: 14, color: 'var(--text)' }}>No tiene licitaciones del Radar en su Watchlist todavía.</span>
+                      <span style={{ fontSize: 12 }}>Márquelas con la estrella desde el listado completo para verlas aquí.</span>
                       <button onClick={() => setFiltro('todas')}
                         style={{ marginTop: 4, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                         Ver listado completo

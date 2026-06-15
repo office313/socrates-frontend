@@ -323,8 +323,8 @@ export default function Watchlist() {
         <div style={{ textAlign: 'center', padding: 40, color: '#aaa' }}>Cargando...</div>
       ) : licitaciones.length === 0 ? (
         <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 60, textAlign: 'center', color: '#aaa' }}>
-          <p style={{ fontSize: 16, marginBottom: 8 }}>Tu Watchlist está vacío</p>
-          <p style={{ fontSize: 13 }}>Añade licitaciones desde el Radar con el botón 👁</p>
+          <p style={{ fontSize: 16, marginBottom: 8 }}>Su Watchlist está vacío</p>
+          <p style={{ fontSize: 13 }}>Añada licitaciones desde el Radar con el botón 👁</p>
         </div>
       ) : (
         <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>

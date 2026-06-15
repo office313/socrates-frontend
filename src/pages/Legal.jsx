@@ -189,7 +189,7 @@ export default function Legal() {
             value={pregunta}
             onChange={e => setPregunta(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) enviarConsulta() }}
-            placeholder="Escribe tu consulta legal aquí…"
+            placeholder="Escriba su consulta legal aquí…"
             rows={3}
             disabled={consultando}
             style={{

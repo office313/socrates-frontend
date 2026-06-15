@@ -64,14 +64,14 @@ export default function Keywords({ standalone = false }) {
           <div style={{ marginTop: 16, padding: 14, background: '#f8f9fa', borderRadius: 8, border: '1px solid #e5e7eb' }}>
             <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue)', margin: '0 0 8px' }}>Consejos para mejores resultados</p>
             <ul style={{ margin: 0, paddingLeft: 16, fontSize: 11, color: '#666', lineHeight: 1.9 }}>
-              <li>Usa términos <strong>genéricos</strong> — "malla" captura más variantes que "malla quirúrgica"</li>
+              <li>Use términos <strong>genéricos</strong> — "malla" captura más variantes que "malla quirúrgica"</li>
               <li>Las palabras <strong>incompletas</strong> amplían la búsqueda — "compu" captura "computadora", "computación"</li>
-              <li>Añade <strong>códigos de ficha técnica</strong> si los conoces (ej: 105789)</li>
-              <li>Incluye <strong>sinónimos</strong> — "compresor" y "compresora"</li>
-              <li>No te preocupes por <strong>tildes ni mayúsculas</strong> — el sistema las ignora siempre</li>
-              <li>Evita palabras muy genéricas como "compra" o "suministro" — generan demasiado ruido</li>
-              <li>Prueba tus keywords en <strong>Explorer</strong> antes de añadirlas — si encuentras adjudicaciones relevantes, es una buena keyword</li>
-              <li>Revisa tus keywords <strong>periódicamente</strong> y ajústalas según los resultados</li>
+              <li>Añada <strong>códigos de ficha técnica</strong> si los conoce (ej: 105789)</li>
+              <li>Incluya <strong>sinónimos</strong> — "compresor" y "compresora"</li>
+              <li>No se preocupe por <strong>tildes ni mayúsculas</strong> — el sistema las ignora siempre</li>
+              <li>Evite palabras muy genéricas como "compra" o "suministro" — generan demasiado ruido</li>
+              <li>Pruebe sus keywords en <strong>Explorer</strong> antes de añadirlas — si encuentra adjudicaciones relevantes, es una buena keyword</li>
+              <li>Revise sus keywords <strong>periódicamente</strong> y ajústelas según los resultados</li>
             </ul>
           </div>
         </div>

@@ -356,7 +356,7 @@ function RadarAvanzado({ ss, ts, is, ls, bs, mostrarMsg }) {
       monto_max: nuevo.monto_max !== '' ? parseFloat(nuevo.monto_max) : null,
     }
     if (!body.institucion && !body.unidad_compra && !body.provincia && body.monto_min == null && body.monto_max == null) {
-      mostrarMsg('Configura al menos un campo del criterio', false); return
+      mostrarMsg('Configure al menos un campo del criterio', false); return
     }
     axios.post('/api/settings/criterios', body).then(r => {
       if (r.data.error) { mostrarMsg(r.data.error, false); return }
@@ -746,8 +746,8 @@ export default function Settings({ usuario }) {
           <div style={{ flex: 1 }}>
             <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
               {totp
-                ? '✅ La verificación en dos pasos está activada. Tu cuenta está protegida.'
-                : 'La verificación en dos pasos añade una capa extra de seguridad. Al iniciar sesión necesitarás tu contraseña y un código de tu app de autenticación.'}
+                ? '✅ La verificación en dos pasos está activada. Su cuenta está protegida.'
+                : 'La verificación en dos pasos añade una capa extra de seguridad. Al iniciar sesión necesitará su contraseña y un código de su app de autenticación.'}
             </p>
             {!totp ? (
               <>
@@ -770,7 +770,7 @@ export default function Settings({ usuario }) {
                         placeholder="Código de 6 dígitos"
                         style={{ ...is, width: 180 }} maxLength={6} />
                       <button onClick={() => {
-                        if (!totpCodigo || totpCodigo.length < 6) { setTotpMsg('Introduce el código de 6 dígitos'); return }
+                        if (!totpCodigo || totpCodigo.length < 6) { setTotpMsg('Introduzca el código de 6 dígitos'); return }
                         axios.post('/api/totp/activar', { codigo: totpCodigo })
                           .then(r => {
                             if (r.data.ok) { setTotp(true); setTotpQR(null); setTotpCodigo(''); setTotpMsg(''); mostrarMsg('2FA activado correctamente') }
@@ -798,7 +798,7 @@ export default function Settings({ usuario }) {
                         placeholder="Código de 6 dígitos" autoFocus
                         style={{ ...is, width: 180 }} maxLength={6} />
                       <button onClick={() => {
-                        if (!totpCodigo || totpCodigo.length < 6) { setTotpMsg('Introduce el código de 6 dígitos'); return }
+                        if (!totpCodigo || totpCodigo.length < 6) { setTotpMsg('Introduzca el código de 6 dígitos'); return }
                         axios.post('/api/totp/desactivar', { codigo: totpCodigo })
                           .then(r => {
                             if (r.data.ok) { setTotp(false); setDesactivarPaso(false); setTotpCodigo(''); setTotpMsg(''); mostrarMsg('2FA desactivado') }
@@ -966,8 +966,8 @@ export default function Settings({ usuario }) {
           <h2 style={ts}>{tieneTrack ? 'Modo de Keywords y Track' : 'Modo de Keywords'}</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
             {tieneTrack
-              ? 'Define si los keywords y Track son compartidos por toda la empresa o individuales por usuario.'
-              : 'Define si los keywords son compartidos por toda la empresa o individuales por usuario.'}
+              ? 'Defina si los keywords y Track son compartidos por toda la empresa o individuales por usuario.'
+              : 'Defina si los keywords son compartidos por toda la empresa o individuales por usuario.'}
           </p>
           <div style={{ display: 'flex', background: '#f0f0f0', borderRadius: 8, padding: 4, gap: 4, width: 'fit-content', marginBottom: 12 }}>
             <button onClick={() => { setModoKeywords('compartido'); axios.post('/api/empresa/config', { modo_keywords: 'compartido' }).then(() => mostrarMsg('Modo actualizado')) }} style={{
