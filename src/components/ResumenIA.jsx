@@ -116,7 +116,7 @@ export function PanelResumenIA({ estado, onCerrar }) {
           <div style={{ fontSize: 13, color: '#7a6fa3' }}>Sócrates está analizando la licitación…</div>
         )}
         {estado.error && (
-          <div style={{ fontSize: 13, color: '#c62828' }}>No se pudo generar el resumen, intenta más tarde.</div>
+          <div style={{ fontSize: 13, color: '#c62828' }}>No se pudo generar el resumen, intente más tarde.</div>
         )}
         {!estado.loading && !estado.error && estado.texto && (
           <CuerpoResumen texto={estado.texto} />
