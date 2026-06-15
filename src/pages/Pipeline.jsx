@@ -117,7 +117,9 @@ function Badge({ estado }) {
 
 // Card grande de estado del Track: título, conteo grande y monto compacto.
 // Azul corporativo #0f2d57 en selección/hover; estética sobria con jerarquía.
-function CardEstado({ estado, count, monto, seleccionada, onClick }) {
+// compact: variante reducida para el grid 3×2 de la columna izquierda del
+// Formulario (15"); en Listado (ancho completo) se usa el tamaño normal.
+function CardEstado({ estado, count, monto, seleccionada, onClick, compact = false }) {
   const [hover, setHover] = useState(false)
   const resaltada = seleccionada || hover
   return (
@@ -130,16 +132,17 @@ function CardEstado({ estado, count, monto, seleccionada, onClick }) {
         background: seleccionada ? '#f5f9ff' : 'white',
         border: `1px solid ${resaltada ? '#0f2d57' : '#e0e0e0'}`,
         boxShadow: seleccionada ? '0 0 0 1px #0f2d57' : 'none',
-        borderRadius: 12, padding: '10px 12px', cursor: 'pointer',
-        transition: 'all 0.15s',
+        borderRadius: compact ? 10 : 12, padding: compact ? '7px 8px' : '10px 12px',
+        cursor: 'pointer', transition: 'all 0.15s',
       }}>
       <div style={{
-        fontSize: 12, color: '#455a64', marginBottom: 12, fontWeight: 500,
-        lineHeight: 1.3, minHeight: '3.9em',
+        fontSize: compact ? 11 : 12, color: '#455a64',
+        marginBottom: compact ? 5 : 12, fontWeight: 500,
+        lineHeight: compact ? 1.2 : 1.3, minHeight: compact ? '2.4em' : '3.9em',
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>{estado}</div>
-      <div style={{ fontSize: 24, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
-      <div style={{ fontSize: 12, color: '#78909c', marginTop: 6 }}>{formatearMonto(monto)}</div>
+      <div style={{ fontSize: compact ? 19 : 24, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{count}</div>
+      <div style={{ fontSize: compact ? 10.5 : 12, color: '#78909c', marginTop: compact ? 3 : 6 }}>{formatearMonto(monto)}</div>
     </div>
   )
 }
@@ -623,7 +626,7 @@ export default function Pipeline({ usuario }) {
           <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Track</h1>
           {/* Toggle de vista PROMINENTE: bordeado en azul corporativo,
               activo con bg sólido. Separado del resto de filtros para que
-              destaque a primera vista. */}
+              destaque a primera vista. Mismo tamaño en Listado y Formulario. */}
           <div style={{
             display: 'inline-flex', alignItems: 'center', gap: 0, padding: 4, borderRadius: 12,
             background: 'white', border: '1.5px solid var(--blue-dark)',
@@ -683,7 +686,8 @@ export default function Pipeline({ usuario }) {
               onKeyDown={e => { if (e.key === 'Enter') aplicarBusqueda() }}
               onFocus={() => setInputFocus(true)}
               onBlur={() => setInputFocus(false)}
-              placeholder="Buscar en Track..."
+              placeholder={inputFocus ? 'Usa * como comodín (ej: *CL-034097, 2026*, *CSS*)' : 'Buscar en Track...'}
+              title="Tip: usa * como comodín (ej: *CL-034097, 2026*, *CSS*)"
               style={{
                 width: '100%',
                 padding: '8px 110px 8px 44px',
@@ -713,9 +717,14 @@ export default function Pipeline({ usuario }) {
                 border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
               }}>Buscar</button>
           </div>
-          <div style={{ marginTop: 6, fontSize: 11, color: '#9aa0a6' }}>
-            Tip: usa * como comodín (ej: *CL-034097, 2026*, *CSS*)
-          </div>
+          {/* En Listado el tip va como línea fija; en Formulario (compact) se
+              libera esa línea — el tip vive ahora en el placeholder al enfocar
+              y en el tooltip (title) del propio input. */}
+          {!compact && (
+            <div style={{ marginTop: 6, fontSize: 11, color: '#9aa0a6' }}>
+              Tip: usa * como comodín (ej: *CL-034097, 2026*, *CSS*)
+            </div>
+          )}
         </div>
 
         {/* Mitad derecha: añadir por número (busca BD→V3 y añade a Track). Solo
@@ -746,7 +755,7 @@ export default function Pipeline({ usuario }) {
   // (compact) van 6 en grid 3×2 (sin "Pendiente de cobro"); en Listado, las 7
   // en fila.
   const renderCards = (compact) => (
-      <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(3, 1fr)' : `repeat(${ESTADOS_CARDS.length + 1}, 1fr)`, gap: compact ? 8 : 10, marginBottom: compact ? 0 : 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: compact ? 'repeat(3, 1fr)' : `repeat(${ESTADOS_CARDS.length + 1}, 1fr)`, gap: compact ? 6 : 10, marginBottom: compact ? 0 : 12 }}>
         {(compact ? ESTADOS_CARDS.filter(e => e !== 'Entregado parcialmente') : ESTADOS_CARDS).map(estado => {
           const delEstado = items.filter(it => it.estado === estado)
           return (
@@ -756,6 +765,7 @@ export default function Pipeline({ usuario }) {
               monto={sumarOfertado(delEstado)}
               seleccionada={!appliedQuery && filtro === estado}
               onClick={() => cambiarFiltroEstado(estado)}
+              compact={compact}
             />
           )
         })}
@@ -822,7 +832,11 @@ export default function Pipeline({ usuario }) {
     return (
       <>
         {modales}
-        <div style={{ height: '100vh', boxSizing: 'border-box', padding: 16, overflow: 'hidden' }}>
+        {/* Padding alineado con el modo Listado (24 arriba/lados) para que el
+            toggle Track Listado/Formulario quede EN LA MISMA posición en ambas
+            vistas y se sienta el mismo control. Bottom a 16 para conservar el
+            presupuesto vertical de la columna (que las 6 cards entren en 15"). */}
+        <div style={{ height: '100vh', boxSizing: 'border-box', padding: '24px 24px 16px', overflow: 'hidden' }}>
           <TrackFormulario
             items={filtrados}
             currentIdx={Math.min(formularioIdx, filtrados.length - 1)}

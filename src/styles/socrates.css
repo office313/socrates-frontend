@@ -108,6 +108,19 @@
 
 .btn-socrates-text { line-height: 1; }
 
+/* Sócrates como ACCIÓN del footer del Formulario (junto a "Estudio de
+   Mercado"): ancho natural en vez de 100%, sin margen inferior y un punto más
+   compacto. Conserva color corporativo y orbe — sigue siendo acción IA
+   destacada, no un botón gris. Scoped: no afecta al botón full-width del
+   sidebar (Dashboard/Watchlist/Analytics). */
+.socrates-footer .btn-socrates {
+  width: auto;
+  margin-bottom: 0;
+  min-height: 40px;
+  padding: 9px 16px;
+  font-size: 13px;
+}
+
 /* === CABECERA DEL PANEL === */
 .panel-socrates-header {
   display: flex;

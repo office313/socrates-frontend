@@ -109,25 +109,31 @@ const parseCurrency = (str) => {
   return cleaned
 }
 
-// Mismo bloque IA del modal pequeño. Su useResumenIA se resetea con key={ctx.id}
-// desde el padre al navegar entre licitaciones.
-function SocratesBloque({ ctx }) {
+// "Análisis de Sócrates" como ACCIÓN del footer del Formulario (junto a
+// "Estudio de Mercado"), aprovechando el antiguo espacio muerto inferior
+// izquierdo. Conserva el orbe policromático (marca IA). El panel del resumen
+// se despliega como overlay FLOTANTE anclado abajo a la izquierda, sobre el
+// footer — así no empuja el layout ni se corta en 15".
+// Se monta con key={ctx.id} desde el padre → su useResumenIA se resetea al
+// navegar entre licitaciones (igual que la versión anterior en la columna).
+function SocratesAccion({ ctx }) {
   const resumenIA = useResumenIA(
     ctx?.id,
     ctx?.tipo === 'adjudicada' ? 'adjudicada' : 'vigente'
   )
-  if (!ctx) return null
-  if (ctx.tipo === 'sin_datos') {
-    return (
-      <div className="aviso-sin-datos-socrates">
-        Sócrates no tiene datos disponibles para esta licitación todavía.
-      </div>
-    )
-  }
+  // Sin contexto o sin datos: no hay acción que ofrecer → no se pinta el botón.
+  if (!ctx || ctx.tipo === 'sin_datos') return null
   return (
-    <div className="seccion-socrates-pipeline">
+    <div className="socrates-footer">
       <BotonResumenIA onClick={resumenIA.pedir} loading={resumenIA.estado.loading} />
-      <PanelResumenIA estado={resumenIA.estado} onCerrar={resumenIA.cerrar} />
+      {resumenIA.estado.visible && (
+        <div style={{
+          position: 'fixed', left: 16, bottom: 84,
+          width: 'min(560px, 44vw)', zIndex: 1200,
+        }}>
+          <PanelResumenIA estado={resumenIA.estado} onCerrar={resumenIA.cerrar} />
+        </div>
+      )}
     </div>
   )
 }
@@ -484,10 +490,10 @@ export default function TrackFormulario({
         gap: 12, overflow: 'hidden',
       }}>
 
-        {/* ════ COLUMNA IZQUIERDA (1/4): controles + cabecera + Sócrates ════ */}
+        {/* ════ COLUMNA IZQUIERDA (1/4): controles + cabecera + cards ════ */}
         <div style={{
           flex: '0 0 25%', minWidth: 340, maxWidth: 440,
-          display: 'flex', flexDirection: 'column', gap: 12,
+          display: 'flex', flexDirection: 'column', gap: 8,
           overflowY: 'auto', minHeight: 0,
         }}>
           {/* 1. Cabecera: Track + toggle Listado/Formulario (arriba del todo). */}
@@ -522,7 +528,7 @@ export default function TrackFormulario({
               no la pastilla — así no hay doble scroll. */}
           <div style={{
             background: 'white', borderRadius: 14, border: '1px solid var(--border)',
-            padding: '12px 14px',
+            padding: '10px 14px',
           }}>
             {dirty && (
               <span style={{
@@ -536,7 +542,7 @@ export default function TrackFormulario({
             )}
 
             {/* Nº ACTO */}
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 6 }}>
               <div style={labelStyle}>Nº ACTO</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15, wordBreak: 'break-all' }}>
@@ -589,7 +595,7 @@ export default function TrackFormulario({
                 al cambiar de pestaña (esta columna no scrollea con las pestañas).
                 Reusa set('estado',v) → entra en el form y persiste con Guardar,
                 igual que cuando vivía en General. Lista canónica ESTADOS. */}
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 6 }}>
               <div style={labelStyle}>ESTADO</div>
               <select value={form.estado ?? ''} onChange={e => set('estado', e.target.value)}
                 style={baseInputStyle({ fontWeight: 600, appearance: 'auto', padding: '8px 10px', fontSize: 13 })}>
@@ -603,7 +609,7 @@ export default function TrackFormulario({
             </div>
 
             {/* PRECIO OFERTADO */}
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 6 }}>
               <div style={labelStyle}>PRECIO OFERTADO</div>
               <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--blue-dark)', lineHeight: 1.15 }}>
                 {form.precio_ofertado ? `US$ ${formatCurrency(form.precio_ofertado)}` : '—'}
@@ -616,7 +622,7 @@ export default function TrackFormulario({
             </div>
 
             {/* INSTITUCIÓN */}
-            <div style={{ marginBottom: 10 }}>
+            <div style={{ marginBottom: 6 }}>
               <div style={labelStyle}>INSTITUCIÓN</div>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)', lineHeight: 1.3 }}>
                 {institucionMostrada || '—'}
@@ -624,7 +630,7 @@ export default function TrackFormulario({
             </div>
 
             {/* UNIDAD DE COMPRA */}
-            <div style={{ marginBottom: descripcionMostrada ? 10 : 0 }}>
+            <div style={{ marginBottom: descripcionMostrada ? 6 : 0 }}>
               <div style={labelStyle}>UNIDAD DE COMPRA</div>
               <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.3 }}>
                 {unidadMostrada || '—'}
@@ -641,14 +647,9 @@ export default function TrackFormulario({
             )}
           </div>
 
-          {/* 5. ANÁLISIS DE SÓCRATES — bisagra: margin-top:auto lo empuja hacia
-              el centro del hueco; SocratesBloque trae su propio orb + título. */}
-          <div style={{ flexShrink: 0, marginTop: 'auto' }}>
-            <SocratesBloque key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
-          </div>
-
-          {/* 6. Cards KPI (6 en grid 3×2) — pegadas al fondo: un 2º margin-top:auto
-              reparte el hueco y las baja, ocupando el antiguo espacio muerto. */}
+          {/* 5. Cards KPI (6 en grid 3×2) — pegadas al fondo con margin-top:auto,
+              que reparte el hueco liberado al mover "Análisis de Sócrates" al
+              footer. Así las 6 entran completas en 15" sin scroll. */}
           <div style={{ marginTop: 'auto' }}>
             {cardsControls}
           </div>
@@ -721,14 +722,24 @@ export default function TrackFormulario({
         </div>
       </div>
 
-      {/* FOOTER a ancho completo de las dos columnas */}
+      {/* FOOTER a ancho completo de las dos columnas. IZQUIERDA: "Análisis de
+          Sócrates" (acción IA con orbe), ocupando el antiguo espacio muerto;
+          DERECHA: acciones del formulario. */}
       <div style={{
         flexShrink: 0, marginTop: 12,
-        display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        gap: 12, flexWrap: 'wrap',
         padding: '12px 16px', background: 'white', borderRadius: 14,
         border: '1px solid var(--border)',
       }}>
-        <div style={{ display: 'flex', gap: 8 }}>
+        {/* Orbe Sócrates a la izquierda (junto a Estudio de Mercado del grupo
+            derecho). Se monta con key={ctx.id} → resetea el resumen al navegar.
+            Wrapper SIEMPRE presente (aunque SocratesAccion sea null por falta de
+            datos) para que space-between mantenga las acciones a la derecha. */}
+        <div style={{ display: 'flex', alignItems: 'center', minHeight: 40 }}>
+          <SocratesAccion key={socratesCtx?.id || 'none'} ctx={socratesCtx} />
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           {item?.id && onEstudio && (
             <button onClick={() => onEstudio(form)} style={{
               padding: '9px 16px', background: 'white', color: 'var(--blue)',
