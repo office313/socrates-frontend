@@ -147,6 +147,24 @@ export default function Registro() {
       .catch(() => {})
   }, [paso])
 
+  // Verificación SIN ventana nueva: mientras el usuario espera en 'verifica', sondeamos si
+  // su email ya quedó verificado (abrió el enlace en otra pestaña/dispositivo). Cuando sí,
+  // avanzamos al paso de plan EN ESTA pantalla, sin dejar la pestaña original huérfana.
+  useEffect(() => {
+    if (paso !== 'verifica') return
+    let vivo = true
+    const id = setInterval(async () => {
+      try {
+        const r = await fetch('/api/registro/estado-verificacion')
+        const d = await r.json().catch(() => ({}))
+        if (vivo && d?.verificado && d?.rt) {
+          clearInterval(id); setRt(d.rt); setPaso('plan')
+        }
+      } catch { /* reintenta en el próximo tick */ }
+    }, 3000)
+    return () => { vivo = false; clearInterval(id) }
+  }, [paso])
+
   // Interpreta la respuesta de /cobro/confirmar y fija el estado del pago. Único lugar
   // que traduce el estado de Yappy a la UI; lo usan el sondeo y el atajo de staging, para
   // que lo que se ve en pruebas pase por la MISMA lógica que producción. Devuelve true si
