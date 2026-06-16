@@ -275,7 +275,7 @@ export default function Clientes() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {empresas.length === 0 && (
           <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 40, textAlign: 'center', color: '#aaa' }}>
-            No hay clientes registrados. Crea el primero con el botón "+ Nueva Empresa".
+            No hay clientes registrados. Cree el primero con el botón "+ Nueva Empresa".
           </div>
         )}
         {empresas.map(e => {

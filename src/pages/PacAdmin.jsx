@@ -68,7 +68,7 @@ export default function PacAdmin() {
               </tr>
             ))}
             {(!pacEstado || pacEstado.entidades.length === 0) && (
-              <tr><td colSpan={5} style={{ padding: '24px 16px', textAlign: 'center', color: '#aaa' }}>Sin datos de PAC. Pulsa "Sincronizar PAC".</td></tr>
+              <tr><td colSpan={5} style={{ padding: '24px 16px', textAlign: 'center', color: '#aaa' }}>Sin datos de PAC. Pulse "Sincronizar PAC".</td></tr>
             )}
           </tbody>
         </table>

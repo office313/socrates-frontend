@@ -907,7 +907,7 @@ export default function Analytics({ usuario }) {
 
           {vista === 'overview' && !buscado && (
             <div style={{ textAlign: 'center', padding: 60, color: '#aaa' }}>
-              <p style={{ fontSize: 16, marginBottom: 8 }}>Realiza una búsqueda primero para ver el análisis de mercado.</p>
+              <p style={{ fontSize: 16, marginBottom: 8 }}>Realice una búsqueda primero para ver el análisis de mercado.</p>
               <p style={{ fontSize: 13 }}>Los rankings de compradores, vendedores y precios se calculan sobre los resultados de la búsqueda.</p>
             </div>
           )}

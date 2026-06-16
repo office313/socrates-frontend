@@ -391,7 +391,7 @@ function RadarAvanzado({ ss, ts, is, ls, bs, mostrarMsg }) {
       {/* ---------- Sectores ---------- */}
       <div style={{ marginBottom: 28 }}>
         <h3 style={subTitle}>Sectores</h3>
-        <p style={help}>Solo se mostrarán licitaciones de los sectores seleccionados. Si no seleccionás ninguno, se muestran todos.</p>
+        <p style={help}>Solo se mostrarán licitaciones de los sectores seleccionados. Si no selecciona ninguno, se muestran todos.</p>
         {disponibles.length === 0 ? (
           <p style={{ color: '#aaa', fontSize: 13 }}>No hay sectores disponibles todavía.</p>
         ) : (
@@ -456,7 +456,7 @@ function RadarAvanzado({ ss, ts, is, ls, bs, mostrarMsg }) {
               <div style={{ gridColumn: '1/-1' }}>
                 <label style={ls}>Unidad de compra</label>
                 <select value={nuevo.unidad_compra} onChange={e => setN('unidad_compra', e.target.value)} style={{ ...is, background: nuevo.institucion ? 'white' : '#f5f5f5' }} disabled={!nuevo.institucion}>
-                  <option value="">{nuevo.institucion ? '— Cualquiera —' : 'Seleccioná una institución primero'}</option>
+                  <option value="">{nuevo.institucion ? '— Cualquiera —' : 'Seleccione una institución primero'}</option>
                   {unidades.map(u => <option key={u} value={u}>{u}</option>)}
                 </select>
               </div>
@@ -509,7 +509,7 @@ function VincularUsuarioEmpresa({ usuario, usuarios, mostrarMsg }) {
   const [loading, setLoading] = useState(false)
   if (otras.length === 0) return null
   const dar = () => {
-    if (!usuarioId || !empresaId) { mostrarMsg('Elegí usuario y empresa destino', false); return }
+    if (!usuarioId || !empresaId) { mostrarMsg('Elija usuario y empresa destino', false); return }
     setLoading(true)
     axios.post(`/api/usuarios/${usuarioId}/vincular-empresa`, { empresa_id: Number(empresaId) })
       .then(r => {
@@ -524,7 +524,7 @@ function VincularUsuarioEmpresa({ usuario, usuarios, mostrarMsg }) {
   return (
     <div style={{ marginTop: 20, paddingTop: 16, borderTop: '1px solid #e5e7eb' }}>
       <p style={{ fontSize: 13, color: '#666', marginBottom: 10, lineHeight: 1.6 }}>
-        Dar a un usuario de esta empresa acceso a otra de tus empresas. Podrá alternar entre ellas desde el selector de empresa de la cabecera.
+        Dar a un usuario de esta empresa acceso a otra de sus empresas. Podrá alternar entre ellas desde el selector de empresa de la cabecera.
       </p>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
         <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)} style={is}>
@@ -761,8 +761,8 @@ export default function Settings({ usuario }) {
                 ) : (
                   <div>
                     <p style={{ fontSize: 13, color: '#444', marginBottom: 12 }}>
-                      1. Escanea este código QR con <strong>Google Authenticator</strong> o <strong>Authy</strong><br/>
-                      2. Introduce el código de 6 dígitos que aparece en la app
+                      1. Escanee este código QR con <strong>Google Authenticator</strong> o <strong>Authy</strong><br/>
+                      2. Introduzca el código de 6 dígitos que aparece en la app
                     </p>
                     <img src={totpQR} alt="QR Code" style={{ width: 180, height: 180, border: '1px solid #e5e7eb', borderRadius: 8, marginBottom: 16, display: 'block' }} />
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
@@ -791,7 +791,7 @@ export default function Settings({ usuario }) {
                 ) : (
                   <div>
                     <p style={{ fontSize: 13, color: '#444', marginBottom: 12 }}>
-                      Para desactivar la verificación en dos pasos, introduce el código de 6 dígitos de tu app autenticadora.
+                      Para desactivar la verificación en dos pasos, introduzca el código de 6 dígitos de su app autenticadora.
                     </p>
                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                       <input value={totpCodigo} onChange={e => setTotpCodigo(e.target.value.replace(/\D/g, ''))}
@@ -834,7 +834,7 @@ export default function Settings({ usuario }) {
             </button>
           </div>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
-            Gestiona los usuarios de tu empresa. Los usuarios pueden ver el Radar y las licitaciones; los supervisores además gestionan keywords y usuarios.
+            Gestione los usuarios de su empresa. Los usuarios pueden ver el Radar y las licitaciones; los supervisores además gestionan keywords y usuarios.
           </p>
           {usuarios.length === 0 ? (
             <p style={{ color: '#aaa', fontSize: 13 }}>No hay usuarios.</p>
@@ -850,7 +850,7 @@ export default function Settings({ usuario }) {
               <tbody>
                 {usuarios.map((u, i) => (
                   <tr key={u.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                    <td style={{ padding: '10px 16px' }}>{u.nombre}{u.es_tu_cuenta && <span style={{ fontSize: 11, color: '#999' }}> (tú)</span>}</td>
+                    <td style={{ padding: '10px 16px' }}>{u.nombre}{u.es_tu_cuenta && <span style={{ fontSize: 11, color: '#999' }}> (usted)</span>}</td>
                     <td style={{ padding: '10px 16px', color: '#666' }}>{u.email}</td>
                     <td style={{ padding: '10px 16px' }}>
                       <span style={{ background: u.rol === 'supervisor' ? '#e8f0fb' : '#f5f5f5', color: u.rol === 'supervisor' ? 'var(--blue)' : '#666', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{u.rol}</span>
@@ -927,7 +927,7 @@ export default function Settings({ usuario }) {
         <div style={ss}>
           <h2 style={ts}>Keywords</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
-            Las keywords son las palabras clave que el sistema usará para detectar licitaciones relevantes para tu empresa en el Radar.
+            Las keywords son las palabras clave que el sistema usará para detectar licitaciones relevantes para su empresa en el Radar.
           </p>
           <button onClick={() => setModalKeywords(true)}
             style={{ padding: '10px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>
@@ -950,7 +950,7 @@ export default function Settings({ usuario }) {
         <div style={ss}>
           <h2 style={ts}>Modo de Búsqueda</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
-            Configura cómo el sistema busca licitaciones. Afecta a todos los usuarios de tu empresa.
+            Configure cómo el sistema busca licitaciones. Afecta a todos los usuarios de su empresa.
           </p>
           <div style={{ display: 'flex', background: '#f0f0f0', borderRadius: 8, padding: 4, gap: 4, width: 'fit-content', marginBottom: 12 }}>
             <button onClick={() => guardarModo('amplio')} style={{ padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: modo === 'amplio' ? 'var(--blue)' : 'transparent', color: modo === 'amplio' ? 'white' : '#666' }}>Modo Amplio</button>

@@ -12,8 +12,17 @@ axios.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
+      // Páginas públicas (sin sesión): no redirigir desde ellas. El alta
+      // /registro la usan clientes DESLOGUEADOS — sin esta excepción, el 401
+      // de /api/me los echaría a /login y nunca podrían registrarse.
       const path = window.location.pathname
-      if (path !== '/app/login' && path !== '/login') {
+      const publicas = ['/app/login', '/login', '/app/registro', '/registro',
+        '/app/recuperar', '/recuperar', '/app/restablecer', '/restablecer',
+        // /pagar es token-gated (ct): la usan clientes SIN sesión desde el enlace
+        // del correo de cobro (incluso suspendidos). Sin esta excepción, el 401 de
+        // /api/me los echaría a /login y no podrían pagar ni ver su salida.
+        '/app/pagar', '/pagar']
+      if (!publicas.includes(path)) {
         window.location.href = '/app/login'
       }
     }

@@ -580,7 +580,7 @@ export default function TrackFormulario({
                 borderRadius: '0 8px 8px 0',
               }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 6 }}>
-                  ⚠️ Cambios detectados desde tu última visita:
+                  ⚠️ Cambios detectados desde su última visita:
                 </div>
                 {cambiosItem.map((c, idx) => (
                   <div key={idx} style={{ fontSize: 12, color: '#78350f', lineHeight: 1.5 }}>
@@ -1111,7 +1111,7 @@ function TabPostAdj({
         ) : (
           <>
             <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-              Si tu CL ya derivó en una SCM/CM/SCA, vincúlala aquí para registrar la adjudicación final.
+              Si su CL ya derivó en una SCM/CM/SCA, vincúlela aquí para registrar la adjudicación final.
             </p>
             <div style={{ display: 'flex', gap: 8 }}>
               <input type="text" value={numDerivadoInput} onChange={e => setNumDerivadoInput(e.target.value)}
