@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import logoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 
@@ -9,14 +9,49 @@ import yappyLogo from '../assets/yappy-logo.svg'
 //    Ahí la salida es reintentar / escríbanos, no "seguir en prueba".
 // El contexto se detecta con /api/cobro/estado (200 = hay sesión; 401 = solo token).
 //
-// Flujo: pulsar "Pagar" → /api/cobro/pagar crea la orden y empuja la solicitud a
-// la app Yappy del cliente → sondeamos /api/cobro/confirmar hasta COMPLETED.
+// Flujo (Botón de Pago V2, web component OBLIGATORIO): el usuario pulsa <btn-yappy> →
+// eventClick crea la orden en el backend (/api/cobro/pagar, 2 POST → transactionId/token/
+// documentName) → se los pasamos a eventPayment, que ABRE el flujo de Yappy y empuja la
+// solicitud al teléfono del cliente → el cliente aprueba en su app → el IPN confirma en el
+// backend → sondeamos /api/cobro/confirmar para reflejar en pantalla el COMPLETED del IPN.
 //
-// IMPORTANTE: un intento fallido (503 "Yappy no disponible", error de red) es un NO-OP
+// REGLA DURA: la activación la pone EXCLUSIVAMENTE el IPN. eventSuccess/eventError del
+// componente son SOLO para la UX (no activan la suscripción).
+//
+// IMPORTANTE: un intento fallido (503 "Yappy no disponible", error de red, E0xx) es un NO-OP
 // sobre la suscripción — el backend lanza 503 ANTES de crear ninguna CobroTransaccion ni
 // tocar el trial, así que el cliente queda exactamente como estaba.
 
 const SOPORTE_EMAIL = 'soporte@socratespro.lat'  // TODO(confirmar con Javier): buzón real / canal
+
+// --- Botón de Pago Yappy V2 (web component <btn-yappy>) ---
+// Se carga del CDN de Yappy y es la pieza OBLIGATORIA que abre el flujo de pago. Prod vs UAT
+// según el entorno, igual que el BASE_URL del backend: el host real de producción usa el CDN
+// de prod; cualquier otro (localhost/staging) usa el de UAT para no pegar contra producción.
+const ES_PROD = typeof window !== 'undefined' && window.location.hostname === 'socratespro.lat'
+const YAPPY_CDN = ES_PROD
+  ? 'https://bt-cdn.yappy.cloud/v1/cdn/web-component-btn-yappy.js'
+  : 'https://bt-cdn-uat.yappycloud.com/v1/cdn/web-component-btn-yappy.js'
+
+// Catálogo oficial de errores del Botón (E002–E100) → mensajes claros al usuario. Los más
+// relevantes: E005 (número no registrado en Yappy) y E009 (orderId > 15; el backend ya
+// respeta el límite, así que no debería llegar).
+const ERRORES_YAPPY = {
+  E002: 'Algo salió mal. Inténtelo de nuevo.',
+  E006: 'Algo salió mal. Inténtelo de nuevo.',
+  E008: 'Algo salió mal. Inténtelo de nuevo.',
+  E012: 'Algo salió mal. Inténtelo de nuevo.',
+  E005: 'Este número no está registrado en Yappy. Verifique el número o use otro.',
+  E007: 'Este pago ya había sido registrado.',
+  E009: 'No pudimos generar la orden de pago. Inténtelo de nuevo.',
+  E010: 'El monto del cobro no es válido.',
+  E011: 'Hubo un problema con el enlace de pago.',
+  E100: 'Solicitud inválida. Inténtelo de nuevo.',
+}
+function mensajeErrorYappy(code) {
+  return ERRORES_YAPPY[String(code || '').toUpperCase()] ||
+    'No se pudo completar el pago con Yappy. Inténtelo de nuevo.'
+}
 
 const card = { background: 'white', borderRadius: 16, padding: 40, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 const btnPrimary = (on) => ({
@@ -47,6 +82,12 @@ export default function Pagar() {
   // Solo entorno de pruebas (localhost). En producción (socratespro.lat) es false y
   // estos atajos no se muestran ni existen en el backend (router gated por STAGING_MODE).
   const esStaging = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+  // Web component de Yappy: ref al <btn-yappy>, carga del script del CDN y disponibilidad.
+  const btnRef = useRef(null)
+  const [componenteListo, setComponenteListo] = useState(false)  // script del CDN cargado
+  const [componenteError, setComponenteError] = useState(false)  // el CDN no cargó
+  const [yappyOnline, setYappyOnline] = useState(true)           // isYappyOnline del componente
 
   // Detectar el contexto al entrar: ¿hay sesión activa? (banner) o ¿solo token? (correo).
   useEffect(() => {
@@ -84,18 +125,81 @@ export default function Pagar() {
     return () => { vivo = false; clearInterval(id) }
   }, [fase, ct])
 
-  const pagar = async () => {
-    setError('')
-    try {
-      const r = await fetch(`/api/cobro/pagar?ct=${encodeURIComponent(ct)}`)
-      if (r.status === 503) { setFase('no_disponible'); return }
-      const d = await r.json().catch(() => ({}))
-      if (r.ok && d?.ok) { setFase('esperando') }
-      else { setError(d?.detail || 'No pudimos iniciar el pago. Inténtelo de nuevo.'); setFase('error') }
-    } catch {
-      setError('Error de conexión. Inténtelo de nuevo.'); setFase('error')
+  // Carga el web component del Botón de Pago desde el CDN de Yappy (una sola vez, idempotente).
+  // Sin esto, <btn-yappy> no se define y no hay flujo de pago. No se necesita en staging
+  // (que usa el simulador del backend).
+  useEffect(() => {
+    if (esStaging) return
+    let cancelado = false
+    // El componente está "listo" cuando <btn-yappy> queda DEFINIDO (whenDefined resuelve
+    // tanto si el script acaba de inyectarse como si ya estaba de una visita anterior).
+    window.customElements?.whenDefined('btn-yappy').then(() => { if (!cancelado) setComponenteListo(true) })
+    // Inyecta el script del CDN una sola vez (idempotente por el data-attr).
+    if (!document.querySelector('script[data-yappy-cdn]')) {
+      const s = document.createElement('script')
+      s.type = 'module'
+      s.src = YAPPY_CDN
+      s.setAttribute('data-yappy-cdn', '1')
+      s.onerror = () => { if (!cancelado) setComponenteError(true) }
+      document.head.appendChild(s)
     }
-  }
+    return () => { cancelado = true }
+  }, [esStaging])
+
+  // Cablea la coreografía oficial de eventos del <btn-yappy> una vez definido:
+  //   eventClick  → crea la orden en el backend (los 2 POST de /api/cobro/pagar)
+  //   eventPayment({transactionId, token, documentName}) → abre el flujo de pago de Yappy
+  //   eventSuccess/eventError → SOLO UX. La activación la pone el IPN, no estos eventos.
+  // En eventSuccess pasamos a 'esperando' (no a 'ok'): el sondeo de /confirmar refleja el
+  // COMPLETED que escriba el IPN — la verdad del cobro. isButtonLoading marca nuestra carga.
+  useEffect(() => {
+    if (esStaging || !componenteListo) return
+    if (!(fase === 'inicio' || fase === 'error')) return
+    let cancelado = false
+    window.customElements.whenDefined('btn-yappy').then(() => {
+      const el = btnRef.current
+      if (cancelado || !el) return
+      // isYappyOnline: si el componente reporta que Yappy está caído, lo señalizamos en la UI.
+      if (el.isYappyOnline === false) setYappyOnline(false)
+
+      el.eventClick = async () => {
+        setError('')
+        el.isButtonLoading = true
+        try {
+          const r = await fetch(`/api/cobro/pagar?ct=${encodeURIComponent(ct)}`)
+          if (r.status === 503) { setFase('no_disponible'); return }
+          const d = await r.json().catch(() => ({}))
+          if (r.ok && d?.ok && d.transactionId && d.token && d.documentName) {
+            // Abre el flujo de pago de Yappy con los 3 datos de la orden recién creada.
+            el.eventPayment({ transactionId: d.transactionId, token: d.token, documentName: d.documentName })
+          } else {
+            setError(d?.detail || 'No pudimos iniciar el pago. Inténtelo de nuevo.')
+            setFase('error')
+          }
+        } catch {
+          setError('Error de conexión. Inténtelo de nuevo.'); setFase('error')
+        } finally {
+          el.isButtonLoading = false
+        }
+      }
+
+      // El usuario aprobó en su app: NO activamos aquí. Vamos a 'esperando' para que el sondeo
+      // de /confirmar refleje el COMPLETED que escribirá el IPN (la verdad del cobro).
+      el.eventSuccess = () => { setFase((f) => (f === 'ok' ? f : 'esperando')) }
+
+      // Error del componente/SDK (catálogo E0xx, o cancelación). Mensaje claro; NO se ha cobrado.
+      el.eventError = (e) => {
+        const code = e?.detail?.error || e?.detail?.code || e?.error || e?.code
+        setError(mensajeErrorYappy(code))
+        setFase('error')
+      }
+    })
+    return () => { cancelado = true }
+  }, [esStaging, componenteListo, fase, ct])
+
+  // Reintentar = volver al inicio para pulsar de nuevo el Botón de Yappy (que reabre el flujo
+  // y reenvía la solicitud al teléfono). La creación de la orden vive ahora en eventClick.
+  const reintentar = () => { setError(''); setFase('inicio') }
 
   // Atajo SOLO staging (rama `ct`): equivalente al "Simular aprobación" del registro,
   // pero para la CONVERSIÓN ANTICIPADA. Reemplaza el paso de "crear la orden con Yappy"
@@ -123,7 +227,7 @@ export default function Pagar() {
           {subEstado === 'trialing' ? 'Seguir en mi prueba' : 'Volver a Socrates Pro'}
         </button>
       ) : conReintento ? (
-        <button type="button" onClick={pagar} style={btnSecundario}>Reintentar</button>
+        <button type="button" onClick={reintentar} style={btnSecundario}>Reintentar</button>
       ) : null}
       <a href={`mailto:${SOPORTE_EMAIL}?subject=${encodeURIComponent('Ayuda con mi pago (Yappy)')}`} style={linkSoporte}>
         ¿Necesita ayuda? Escríbanos
@@ -179,8 +283,30 @@ export default function Pagar() {
                   </div>
                 </div>
               </>
+            ) : componenteError ? (
+              /* El CDN de Yappy no cargó: sin botón no hay pago. Salida clara. */
+              <div style={{ textAlign: 'center', fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                No pudimos cargar el pago con Yappy. Revise su conexión e inténtelo de nuevo.
+                <button type="button" onClick={() => window.location.reload()} style={{ ...btnSecundario, marginTop: 12 }}>Reintentar</button>
+              </div>
             ) : (
-              <button type="button" onClick={pagar} style={btnPrimary(true)}>Pagar con Yappy</button>
+              <>
+                {/* Botón de Pago oficial de Yappy (web component). theme darkBlue = marca;
+                    rounded combina con el resto de botones (borderRadius 8). Es la pieza que
+                    abre el flujo y empuja la solicitud al teléfono; sus eventos van cableados
+                    en el useEffect (eventClick→crear orden→eventPayment; eventSuccess/eventError→UX). */}
+                <btn-yappy ref={btnRef} theme="darkBlue" rounded="true"></btn-yappy>
+                {!componenteListo && (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', textAlign: 'center', marginTop: 8 }}>
+                    Cargando el pago seguro…
+                  </p>
+                )}
+                {!yappyOnline && (
+                  <p style={{ fontSize: 12, color: 'var(--red)', textAlign: 'center', marginTop: 8 }}>
+                    Yappy no está disponible en este momento. Inténtelo de nuevo en unos minutos.
+                  </p>
+                )}
+              </>
             )}
             {/* Tras un error, ofrecer también la salida contextual (no solo reintentar). */}
             {fase === 'error' && ctx === 'sesion' && (
@@ -204,7 +330,7 @@ export default function Pagar() {
               Le hemos enviado una solicitud de pago. Apruébela con su PIN o huella; esta página se
               actualizará en cuanto se confirme.
             </p>
-            <button type="button" onClick={pagar} style={{ marginTop: 16, background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+            <button type="button" onClick={reintentar} style={{ marginTop: 16, background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               No me llegó — reenviar solicitud
             </button>
             {ctx === 'sesion' && (
