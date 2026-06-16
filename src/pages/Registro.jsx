@@ -3,6 +3,7 @@ import { Mail, Smartphone, CheckCircle2, AlertTriangle, RotateCcw, Wrench, Shiel
 import iconoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 import { PAISES } from '../utils/paises'
+import CronometroYappy from '../components/CronometroYappy'
 
 // Icono de cabecera sobrio (sustituye los emojis de sistema). Centrado, navy de marca.
 function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
@@ -153,16 +154,29 @@ export default function Registro() {
   useEffect(() => {
     if (paso !== 'verifica') return
     let vivo = true
-    const id = setInterval(async () => {
+    const comprobar = async () => {
       try {
         const r = await fetch('/api/registro/estado-verificacion')
         const d = await r.json().catch(() => ({}))
         if (vivo && d?.verificado && d?.rt) {
-          clearInterval(id); setRt(d.rt); setPaso('plan')
+          vivo = false; clearInterval(id); setRt(d.rt); setPaso('plan')
         }
-      } catch { /* reintenta en el próximo tick */ }
-    }, 3000)
-    return () => { vivo = false; clearInterval(id) }
+      } catch { /* reintenta en el próximo tick / señal */ }
+    }
+    const id = setInterval(comprobar, 3000)
+    // Señal INSTANTÁNEA desde la pestaña que abrió el enlace del email (misma-origin): la
+    // página de verificación escribe en localStorage y emite por BroadcastChannel → aquí
+    // comprobamos al momento, sin esperar al tick de 3s. El sondeo queda de respaldo (p. ej.
+    // si el enlace se abrió en otro dispositivo, donde estas señales no llegan).
+    const onStorage = (e) => { if (e.key === 'socrates_email_verificado') comprobar() }
+    window.addEventListener('storage', onStorage)
+    let bc
+    try { bc = new BroadcastChannel('socrates_registro'); bc.onmessage = () => comprobar() } catch { /* sin soporte: queda el sondeo */ }
+    return () => {
+      vivo = false; clearInterval(id)
+      window.removeEventListener('storage', onStorage)
+      try { bc && bc.close() } catch { /* noop */ }
+    }
   }, [paso])
 
   // Interpreta la respuesta de /cobro/confirmar y fija el estado del pago. Único lugar
@@ -196,10 +210,13 @@ export default function Registro() {
   // con salidas claras. En staging (sin Yappy real) no sondea; los botones "simular"
   // confirman. Si no hay orden creada (Yappy aún no habilitado) tampoco sondea.
   useEffect(() => {
-    if (paso !== 'pago' || !cobro?.ct || esStaging || !cobro?.ordenCreada) return
+    if (paso !== 'pago' || !cobro?.ct || esStaging || !cobro?.ordenCreada || pagoEstado !== 'esperando') return
     let vivo = true
     let intentos = 0
-    const MAX_INTENTOS = 45  // ~3 min a 4s; el alta es con el cliente presente
+    // ~5,3 min a 4s: red de seguridad por DETRÁS del cronómetro de 5 min, que es quien marca
+    // la expiración visible (la orden Yappy caduca a los 5 min). Así el sondeo no se rinde
+    // antes de que la orden caduque de verdad.
+    const MAX_INTENTOS = 80
     const id = setInterval(async () => {
       intentos++
       try {
@@ -214,7 +231,7 @@ export default function Registro() {
       }
     }, 4000)
     return () => { vivo = false; clearInterval(id) }
-  }, [paso, cobro]) // eslint-disable-line
+  }, [paso, cobro, pagoEstado]) // eslint-disable-line
 
   // Comprobar elegibilidad de la prueba de $1 cuando el número de Yappy es válido (regla D).
   useEffect(() => {
@@ -356,12 +373,18 @@ export default function Registro() {
     }
   }
 
+  // Centrado robusto que NO recorta: alignItems flex-start + margin:auto en la tarjeta.
+  // Si el contenido cabe, queda centrado vertical; si es más alto que el viewport, se
+  // ancla arriba y hace scroll natural (sin la parte superior inalcanzable del center).
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 16px' }}>
-      <div style={{ background: 'white', borderRadius: 16, padding: 26, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-        <div style={{ textAlign: 'center', marginBottom: 14 }}>
-          <img src={iconoSocrates} alt="Socrates Pro" width="110" style={{ display: 'block', margin: '0 auto', height: 'auto' }} />
-          <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>El flujo continuo de oportunidades a ingresos</p>
+    <div style={{ minHeight: '100vh', background: 'var(--blue)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '14px 16px', boxSizing: 'border-box', overflowY: 'auto' }}>
+      <div style={{ background: 'white', borderRadius: 16, padding: 16, width: '100%', maxWidth: 500, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', margin: 'auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 8 }}>
+          <img src={iconoSocrates} alt="Socrates Pro" width="72" style={{ display: 'block', margin: '0 auto', height: 'auto' }} />
+          {/* El claim solo en el paso de datos; en los pasos largos (plan/pago) se omite para ganar altura. */}
+          {paso === 'datos' && (
+            <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 3 }}>El flujo continuo de oportunidades a ingresos</p>
+          )}
         </div>
 
         {error && (
@@ -498,12 +521,12 @@ export default function Registro() {
         {paso === 'plan' && (
           <div>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Elija su plan</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 14 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 8 }}>
               Pro y Pro+ incluyen 5 usuarios (ampliables con paquetes de +5); Lite es para 1 usuario.
             </p>
 
             {/* Conmutador Mensual / Anual ("2 meses gratis") */}
-            <div style={{ display: 'inline-flex', padding: 3, borderRadius: 999, background: 'var(--gray)', marginBottom: 16 }}>
+            <div style={{ display: 'inline-flex', padding: 3, borderRadius: 999, background: 'var(--gray)', marginBottom: 10 }}>
               {[['mensual', 'Mensual'], ['anual', 'Anual']].map(([val, label]) => (
                 <button key={val} type="button" onClick={() => setCiclo(val)} style={{
                   padding: '6px 16px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 13,
@@ -517,7 +540,7 @@ export default function Registro() {
               ))}
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
               {Object.values(planesMeta.planes).map((p) => {
                 const sel = plan === p.id
                 // Precio mostrado según ciclo (anual = base × meses, "2 meses gratis").
@@ -528,7 +551,7 @@ export default function Registro() {
                 return (
                   <button key={p.id} type="button" onClick={() => { setPlan(p.id); setPacks(pk => Math.min(pk, p.max_packs || 0)) }} style={{
                     textAlign: 'left', border: `2px solid ${sel ? 'var(--blue)' : 'var(--border)'}`,
-                    background: sel ? 'var(--blue-light)' : 'white', borderRadius: 10, padding: '14px 16px', cursor: 'pointer',
+                    background: sel ? 'var(--blue-light)' : 'white', borderRadius: 10, padding: '8px 14px', cursor: 'pointer',
                   }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>{p.nombre}</span>
@@ -551,7 +574,7 @@ export default function Registro() {
             </div>
 
             {permitePacks && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                 <div>
                   <div style={{ fontWeight: 600, fontSize: 14 }}>Paquetes de +5 usuarios</div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>+${anual ? cfg.pack_usd * meses : cfg.pack_usd}{sufijo} por paquete</div>
@@ -564,7 +587,7 @@ export default function Registro() {
               </div>
             )}
 
-            <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 16, marginBottom: 20 }}>
+            <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 11, marginBottom: 10 }}>
               <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
               {(() => {
                 // Precio BASE limpio mientras decide; el desglose con ITBMS y el total real
@@ -580,19 +603,15 @@ export default function Registro() {
                   </div>
                 )
               })()}
-              {totalLanzamiento != null && (
-                <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>Promoción: Track incluido gratis los primeros {cfg.lanzamiento_meses} meses</div>
-              )}
-              {anual && (
-                <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Equivale a 2 meses gratis frente al pago mensual.</div>
-              )}
+              {/* La promoción de Track ya se muestra en la tarjeta del plan; aquí se omite
+                  para no duplicar y ganar altura. */}
               {/* Trial-first: dejar claro que HOY paga $1, no la cuota entera. La cuota de
                   arriba es lo que se cobra al terminar la prueba (menos ese $1). */}
               {trialElegible && (
                 <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Hoy paga</span>
-                    <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)' }}>
+                    <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
                       $1<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> + ITBMS</span>
                     </span>
                   </div>
@@ -604,7 +623,7 @@ export default function Registro() {
             </div>
 
             {/* Método de pago: número Yappy (no se cobra ahora; se usa al fin de la prueba) */}
-            <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 16, marginBottom: 16 }}>
+            <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 11, marginBottom: 10 }}>
               <Campo label="Su número de Yappy">
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>+507</span>
@@ -613,8 +632,7 @@ export default function Registro() {
                 </div>
               </Campo>
               <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -6 }}>
-                Su método de pago. Recibirá la solicitud de cobro en su app de Yappy y la
-                aprueba con su PIN o huella.
+                Su método de pago. Aprobará el cobro en su app de Yappy con PIN o huella.
               </div>
               {yappyTel && !yappyTelOk && (
                 <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>El número debe tener 8 dígitos.</div>
@@ -622,7 +640,7 @@ export default function Registro() {
             </div>
 
             {/* Marca: que desde que elige se vea que el pago es por Yappy. */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '0 0 14px', fontSize: 13, color: 'var(--text-muted)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>
               <span>Pago con</span>
               <YappyLogo width={86} />
             </div>
@@ -635,8 +653,8 @@ export default function Registro() {
                   style={btn(!loading && yappyTelOk)}>
                   {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
                 </button>
-                <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '8px 0 14px' }}>
-                  $1 + ITBMS. Valida su Yappy y se descuenta del primer pago al terminar la prueba.
+                <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 8px' }}>
+                  $1 + ITBMS hoy; se descuenta del primer pago al acabar la prueba.
                 </p>
               </>
             ) : (
@@ -780,7 +798,12 @@ export default function Registro() {
                     El cobro por Yappy se está habilitando. Su cuenta queda guardada; le avisaremos por correo.
                   </p>
                 ) : (
-                  <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Esperando su confirmación en Yappy…</div>
+                  <>
+                    {/* Cronómetro de 5 min (la orden Yappy caduca a los 5 min, confirmado por
+                        Banco General). key={ct} → cada reenvío arranca de nuevo en 5:00. */}
+                    <CronometroYappy key={cobro.ct} segundos={300} onExpirar={() => setPagoEstado('expirado')} />
+                    <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Esperando su confirmación en Yappy…</div>
+                  </>
                 )}
               </>
             )}

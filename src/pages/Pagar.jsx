@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Smartphone, CheckCircle2, AlertTriangle, Wrench } from 'lucide-react'
 import logoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
+import CronometroYappy from '../components/CronometroYappy'
 
 // Icono de cabecera sobrio (sustituye emojis de sistema). Centrado, navy de marca.
 function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
@@ -365,10 +366,15 @@ export default function Pagar() {
           <div style={{ textAlign: 'center' }}>
             <IconoHeader icon={Smartphone} />
             <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Revise su app de Yappy</h2>
-            <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
+            <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 14 }}>
               Le hemos enviado una solicitud de pago. Apruébela con su PIN o huella; esta página se
               actualizará en cuanto se confirme.
             </p>
+            {/* Cronómetro de 5 min: la orden Yappy caduca a los 5 min (confirmado por Banco
+                General). Al expirar → pantalla "fallido" con EXPIRED, que ofrece reintentar. */}
+            {!esStaging && (
+              <CronometroYappy segundos={300} onExpirar={() => { setResultadoFallo('EXPIRED'); setFase('fallido') }} />
+            )}
             <button type="button" onClick={reintentar} style={{ marginTop: 16, background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               No me llegó — reenviar solicitud
             </button>
