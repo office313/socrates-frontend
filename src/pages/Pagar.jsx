@@ -53,6 +53,17 @@ function mensajeErrorYappy(code) {
     'No se pudo completar el pago con Yappy. Inténtelo de nuevo.'
 }
 
+// id de plan → nombre de cara al cliente (espejo de api/planes.py). 'basic'/desconocido
+// → null (sin nombre): el encabezado cae a un título neutro, nunca a "Pagar con Yappy".
+const PLAN_NOMBRES = { lite: 'Lite', pro: 'Pro', 'pro-plus': 'Pro+', proplus: 'Pro+' }
+function nombrePlan(id) {
+  return PLAN_NOMBRES[String(id || '').toLowerCase()] || null
+}
+function precioPlan(monto, ciclo) {
+  if (typeof monto !== 'number' || Number.isNaN(monto)) return null
+  return `US$ ${monto.toFixed(2)}/${ciclo === 'anual' ? 'año' : 'mes'}`
+}
+
 const card = { background: 'white', borderRadius: 16, padding: 40, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 const btnPrimary = (on) => ({
   width: '100%', padding: '12px', background: on ? '#00C0A3' : '#ccc', color: 'white',
@@ -75,6 +86,10 @@ export default function Pagar() {
   // Contexto: null (sin saber aún) | 'sesion' (en-app) | 'token' (enlace de correo).
   const [ctx, setCtx] = useState(null)
   const [subEstado, setSubEstado] = useState(null)  // 'trialing' | 'active' | … (solo si hay sesión)
+  // Plan + precio del cobro, para el encabezado (datos reales de /cobro/estado, no fijos).
+  const [planId, setPlanId] = useState(null)        // 'lite' | 'pro' | 'pro-plus'
+  const [monto, setMonto] = useState(null)          // total a cobrar (base + ITBMS)
+  const [ciclo, setCiclo] = useState(null)          // 'mensual' | 'anual'
   // Estado terminal del cobro cuando NO se aplicó (DECLINED/EXPIRED/…), para la pantalla
   // 'fallido' — un no-op sobre la suscripción (la prueba/cuenta sigue intacta).
   const [resultadoFallo, setResultadoFallo] = useState('')
@@ -96,8 +111,12 @@ export default function Pagar() {
       .then(r => r.ok ? r.json() : null)
       .then(d => {
         if (!vivo) return
-        if (d) { setCtx('sesion'); setSubEstado(d.suscripcion_estado || null) }
-        else { setCtx('token') }
+        if (d) {
+          setCtx('sesion'); setSubEstado(d.suscripcion_estado || null)
+          setPlanId(d.plan || null)
+          setMonto(typeof d.monto === 'number' ? d.monto : null)
+          setCiclo(d.ciclo || null)
+        } else { setCtx('token') }
       })
       .catch(() => { if (vivo) setCtx('token') })
     return () => { vivo = false }
@@ -257,9 +276,18 @@ export default function Pagar() {
 
         {(fase === 'inicio' || fase === 'error') && (
           <>
-            <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px', textAlign: 'center' }}>Pagar con Yappy</h2>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '0 0 14px', fontSize: 13, color: 'var(--text-muted)' }}>
-              <span>Pago seguro con</span><YappyLogo width={88} />
+            {/* Encabezado: el PLAN que se contrata (protagonista, navy de marca) + su precio/
+                ciclo, con datos reales de /cobro/estado. Sin nombre de plan (contexto token o
+                desconocido) → título neutro, nunca el redundante "Pagar con Yappy" (lo dice el botón). */}
+            <div style={{ textAlign: 'center', marginBottom: 14 }}>
+              <h2 style={{ fontSize: 20, color: 'var(--blue)', fontWeight: 700, margin: 0 }}>
+                {nombrePlan(planId) ? `Plan ${nombrePlan(planId)}` : 'Complete su pago'}
+              </h2>
+              {precioPlan(monto, ciclo) && (
+                <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600, margin: '4px 0 0' }}>
+                  {precioPlan(monto, ciclo)}
+                </p>
+              )}
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
               Al pulsar recibirá una solicitud de pago en su app de Yappy. Apruébela con su PIN o huella.
@@ -308,6 +336,11 @@ export default function Pagar() {
                 )}
               </>
             )}
+            {/* Sello de confianza (branding). DEBAJO del botón, como nota fina: el protagonista
+                del encabezado es el plan, no "Yappy". Una sola mención del logo como sello. */}
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+              <span>Pago seguro con</span><YappyLogo width={66} />
+            </div>
             {/* Tras un error, ofrecer también la salida contextual (no solo reintentar). */}
             {fase === 'error' && ctx === 'sesion' && (
               <button type="button" onClick={irApp} style={{ ...btnSecundario, marginTop: 8 }}>
