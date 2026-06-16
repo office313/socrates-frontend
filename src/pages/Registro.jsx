@@ -523,9 +523,9 @@ export default function Registro() {
                 const base = totalLanzamiento != null ? totalLanzamiento : totalLista
                 return (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
-                    <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{anual ? 'Cuota anual' : 'Cuota mensual'}</span>
-                    <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)' }}>
-                      ${base}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo} + ITBMS</span>
+                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{anual ? 'Cuota anual (luego)' : 'Cuota mensual (luego)'}</span>
+                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>
+                      ${base}<span style={{ fontSize: 11, fontWeight: 400 }}>{sufijo} + ITBMS</span>
                     </span>
                   </div>
                 )
@@ -541,8 +541,8 @@ export default function Registro() {
               {trialElegible && (
                 <>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Hoy paga</span>
-                    <span style={{ fontSize: 18, fontWeight: 700, color: '#00A88E' }}>
+                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Hoy paga</span>
+                    <span style={{ fontSize: 26, fontWeight: 800, color: 'var(--text)' }}>
                       $1<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> + ITBMS</span>
                     </span>
                   </div>
