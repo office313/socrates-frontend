@@ -73,8 +73,10 @@ function precioPlan(monto, ciclo) {
 }
 
 const card = { background: 'white', borderRadius: 16, padding: 40, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
+// Botón de acción principal en navy de marca (NO verde): coherente con el <btn-yappy>
+// (theme darkBlue) y con la "elegancia contenida" de la marca.
 const btnPrimary = (on) => ({
-  width: '100%', padding: '12px', background: on ? '#00C0A3' : '#ccc', color: 'white',
+  width: '100%', padding: '12px', background: on ? 'var(--blue)' : '#ccc', color: 'white',
   borderRadius: 8, fontSize: 14, fontWeight: 700, border: 'none', cursor: on ? 'pointer' : 'default',
 })
 const btnSecundario = {
@@ -96,7 +98,7 @@ export default function Pagar() {
   const [subEstado, setSubEstado] = useState(null)  // 'trialing' | 'active' | … (solo si hay sesión)
   // Plan + precio del cobro, para el encabezado (datos reales de /cobro/estado, no fijos).
   const [planId, setPlanId] = useState(null)        // 'lite' | 'pro' | 'pro-plus'
-  const [monto, setMonto] = useState(null)          // total a cobrar (base + ITBMS)
+  const [montoBase, setMontoBase] = useState(null)  // base SIN impuesto (el ITBMS se indica aparte)
   const [ciclo, setCiclo] = useState(null)          // 'mensual' | 'anual'
   // Estado terminal del cobro cuando NO se aplicó (DECLINED/EXPIRED/…), para la pantalla
   // 'fallido' — un no-op sobre la suscripción (la prueba/cuenta sigue intacta).
@@ -126,7 +128,7 @@ export default function Pagar() {
         if (d) {
           setCtx('sesion'); setSubEstado(d.suscripcion_estado || null)
           setPlanId(d.plan || null)
-          setMonto(typeof d.monto === 'number' ? d.monto : null)
+          setMontoBase(typeof d.monto_base === 'number' ? d.monto_base : null)
           setCiclo(d.ciclo || null)
           // ¿el pago es forzado? MISMA regla que el gate del Layout (util compartido, gracia 0).
           setForzado(exigePago(d))
@@ -297,9 +299,10 @@ export default function Pagar() {
               <h2 style={{ fontSize: 20, color: 'var(--blue)', fontWeight: 700, margin: 0 }}>
                 {nombrePlan(planId) ? `Plan ${nombrePlan(planId)}` : 'Complete su pago'}
               </h2>
-              {precioPlan(monto, ciclo) && (
+              {precioPlan(montoBase, ciclo) && (
                 <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600, margin: '4px 0 0' }}>
-                  {precioPlan(monto, ciclo)}
+                  {precioPlan(montoBase, ciclo)}
+                  <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> + 7% ITBMS</span>
                 </p>
               )}
             </div>
