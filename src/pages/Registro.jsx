@@ -117,6 +117,10 @@ export default function Registro() {
   // eterno: el sondeo se rinde con timeout y los estados terminales de Yappy tienen salida.
   const [pagoEstado, setPagoEstado] = useState('esperando')
   const [cambiarTel, setCambiarTel] = useState(false)  // mostrar input para corregir el número
+  // Reenvío de la verificación: confirmación visible + cooldown (evita pulsaciones repetidas
+  // y protege el límite de envíos de Resend).
+  const [reenvioMsg, setReenvioMsg] = useState('')
+  const [reenvioCooldown, setReenvioCooldown] = useState(0)  // segundos restantes
 
   // Al cargar: si venimos de la verificación de email (paso=2 & rt) → paso plan.
   useEffect(() => {
@@ -270,15 +274,26 @@ export default function Registro() {
   }
 
   const reenviar = async () => {
-    setError(''); setLoading(true)
+    if (loading || reenvioCooldown > 0) return
+    setError(''); setReenvioMsg(''); setLoading(true)
     try {
       await fetch('/api/registro/reenviar', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: form.email }),
       })
-    } catch { /* respuesta genérica */ }
-    finally { setLoading(false) }
+      setReenvioMsg('Correo reenviado. Revise su bandeja de entrada y la carpeta de spam.')
+      setReenvioCooldown(60)  // cooldown 60s: feedback + protege el límite de Resend
+    } catch {
+      setReenvioMsg('No pudimos reenviar ahora. Inténtelo en un momento.')
+    } finally { setLoading(false) }
   }
+
+  // Cuenta atrás del cooldown de reenvío (1s por tick hasta 0).
+  useEffect(() => {
+    if (reenvioCooldown <= 0) return
+    const id = setTimeout(() => setReenvioCooldown(reenvioCooldown - 1), 1000)
+    return () => clearTimeout(id)
+  }, [reenvioCooldown])
 
   // Móvil Yappy = método de pago: 8 dígitos de Panamá (admite +507 / separadores).
   const yappyTelDigitos = yappyTel.replace(/\D/g, '').replace(/^507/, '')
@@ -431,10 +446,19 @@ export default function Registro() {
             </p>
             <p style={{ color: 'var(--text-muted)', fontSize: 12, marginTop: 20 }}>
               ¿No le llegó?{' '}
-              <button onClick={reenviar} disabled={loading} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline', fontSize: 12 }}>
-                Reenviar email
+              <button onClick={reenviar} disabled={loading || reenvioCooldown > 0} style={{
+                background: 'none', border: 'none',
+                color: (loading || reenvioCooldown > 0) ? 'var(--text-muted)' : 'var(--blue)',
+                fontWeight: 600, fontSize: 12,
+                cursor: (loading || reenvioCooldown > 0) ? 'default' : 'pointer',
+                textDecoration: (loading || reenvioCooldown > 0) ? 'none' : 'underline',
+              }}>
+                {loading ? 'Reenviando…' : reenvioCooldown > 0 ? `Podrá reenviar en ${reenvioCooldown}s` : 'Reenviar email'}
               </button>
             </p>
+            {reenvioMsg && (
+              <p style={{ color: 'var(--blue)', fontSize: 12, fontWeight: 600, marginTop: 4 }}>✓ {reenvioMsg}</p>
+            )}
             {esStaging && (
               <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px dashed var(--border)' }}>
                 <div style={{ fontSize: 11, color: 'var(--text-muted)', marginBottom: 8 }}>Entorno de pruebas (el email no se envía de verdad)</div>
