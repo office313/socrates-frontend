@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
+import { Smartphone, CheckCircle2, AlertTriangle, Wrench } from 'lucide-react'
 import logoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
+
+// Icono de cabecera sobrio (sustituye emojis de sistema). Centrado, navy de marca.
+function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
+  return <Icon size={size} strokeWidth={1.5} color={color} style={{ display: 'block', margin: '0 auto 10px' }} />
+}
 
 // Página de pago del Camino B (Yappy). Se llega aquí desde DOS contextos:
 //  - EN-APP (banner de conversión anticipada): el cliente YA tiene sesión y prueba/
@@ -357,7 +363,7 @@ export default function Pagar() {
 
         {fase === 'esperando' && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
+            <IconoHeader icon={Smartphone} />
             <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Revise su app de Yappy</h2>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
               Le hemos enviado una solicitud de pago. Apruébela con su PIN o huella; esta página se
@@ -376,7 +382,7 @@ export default function Pagar() {
 
         {fase === 'ok' && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+            <IconoHeader icon={CheckCircle2} />
             <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Pago confirmado</h2>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
               Su suscripción está al día. Gracias.
@@ -389,7 +395,7 @@ export default function Pagar() {
 
         {fase === 'fallido' && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
+            <IconoHeader icon={AlertTriangle} color="var(--red)" />
             <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>
               {resultadoFallo === 'EXPIRED' ? 'La solicitud de pago expiró' : 'El pago no se completó'}
             </h2>
@@ -417,7 +423,7 @@ export default function Pagar() {
 
         {fase === 'no_disponible' && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 36, marginBottom: 8 }}>🛠️</div>
+            <IconoHeader icon={Wrench} color="var(--text-muted)" />
             <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>El pago con Yappy aún no está disponible</h2>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
               {ctx === 'sesion'
