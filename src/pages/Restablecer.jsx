@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import logoSocrates from '../assets/socratespro-logo-completo.svg'
 
 const is = {
@@ -87,7 +88,7 @@ export default function Restablecer() {
   if (estado === 'invalido') {
     return card(
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>⚠️</div>
+        <AlertTriangle size={40} strokeWidth={1.5} color="var(--red)" style={{ display: "block", margin: "0 auto 8px" }} />
         <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Enlace no válido o caducado</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20 }}>
           Este enlace ya se usó o ha expirado. Solicite uno nuevo desde "¿Olvidó su contraseña?".
@@ -103,7 +104,7 @@ export default function Restablecer() {
   if (estado === 'listo') {
     return card(
       <div style={{ textAlign: 'center' }}>
-        <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+        <CheckCircle2 size={40} strokeWidth={1.5} color="var(--blue)" style={{ display: "block", margin: "0 auto 8px" }} />
         <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Contraseña actualizada</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
           Listo. Entrando a su cuenta...
