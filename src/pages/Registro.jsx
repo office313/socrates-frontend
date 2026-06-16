@@ -523,7 +523,7 @@ export default function Registro() {
                 const base = totalLanzamiento != null ? totalLanzamiento : totalLista
                 return (
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
-                    <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{anual ? 'Precio anual' : 'Precio mensual'}</span>
+                    <span style={{ fontSize: 14, color: 'var(--text-muted)' }}>{anual ? 'Cuota anual' : 'Cuota mensual'}</span>
                     <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)' }}>
                       ${base}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo} + ITBMS</span>
                     </span>
@@ -535,6 +535,21 @@ export default function Registro() {
               )}
               {anual && (
                 <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>Equivale a 2 meses gratis frente al pago mensual.</div>
+              )}
+              {/* Trial-first: dejar claro que HOY paga $1, no la cuota entera. La cuota de
+                  arriba es lo que se cobra al terminar la prueba (menos ese $1). */}
+              {trialElegible && (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Hoy paga</span>
+                    <span style={{ fontSize: 18, fontWeight: 700, color: '#00A88E' }}>
+                      $1<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> + ITBMS</span>
+                    </span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
+                    Prueba de 5 días por $1. Al terminar, se cobra la cuota indicada arriba, menos ese $1 ya abonado.
+                  </div>
+                </>
               )}
             </div>
 
