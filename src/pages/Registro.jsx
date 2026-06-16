@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react'
+import { Mail, Smartphone, CheckCircle2, AlertTriangle, RotateCcw, Wrench, ShieldCheck, Check } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 import { PAISES } from '../utils/paises'
 
+// Icono de cabecera sobrio (sustituye los emojis de sistema). Centrado, navy de marca.
+function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
+  return <Icon size={size} strokeWidth={1.5} color={color} style={{ display: 'block', margin: '0 auto 10px' }} />
+}
+
 // Estilos compartidos (coherentes con Login.jsx / Settings.jsx)
 const is = {
-  width: '100%', padding: '10px 14px', border: '1px solid var(--border)',
+  width: '100%', padding: '7px 12px', border: '1px solid var(--border)',
   borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box',
 }
-const ls = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }
+const ls = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }
 const btn = (enabled = true) => ({
   width: '100%', padding: '12px', background: enabled ? 'var(--red)' : '#ccc', color: 'white',
   borderRadius: 8, fontSize: 14, fontWeight: 600, border: 'none',
@@ -351,10 +357,10 @@ export default function Registro() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px' }}>
-      <div style={{ background: 'white', borderRadius: 16, padding: 40, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
-        <div style={{ textAlign: 'center', marginBottom: 24 }}>
-          <img src={iconoSocrates} alt="Socrates Pro" width="180" style={{ display: 'block', margin: '0 auto', height: 'auto' }} />
+    <div style={{ minHeight: '100vh', background: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '14px 16px' }}>
+      <div style={{ background: 'white', borderRadius: 16, padding: 26, width: '100%', maxWidth: 460, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ textAlign: 'center', marginBottom: 14 }}>
+          <img src={iconoSocrates} alt="Socrates Pro" width="110" style={{ display: 'block', margin: '0 auto', height: 'auto' }} />
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>El flujo continuo de oportunidades a ingresos</p>
         </div>
 
@@ -367,7 +373,7 @@ export default function Registro() {
         {paso === 'datos' && (
           <form onSubmit={enviarPaso1}>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Cree su cuenta</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 20 }}>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 12 }}>
               Plan seleccionado: <strong>{normalizarPlan(plan) === 'pro-plus' ? 'Pro+' : 'Pro'}</strong>. Podrá cambiarlo en el siguiente paso.
             </p>
 
@@ -456,7 +462,7 @@ export default function Registro() {
         {/* PASO 1b — VERIFICA TU EMAIL */}
         {paso === 'verifica' && (
           <div style={{ textAlign: 'center' }}>
-            <div style={{ fontSize: 40, marginBottom: 8 }}>📧</div>
+            <IconoHeader icon={Mail} size={40} />
             <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 8px' }}>Verifique su email</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 14, lineHeight: 1.6 }}>
               Le enviamos un email a <strong>{form.email || 'su correo'}</strong> con un enlace para confirmar su dirección.
@@ -475,7 +481,9 @@ export default function Registro() {
               </button>
             </p>
             {reenvioMsg && (
-              <p style={{ color: 'var(--blue)', fontSize: 12, fontWeight: 600, marginTop: 4 }}>✓ {reenvioMsg}</p>
+              <p style={{ color: 'var(--blue)', fontSize: 12, fontWeight: 600, marginTop: 4, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                <Check size={14} strokeWidth={2.5} /> {reenvioMsg}
+              </p>
             )}
             {esStaging && (
               <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px dashed var(--border)' }}>
@@ -652,7 +660,7 @@ export default function Registro() {
           <div style={{ textAlign: 'center' }}>
             {pagoEstado === 'ok' ? (
               <>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>✅</div>
+                <IconoHeader icon={CheckCircle2} />
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
                   {cobro.modo === 'completo' ? 'Suscripción activa' : 'Su prueba está activa'}
                 </h1>
@@ -669,7 +677,7 @@ export default function Registro() {
               <>
                 {/* Nunca un spinner eterno: estado claro + salidas (reenviar / cambiar número /
                     volver). Distinguimos el fallo técnico NUESTRO del rechazo/expiración del cliente. */}
-                <div style={{ fontSize: 36, marginBottom: 8 }}>{pagoEstado === 'tecnico' ? '⚠️' : '🔁'}</div>
+                <IconoHeader icon={pagoEstado === 'tecnico' ? AlertTriangle : RotateCcw} color="var(--red)" />
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
                   {pagoEstado === 'tecnico' ? 'No pudimos confirmar el pago'
                     : pagoEstado === 'expirado' ? 'La solicitud de Yappy expiró'
@@ -716,7 +724,7 @@ export default function Registro() {
               </>
             ) : (
               <>
-                <div style={{ fontSize: 36, marginBottom: 8 }}>📲</div>
+                <IconoHeader icon={Smartphone} />
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 12px' }}>
                   Apruebe el pago de ${cobro.monto?.toFixed(2)} en Yappy
                 </h1>
@@ -742,7 +750,7 @@ export default function Registro() {
                   {cobro.modo !== 'completo' && ' Ese $1 se descuenta del primer pago.'}
                 </p>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8, textAlign: 'left' }}>
-                  <span style={{ fontSize: 18 }}>🔒</span>
+                  <ShieldCheck size={20} strokeWidth={1.8} color="var(--blue)" style={{ flexShrink: 0, marginTop: 1 }} />
                   <div style={{ fontSize: 13, color: 'var(--text)' }}>
                     <strong>Socrates Pro no almacena datos de pago.</strong> El cobro lo aprueba usted desde su propia app de Yappy.
                   </div>
@@ -804,7 +812,7 @@ function AccionesCuenta() {
 
 function Campo({ label, children }) {
   return (
-    <div style={{ marginBottom: 14 }}>
+    <div style={{ marginBottom: 7 }}>
       <label style={ls}>{label}</label>
       {children}
     </div>
