@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Mail } from 'lucide-react'
 import logoSocrates from '../assets/socratespro-logo-completo.svg'
 
 const is = {
@@ -74,7 +75,7 @@ export default function Recuperar() {
         ) : (
           <div>
             <div style={{ textAlign: 'center', marginBottom: 16 }}>
-              <div style={{ fontSize: 36, marginBottom: 8 }}>📧</div>
+              <Mail size={40} strokeWidth={1.5} color="var(--blue)" style={{ display: "block", margin: "0 auto 8px" }} />
               <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Revise su correo</h2>
             </div>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, textAlign: 'center' }}>

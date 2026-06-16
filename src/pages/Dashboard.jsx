@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { Radar } from 'lucide-react'
 import RadarSync from '../components/RadarSync'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 import ModalEstudioMercado from '../components/ModalEstudioMercado'
@@ -560,7 +561,7 @@ export default function Dashboard({ usuario }) {
                     ) : (
                       /* filtro 'todas': caso real de 0 coincidencias con las keywords */
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                        <span style={{ fontSize: 30 }}>📡</span>
+                        <Radar size={30} strokeWidth={1.5} color="var(--text-muted)" style={{ marginBottom: 2 }} />
                         <span style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600 }}>Aún no hay licitaciones vigentes para sus palabras clave</span>
                         <span style={{ fontSize: 12.5, maxWidth: 440, lineHeight: 1.55 }}>
                           En cuanto se publique una licitación vigente que coincida, aparecerá aquí automáticamente. El Radar se actualiza varias veces al día.

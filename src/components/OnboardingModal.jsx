@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import logo from '../assets/socratespro-logo-completo.svg'
 import iconoRojo from '../assets/socratespro-icono-rojo.svg'
+import { CheckCircle2, AlertTriangle } from 'lucide-react'
 import iconoCargando from '../assets/socratespro-icono-rojo-cargando.svg'
 
 // Estilos coherentes con Login/Registro.
@@ -391,7 +392,7 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
       )}
       {estado === 'listo' && (
         <>
-          <div style={{ fontSize: 44, marginBottom: 8 }}>✅</div>
+          <CheckCircle2 size={46} strokeWidth={1.5} color="var(--blue)" style={{ display: "block", margin: "0 auto 8px" }} />
           <h1 style={h1}>¡Su Radar está listo!</h1>
           <p style={sub}>
             {info.licitaciones > 0
@@ -411,7 +412,7 @@ function PasoFinal({ modoBusqueda, modoKeywords }) {
       )}
       {estado === 'error' && (
         <>
-          <div style={{ fontSize: 44, marginBottom: 8 }}>⚠️</div>
+          <AlertTriangle size={46} strokeWidth={1.5} color="var(--red)" style={{ display: "block", margin: "0 auto 8px" }} />
           <h1 style={h1}>Casi listo</h1>
           <p style={sub}>Hubo un problema preparando su Radar, pero sus datos están guardados. Puede entrar; su Radar se completará en la próxima actualización.</p>
           <div style={{ marginTop: 20 }}><button style={btnPrimary()} onClick={entrar}>Entrar a Socrates Pro</button></div>
