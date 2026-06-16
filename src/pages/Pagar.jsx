@@ -3,6 +3,7 @@ import { Smartphone, CheckCircle2, AlertTriangle, Wrench } from 'lucide-react'
 import logoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 import CronometroYappy from '../components/CronometroYappy'
+import { exigePago } from '../utils/suscripcion'
 
 // Icono de cabecera sobrio (sustituye emojis de sistema). Centrado, navy de marca.
 function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
@@ -100,6 +101,10 @@ export default function Pagar() {
   // Estado terminal del cobro cuando NO se aplicó (DECLINED/EXPIRED/…), para la pantalla
   // 'fallido' — un no-op sobre la suscripción (la prueba/cuenta sigue intacta).
   const [resultadoFallo, setResultadoFallo] = useState('')
+  // Pago FORZADO (gracia 0): trial vencido / periodo vencido / cobro pendiente. Cuando es
+  // forzado, se ocultan las salidas "Seguir en mi prueba"/"Volver" — para usar la app, paga.
+  // En la conversión VOLUNTARIA (trial aún activo) esas salidas SÍ se muestran.
+  const [forzado, setForzado] = useState(false)
 
   // Solo entorno de pruebas (localhost). En producción (socratespro.lat) es false y
   // estos atajos no se muestran ni existen en el backend (router gated por STAGING_MODE).
@@ -123,6 +128,8 @@ export default function Pagar() {
           setPlanId(d.plan || null)
           setMonto(typeof d.monto === 'number' ? d.monto : null)
           setCiclo(d.ciclo || null)
+          // ¿el pago es forzado? MISMA regla que el gate del Layout (util compartido, gracia 0).
+          setForzado(exigePago(d))
         } else { setCtx('token') }
       })
       .catch(() => { if (vivo) setCtx('token') })
@@ -248,7 +255,7 @@ export default function Pagar() {
   // con token (correo), reintentar. Siempre con un "escríbanos" real (mailto).
   const Salidas = ({ conReintento = true }) => (
     <div style={{ marginTop: 18, display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {ctx === 'sesion' ? (
+      {ctx === 'sesion' && !forzado ? (
         <button type="button" onClick={irApp} style={btnPrimary(true)}>
           {subEstado === 'trialing' ? 'Seguir en mi prueba' : 'Volver a Socrates Pro'}
         </button>
@@ -348,8 +355,8 @@ export default function Pagar() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
               <span>Pago seguro con</span><YappyLogo width={66} />
             </div>
-            {/* Tras un error, ofrecer también la salida contextual (no solo reintentar). */}
-            {fase === 'error' && ctx === 'sesion' && (
+            {/* Tras un error, ofrecer también la salida contextual (no si el pago es forzado). */}
+            {fase === 'error' && ctx === 'sesion' && !forzado && (
               <button type="button" onClick={irApp} style={{ ...btnSecundario, marginTop: 8 }}>
                 {subEstado === 'trialing' ? 'Seguir en mi prueba' : 'Volver a Socrates Pro'}
               </button>
@@ -378,7 +385,7 @@ export default function Pagar() {
             <button type="button" onClick={reintentar} style={{ marginTop: 16, background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               No me llegó — reenviar solicitud
             </button>
-            {ctx === 'sesion' && (
+            {ctx === 'sesion' && !forzado && (
               <div><button type="button" onClick={irApp} style={{ marginTop: 8, background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline' }}>
                 {subEstado === 'trialing' ? 'Seguir en mi prueba' : 'Volver a la app'}
               </button></div>
@@ -415,7 +422,7 @@ export default function Pagar() {
               <button type="button" onClick={() => { setError(''); setFase('inicio') }} style={btnSecundario}>
                 Reintentar el pago
               </button>
-              {ctx === 'sesion' && (
+              {ctx === 'sesion' && !forzado && (
                 <button type="button" onClick={irApp} style={btnPrimary(true)}>
                   {subEstado === 'trialing' ? 'Seguir en mi prueba' : 'Volver a Socrates Pro'}
                 </button>

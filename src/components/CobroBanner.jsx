@@ -11,17 +11,21 @@ function diasHasta(iso) {
   return Math.ceil(ms / 86400000)
 }
 
-export default function CobroBanner() {
-  const [estado, setEstado] = useState(null)
+export default function CobroBanner({ estado: estadoProp }) {
+  const [estadoLocal, setEstadoLocal] = useState(null)
+  // Si el Layout ya pasó el estado (caso normal), lo reusamos sin volver a pedirlo.
+  // Si se usa el banner suelto (sin prop), mantiene su propio fetch (retrocompatible).
+  const estado = estadoProp !== undefined ? estadoProp : estadoLocal
 
   useEffect(() => {
+    if (estadoProp !== undefined) return  // estado provisto por el Layout → no refetch
     let vivo = true
     fetch('/api/cobro/estado')
       .then(r => r.ok ? r.json() : null)
-      .then(d => { if (vivo) setEstado(d) })
+      .then(d => { if (vivo) setEstadoLocal(d) })
       .catch(() => {})
     return () => { vivo = false }
-  }, [])
+  }, [estadoProp])
 
   if (!estado) return null
   const { suscripcion_estado, cobro_pendiente, ct, trial_fin } = estado

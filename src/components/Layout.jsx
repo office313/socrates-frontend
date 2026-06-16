@@ -1,19 +1,42 @@
+import { useState, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import SoporteWidget from './SoporteWidget'
 import OnboardingModal from './OnboardingModal'
 import CobroBanner from './CobroBanner'
+import { exigePago } from '../utils/suscripcion'
 
 const CATPLAN_ID = 2
 
 export default function Layout({ usuario, loading, children }) {
   const location = useLocation()
+  const esCatplan = usuario?.empresa_id === CATPLAN_ID
 
-  if (loading) return (
+  // Estado de suscripción: (a) decide la redirección al pago al vencer y (b) alimenta el
+  // banner (un solo fetch, compartido). undefined = cargando; null = sin dato (CATPLAN o
+  // error → no redirige, fail-open); objeto = estado real.
+  const [cobro, setCobro] = useState(undefined)
+
+  useEffect(() => {
+    // Solo clientes reales consultan el estado: CATPLAN/superadmin no tienen suscripción, y
+    // sin usuario no se llega al gate de cobro (se retorna antes). No reseteamos cobro aquí
+    // a propósito (evita un setState síncrono en el efecto): esos caminos no lo leen.
+    if (!usuario || esCatplan) return
+    let vivo = true
+    fetch('/api/cobro/estado')
+      .then(r => r.ok ? r.json() : null)
+      .then(d => { if (vivo) setCobro(d) })
+      .catch(() => { if (vivo) setCobro(null) })  // fail-open: un fallo de red NO encierra al cliente
+    return () => { vivo = false }
+  }, [usuario, esCatplan])
+
+  const cargando = (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
       <div style={{ color: 'var(--blue)', fontSize: 14 }}>Cargando...</div>
     </div>
   )
+
+  if (loading) return cargando
 
   if (!usuario) return <Navigate to="/login" replace />
 
@@ -24,10 +47,20 @@ export default function Layout({ usuario, loading, children }) {
   }
 
   // CATPLAN solo puede ver /clientes, /settings, /panel-control, /pac, /tickets (superadmin)
-  const esCatplan = usuario.empresa_id === CATPLAN_ID
   const rutasPermitidas = ['/clientes', '/settings', '/panel-control', '/pac', '/tickets']
   if (esCatplan && !rutasPermitidas.some(r => location.pathname.startsWith(r))) {
     return <Navigate to="/clientes" replace />
+  }
+
+  // Redirección al pago al vencer (gracia 0). Esperamos a tener el estado antes de decidir
+  // (para no parpadear la app ni rebotar). /pagar vive FUERA del Layout → sin bucle.
+  // BCN/CATPLAN/legacy (campos en NULL) nunca cumplen exigePago → entran directo.
+  if (!esCatplan) {
+    if (cobro === undefined) return cargando
+    if (exigePago(cobro)) {
+      const ct = cobro?.ct ? `?ct=${encodeURIComponent(cobro.ct)}` : ''
+      return <Navigate to={`/pagar${ct}`} replace />
+    }
   }
 
   return (
@@ -41,7 +74,8 @@ export default function Layout({ usuario, loading, children }) {
         minHeight: '100vh',
         background: 'var(--gray)',
       }}>
-        {!esCatplan && <CobroBanner />}
+        {/* El banner reusa el estado ya cargado por el Layout (sin segundo fetch). */}
+        {!esCatplan && <CobroBanner estado={cobro} />}
         {children}
       </main>
       {/* "Sócrates le ayuda" — soporte flotante en todas las pantallas del
