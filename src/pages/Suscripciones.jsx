@@ -89,6 +89,7 @@ function DetalleCliente({ id, onClose }) {
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [modoCancelar, setModoCancelar] = useState('al_vencimiento')
+  const [pmBase, setPmBase] = useState('')   // importe base (sin ITBMS) del pago manual
 
   // Recarga el detalle (tras una acción → se ven el nuevo estado y el evento de auditoría).
   // setState solo en callbacks async → no es setState síncrono en el efecto.
@@ -137,6 +138,16 @@ function DetalleCliente({ id, onClose }) {
       .catch(e => setMsg(e.response?.data?.detail || 'Error al cancelar.'))
       .finally(() => setBusy(false))
   }
+  const abrirPagoManual = () => { setMsg(''); setNota(''); setPmBase(''); setModal('pago_manual') }
+  const ejecutarPagoManual = () => {
+    if (!pmBase || Number(pmBase) <= 0) { setMsg('Indique el importe base (>0).'); return }
+    if (!nota.trim()) { setMsg('La referencia del pago es obligatoria.'); return }
+    setBusy(true); setMsg('')
+    axios.post(`/api/admin/suscripciones/${id}/pago-manual`, { confirmar: true, monto_base: Number(pmBase), nota: nota.trim() })
+      .then(() => { setModal(null); cargar() })
+      .catch(e => setMsg(e.response?.data?.detail || 'Error al registrar el pago.'))
+      .finally(() => setBusy(false))
+  }
 
   return (
     <>
@@ -173,6 +184,7 @@ function DetalleCliente({ id, onClose }) {
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
                 <button onClick={abrirExtender} style={accionBtn}>Extender</button>
                 <button onClick={abrirCancelar} style={{ ...accionBtn, background: 'white', color: 'var(--red)', border: '1px solid var(--red)' }}>Cancelar</button>
+                <button onClick={abrirPagoManual} style={{ ...accionBtn, background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)' }}>Registrar pago manual</button>
               </div>
             )}
 
@@ -280,6 +292,31 @@ function DetalleCliente({ id, onClose }) {
             <button onClick={ejecutarCancelar} disabled={busy} style={{ ...accionBtn, background: modoCancelar === 'cortar_ya' ? 'var(--red)' : 'var(--blue)', opacity: busy ? 0.6 : 1 }}>
               {busy ? 'Aplicando…' : (modoCancelar === 'cortar_ya' ? 'Cancelar y suspender ahora' : 'Cancelar al vencimiento')}
             </button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {modal === 'pago_manual' && data && (
+      <div style={modalWrap} onClick={cerrarModal}>
+        <div style={modalCard} onClick={e => e.stopPropagation()}>
+          <h3 style={{ margin: '0 0 12px', color: 'var(--blue)', fontSize: 16 }}>Registrar pago manual</h3>
+          <div style={{ background: '#fff8e1', border: '1px solid #f0d98c', color: '#8a6d1a', borderRadius: 8, padding: '10px 12px', fontSize: 12, lineHeight: 1.5, marginBottom: 14 }}>
+            ⚠ <strong>Esto NO cobra nada.</strong> Solo refleja un pago que el cliente ya hizo <strong>FUERA de Yappy</strong> (transferencia/efectivo). No se le pide ni se le cobra dinero — únicamente se registra y se renueva la suscripción.
+          </div>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Importe base recibido (sin ITBMS)</label>
+          <input type="number" min="0" step="0.01" style={modalInp} value={pmBase} onChange={e => setPmBase(e.target.value)} placeholder="70.00" />
+          {Number(pmBase) > 0 && (
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>
+              Se registrará: base <strong>US$ {Number(pmBase).toFixed(2)}</strong> + ITBMS 7% <strong>US$ {(Number(pmBase) * 0.07).toFixed(2)}</strong> = total <strong style={{ color: 'var(--blue)' }}>US$ {(Number(pmBase) * 1.07).toFixed(2)}</strong>. Renueva el plan ({data.empresa.ciclo || 'mensual'}).
+            </div>
+          )}
+          <label style={{ ...dl, display: 'block', margin: '12px 0 4px' }}>Referencia del pago (obligatorio)</label>
+          <input style={modalInp} value={nota} onChange={e => setNota(e.target.value)} placeholder="Ej.: transferencia Banco General ref 12345, 17-jun" />
+          {msg && <div style={{ color: 'var(--red)', fontSize: 12, marginTop: 8 }}>{msg}</div>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+            <button onClick={cerrarModal} disabled={busy} style={cancelarBtn}>Volver</button>
+            <button onClick={ejecutarPagoManual} disabled={busy} style={{ ...accionBtn, opacity: busy ? 0.6 : 1 }}>{busy ? 'Registrando…' : 'Registrar pago (no cobra)'}</button>
           </div>
         </div>
       </div>
