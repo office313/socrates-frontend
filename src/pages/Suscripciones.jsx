@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 
-// Panel de Suscripciones (superadmin) — FASE 1: SOLO LECTURA.
-// Lista de clientes con estado/plan/vencimiento/método + detalle con historial de cobros,
-// datos del método (method-agnostic) y crédito. Las ACCIONES son Fase 2 (con su blindaje).
+// Panel de Suscripciones (superadmin) — SOLO LECTURA. Dos pestañas que conviven:
+//  - "Clientes": estado de la suscripción por cliente (¿cómo está X?).
+//  - "Transacciones": todos los cobros, buscable (localizar un pago concreto y actuar).
+// Las ACCIONES (extender/cancelar/pago manual) son Fase 2, con su blindaje.
 
 const ESTADO_COLOR = {
   Prueba: { bg: 'var(--blue-light)', color: 'var(--blue)' },
@@ -17,6 +18,7 @@ const ESTADO_COBRO_COLOR = {
   PENDING: { bg: '#fff8e1', color: '#b7791f' },
   EXPIRED: { bg: '#f3f4f6', color: '#6b7280' },
   DECLINED: { bg: 'var(--red-light)', color: 'var(--red)' },
+  CANCELLED: { bg: 'var(--red-light)', color: 'var(--red)' },
   REVERSED: { bg: 'var(--red-light)', color: 'var(--red)' },
   FAILED: { bg: 'var(--red-light)', color: 'var(--red)' },
 }
@@ -29,6 +31,10 @@ function Chip({ label, mapa = ESTADO_COLOR }) {
 function fmtFecha(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+function fmtFechaHora(iso) {
+  if (!iso) return '—'
+  return new Date(iso).toLocaleString('es-PA', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 function fmtUSD(n) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—'
@@ -45,21 +51,29 @@ function venceTexto(s) {
 }
 
 // Render method-agnostic del método de pago: etiqueta + lista genérica clave→valor.
-// Un método nuevo (tarjeta, …) NO exige tocar esta pantalla.
 function Metodo({ metodo }) {
   if (!metodo) return <span style={{ color: '#9ca3af' }}>—</span>
   const entradas = Object.entries(metodo.detalle || {})
   return (
     <span>
       <strong style={{ color: 'var(--blue)' }}>{metodo.etiqueta}</strong>
-      {entradas.map(([k, v]) => (
-        <span key={k} style={{ color: '#6b7280' }}> · {k}: {v}</span>
-      ))}
+      {entradas.map(([k, v]) => <span key={k} style={{ color: '#6b7280' }}> · {k}: {v}</span>)}
     </span>
   )
 }
 
-function Detalle({ id, onClose }) {
+const drawerWrap = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }
+const drawerPanel = { background: 'white', width: 560, maxWidth: '92vw', height: '100%', overflow: 'auto', boxShadow: '-8px 0 30px rgba(0,0,0,0.15)' }
+const drawerHead = { padding: '16px 22px', background: 'var(--blue)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0 }
+const cerrarBtn = { background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }
+const dl = { fontSize: 11, color: '#9ca3af', fontWeight: 600 }
+const dv = { fontSize: 13, color: '#374151', fontWeight: 600 }
+function Dato({ label, children }) {
+  return <div><div style={dl}>{label}</div><div style={dv}>{children}</div></div>
+}
+
+// ============================ VISTA: CLIENTES ============================
+function DetalleCliente({ id, onClose }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(false)
   useEffect(() => {
@@ -72,22 +86,15 @@ function Detalle({ id, onClose }) {
 
   const th = { padding: '7px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }
   const td = { padding: '7px 10px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }
-  const dato = (label, valor) => (
-    <div><div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600 }}>{label}</div><div style={{ fontSize: 13, color: '#374151', fontWeight: 600 }}>{valor}</div></div>
-  )
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }} onClick={onClose}>
-      <div style={{ background: 'white', width: 560, maxWidth: '92vw', height: '100%', overflow: 'auto', boxShadow: '-8px 0 30px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
-        <div style={{ padding: '16px 22px', background: 'var(--blue)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0 }}>
-          <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>
-            {data ? data.empresa.nombre : 'Cargando…'}
-          </h2>
-          <button onClick={onClose} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cerrar</button>
+    <div style={drawerWrap} onClick={onClose}>
+      <div style={drawerPanel} onClick={e => e.stopPropagation()}>
+        <div style={drawerHead}>
+          <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>{data ? data.empresa.nombre : 'Cargando…'}</h2>
+          <button onClick={onClose} style={cerrarBtn}>Cerrar</button>
         </div>
-
         {error && <div style={{ padding: 24, color: 'var(--red)', fontSize: 13 }}>No se pudo cargar el detalle.</div>}
-
         {data && (
           <div style={{ padding: 22 }}>
             {data.empresa.protegida && (
@@ -95,28 +102,22 @@ function Detalle({ id, onClose }) {
                 Cuenta protegida (sin suscripción gestionada). Solo lectura.
               </div>
             )}
-
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
-              {dato('Plan', data.empresa.plan || '—')}
-              {dato('Estado', <Chip label={data.empresa.estado_label} />)}
-              {dato('Ciclo', data.empresa.ciclo || '—')}
-              {dato('Vence', fmtFecha(data.empresa.vence_en))}
-              {dato('Fin de prueba', fmtFecha(data.empresa.trial_fin))}
-              {dato('Gracia hasta', fmtFecha(data.empresa.gracia_hasta))}
-              {dato('Método de pago', <Metodo metodo={data.empresa.metodo_pago} />)}
-              {dato('Crédito $1', `${fmtUSD(data.empresa.credito)} + ITBMS ${fmtUSD(data.empresa.credito_itbms)}`)}
+              <Dato label="Plan">{data.empresa.plan || '—'}</Dato>
+              <Dato label="Estado"><Chip label={data.empresa.estado_label} /></Dato>
+              <Dato label="Ciclo">{data.empresa.ciclo || '—'}</Dato>
+              <Dato label="Vence">{fmtFecha(data.empresa.vence_en)}</Dato>
+              <Dato label="Fin de prueba">{fmtFecha(data.empresa.trial_fin)}</Dato>
+              <Dato label="Gracia hasta">{fmtFecha(data.empresa.gracia_hasta)}</Dato>
+              <Dato label="Método de pago"><Metodo metodo={data.empresa.metodo_pago} /></Dato>
+              <Dato label="Crédito $1">{`${fmtUSD(data.empresa.credito)} + ITBMS ${fmtUSD(data.empresa.credito_itbms)}`}</Dato>
             </div>
-
             <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '0 0 8px' }}>Historial de cobros</h3>
             {data.historial.length === 0 ? (
               <p style={{ color: '#9ca3af', fontSize: 13 }}>Sin cobros registrados.</p>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead>
-                  <tr>
-                    {['Fecha', 'Tipo', 'Estado', 'Base', 'ITBMS', 'Referencia', '#'].map(h => <th key={h} style={th}>{h}</th>)}
-                  </tr>
-                </thead>
+                <thead><tr>{['Fecha', 'Tipo', 'Estado', 'Base', 'ITBMS', 'Referencia', '#'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {data.historial.map(c => (
                     <tr key={c.id}>
@@ -139,13 +140,9 @@ function Detalle({ id, onClose }) {
   )
 }
 
-const FILTROS = [
-  ['todos', 'Todos'],
-  ['impagos', 'Impagos'],
-  ['por_vencer', 'Trials por vencer'],
-]
+const FILTROS_CLIENTES = [['todos', 'Todos'], ['impagos', 'Impagos'], ['por_vencer', 'Trials por vencer']]
 
-export default function Suscripciones() {
+function VistaClientes() {
   const [lista, setLista] = useState([])
   const [filtro, setFiltro] = useState('todos')
   const [sel, setSel] = useState(null)
@@ -160,61 +157,39 @@ export default function Suscripciones() {
     return () => { vivo = false }
   }, [])
 
-  const filtrada = lista.filter(s => {
-    if (filtro === 'impagos') return s.suscripcion_estado === 'past_due'
-    if (filtro === 'por_vencer') {
-      return s.dias_restantes != null && s.dias_restantes >= 0 && s.dias_restantes <= 7 &&
-        (s.suscripcion_estado === 'trialing' || s.suscripcion_estado === 'active')
-    }
-    return true
-  })
-
-  const cuenta = (f) => lista.filter(s => {
+  const pasa = (s, f) => {
     if (f === 'impagos') return s.suscripcion_estado === 'past_due'
     if (f === 'por_vencer') return s.dias_restantes != null && s.dias_restantes >= 0 && s.dias_restantes <= 7 && (s.suscripcion_estado === 'trialing' || s.suscripcion_estado === 'active')
     return true
-  }).length
+  }
+  const filtrada = lista.filter(s => pasa(s, filtro))
+  const cuenta = (f) => lista.filter(s => pasa(s, f)).length
 
   const th = { padding: '10px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }
   const td = { padding: '12px 14px', fontSize: 13, color: '#374151', borderBottom: '1px solid #f3f4f6' }
 
   return (
-    <div style={{ padding: 24 }}>
-      {sel && <Detalle id={sel} onClose={() => setSel(null)} />}
-
-      <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '0 0 18px' }}>Suscripciones</h1>
-
+    <div>
+      {sel && <DetalleCliente id={sel} onClose={() => setSel(null)} />}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        {FILTROS.map(([val, label]) => (
+        {FILTROS_CLIENTES.map(([val, label]) => (
           <button key={val} onClick={() => setFiltro(val)} style={{
             padding: '6px 14px', borderRadius: 999, fontSize: 13, fontWeight: 600, cursor: 'pointer',
             border: `1px solid ${filtro === val ? 'var(--blue)' : '#e5e7eb'}`,
-            background: filtro === val ? 'var(--blue)' : 'white',
-            color: filtro === val ? 'white' : '#6b7280',
-          }}>
-            {label} <span style={{ opacity: 0.7 }}>({cuenta(val)})</span>
-          </button>
+            background: filtro === val ? 'var(--blue)' : 'white', color: filtro === val ? 'white' : '#6b7280',
+          }}>{label} <span style={{ opacity: 0.7 }}>({cuenta(val)})</span></button>
         ))}
       </div>
-
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead>
-            <tr style={{ background: '#f8f9fa' }}>
-              {['Cliente', 'Plan', 'Estado', 'Vence', 'Método', 'Último cobro'].map(h => <th key={h} style={th}>{h}</th>)}
-            </tr>
-          </thead>
+          <thead><tr style={{ background: '#f8f9fa' }}>{['Cliente', 'Plan', 'Estado', 'Vence', 'Método', 'Último cobro'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
           <tbody>
             {cargando && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={6}>Cargando…</td></tr>}
-            {!cargando && filtrada.length === 0 && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={6}>Sin resultados para este filtro.</td></tr>}
+            {!cargando && filtrada.length === 0 && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={6}>Sin resultados.</td></tr>}
             {filtrada.map(s => (
               <tr key={s.id} onClick={() => setSel(s.id)} style={{ cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'}
-                onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                <td style={td}>
-                  <span style={{ fontWeight: 600, color: 'var(--blue)' }}>{s.nombre}</span>
-                  {s.protegida && <span style={{ marginLeft: 8, fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>protegida</span>}
-                </td>
+                onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                <td style={td}><span style={{ fontWeight: 600, color: 'var(--blue)' }}>{s.nombre}</span>{s.protegida && <span style={{ marginLeft: 8, fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>protegida</span>}</td>
                 <td style={td}>{s.plan || '—'}</td>
                 <td style={td}><Chip label={s.estado_label} /></td>
                 <td style={td}>{venceTexto(s)}</td>
@@ -225,6 +200,164 @@ export default function Suscripciones() {
           </tbody>
         </table>
       </div>
+    </div>
+  )
+}
+
+// ============================ VISTA: TRANSACCIONES ============================
+function DetalleTransaccion({ tx, onClose }) {
+  return (
+    <div style={drawerWrap} onClick={onClose}>
+      <div style={drawerPanel} onClick={e => e.stopPropagation()}>
+        <div style={drawerHead}>
+          <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>Transacción #{tx.id}</h2>
+          <button onClick={onClose} style={cerrarBtn}>Cerrar</button>
+        </div>
+        <div style={{ padding: 22 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
+            <Dato label="Cliente">{tx.cliente}</Dato>
+            <Dato label="RUC">{tx.ruc || '—'}</Dato>
+            <Dato label="Estado"><Chip label={tx.estado} mapa={ESTADO_COBRO_COLOR} /></Dato>
+            <Dato label="Tipo">{tx.tipo}</Dato>
+            <Dato label="Creada">{fmtFechaHora(tx.creado_en)}</Dato>
+            <Dato label="Confirmada">{fmtFechaHora(tx.confirmado_en)}</Dato>
+            <Dato label="Base (sin ITBMS)">{fmtUSD(tx.monto_base)}</Dato>
+            <Dato label="ITBMS (7%)">{fmtUSD(tx.itbms)}</Dato>
+            <Dato label="Total cobrado">{`${fmtUSD(tx.monto)} ${tx.moneda || ''}`}</Dato>
+            <Dato label="Intento de cobro">{tx.intento}</Dato>
+            <Dato label={tx.etiqueta_referencia || 'Referencia'}>{tx.referencia || <span style={{ color: '#d1d5db' }}>—</span>}</Dato>
+            <Dato label="Método"><Metodo metodo={{ etiqueta: (tx.metodo || 'yappy'), detalle: tx.yappy_telefono ? { 'Teléfono': tx.yappy_telefono } : {} }} /></Dato>
+            <Dato label="Plan / ciclo">{`${tx.plan || '—'} / ${tx.ciclo || '—'}`}</Dato>
+          </div>
+          {tx.detalle && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={dl}>Notas internas</div>
+              <div style={{ fontSize: 12, color: '#374151', background: '#f8f9fa', borderRadius: 8, padding: 10, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{tx.detalle}</div>
+            </div>
+          )}
+          <p style={{ fontSize: 11, color: '#9ca3af', lineHeight: 1.6, margin: 0 }}>
+            El nº de control de Yappy y el estado los fija el IPN al confirmar. La firma (hash) del IPN
+            se verifica en el momento pero <strong>no se almacena</strong> (es un dato de un solo uso).
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+const ESTADOS_FILTRO = ['', 'COMPLETED', 'PENDING', 'DECLINED', 'EXPIRED', 'CANCELLED', 'REVERSED', 'FAILED']
+
+function VistaTransacciones() {
+  const [q, setQ] = useState('')
+  const [estado, setEstado] = useState('')
+  const [desde, setDesde] = useState('')
+  const [hasta, setHasta] = useState('')
+  const [filas, setFilas] = useState([])
+  const [meta, setMeta] = useState({ truncado: false, limite: 300 })
+  const [cargando, setCargando] = useState(true)
+  const [sel, setSel] = useState(null)
+
+  const buscar = () => {
+    setCargando(true)
+    const p = new URLSearchParams()
+    if (q.trim()) p.set('q', q.trim())
+    if (estado) p.set('estado', estado)
+    if (desde) p.set('desde', desde)
+    if (hasta) p.set('hasta', hasta)
+    axios.get(`/api/admin/transacciones?${p.toString()}`)
+      .then(r => { setFilas(r.data.transacciones || []); setMeta({ truncado: r.data.truncado, limite: r.data.limite }) })
+      .catch(() => setFilas([]))
+      .finally(() => setCargando(false))
+  }
+  // Carga inicial (todas las transacciones, más recientes primero). Fetch inline con el
+  // setState solo en callbacks async (evita setState síncrono dentro del efecto).
+  useEffect(() => {
+    let vivo = true
+    axios.get('/api/admin/transacciones')
+      .then(r => { if (vivo) { setFilas(r.data.transacciones || []); setMeta({ truncado: r.data.truncado, limite: r.data.limite }) } })
+      .catch(() => { if (vivo) setFilas([]) })
+      .finally(() => { if (vivo) setCargando(false) })
+    return () => { vivo = false }
+  }, [])
+
+  const inp = { padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }
+  const th = { padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }
+  const td = { padding: '10px 12px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }
+
+  return (
+    <div>
+      {sel && <DetalleTransaccion tx={sel} onClose={() => setSel(null)} />}
+
+      {/* Buscador + filtros */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end', marginBottom: 16, background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: 14 }}>
+        <div style={{ flex: 2, minWidth: 240 }}>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Buscar (cliente, RUC, nº de control, teléfono)</label>
+          <input style={{ ...inp, width: '100%' }} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') buscar() }} placeholder="Ej.: YFAMU-22561483, +50761234567, RUC…" />
+        </div>
+        <div>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Estado</label>
+          <select style={inp} value={estado} onChange={e => setEstado(e.target.value)}>
+            {ESTADOS_FILTRO.map(s => <option key={s} value={s}>{s || 'Todos'}</option>)}
+          </select>
+        </div>
+        <div>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Desde</label>
+          <input type="date" style={inp} value={desde} onChange={e => setDesde(e.target.value)} />
+        </div>
+        <div>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Hasta</label>
+          <input type="date" style={inp} value={hasta} onChange={e => setHasta(e.target.value)} />
+        </div>
+        <button onClick={buscar} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Buscar</button>
+      </div>
+
+      <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr style={{ background: '#f8f9fa' }}>{['Cliente', 'Creada', 'Confirmada', 'Total', 'Estado', 'Tipo', 'Nº de control', 'Teléfono', '#'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+          <tbody>
+            {cargando && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={9}>Cargando…</td></tr>}
+            {!cargando && filas.length === 0 && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={9}>Sin transacciones para esta búsqueda.</td></tr>}
+            {filas.map(t => (
+              <tr key={t.id} onClick={() => setSel(t)} style={{ cursor: 'pointer' }}
+                onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                <td style={td}><span style={{ fontWeight: 600, color: 'var(--blue)' }}>{t.cliente}</span>{t.ruc && <div style={{ fontSize: 10, color: '#9ca3af' }}>RUC {t.ruc}</div>}</td>
+                <td style={td}>{fmtFechaHora(t.creado_en)}</td>
+                <td style={td}>{fmtFechaHora(t.confirmado_en)}</td>
+                <td style={td}>{fmtUSD(t.monto)}<div style={{ fontSize: 10, color: '#9ca3af' }}>{fmtUSD(t.monto_base)} + {fmtUSD(t.itbms)}</div></td>
+                <td style={td}><Chip label={t.estado} mapa={ESTADO_COBRO_COLOR} /></td>
+                <td style={td}>{t.tipo}</td>
+                <td style={td}>{t.referencia || <span style={{ color: '#d1d5db' }}>—</span>}</td>
+                <td style={td}>{t.yappy_telefono || <span style={{ color: '#d1d5db' }}>—</span>}</td>
+                <td style={td}>{t.intento}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {meta.truncado && (
+        <p style={{ fontSize: 12, color: '#b7791f', marginTop: 10 }}>
+          Mostrando las {meta.limite} más recientes. Afina la búsqueda (cliente, fechas, estado) para ver el resto.
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ============================ PÁGINA (pestañas) ============================
+export default function Suscripciones() {
+  const [tab, setTab] = useState('clientes')
+  const tabStyle = (t) => ({
+    padding: '8px 18px', borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: 'pointer', border: 'none',
+    background: tab === t ? 'var(--blue)' : 'transparent', color: tab === t ? 'white' : 'var(--blue)',
+  })
+  return (
+    <div style={{ padding: 24 }}>
+      <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '0 0 16px' }}>Suscripciones</h1>
+      <div style={{ display: 'inline-flex', gap: 4, padding: 4, background: 'var(--blue-light)', borderRadius: 999, marginBottom: 20 }}>
+        <button style={tabStyle('clientes')} onClick={() => setTab('clientes')}>Clientes</button>
+        <button style={tabStyle('transacciones')} onClick={() => setTab('transacciones')}>Transacciones</button>
+      </div>
+      {tab === 'clientes' ? <VistaClientes /> : <VistaTransacciones />}
     </div>
   )
 }
