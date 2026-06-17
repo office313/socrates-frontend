@@ -90,6 +90,8 @@ function DetalleCliente({ id, onClose }) {
   const [msg, setMsg] = useState('')
   const [modoCancelar, setModoCancelar] = useState('al_vencimiento')
   const [pmBase, setPmBase] = useState('')   // importe base (sin ITBMS) del pago manual
+  const [modoExt, setModoExt] = useState('dias')   // extender: 'dias' | 'fecha'
+  const [fechaExt, setFechaExt] = useState('')     // fecha concreta (modo 'fecha')
 
   // Recarga el detalle (tras una acción → se ven el nuevo estado y el evento de auditoría).
   // setState solo en callbacks async → no es setState síncrono en el efecto.
@@ -103,7 +105,7 @@ function DetalleCliente({ id, onClose }) {
   const th = { padding: '7px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }
   const td = { padding: '7px 10px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }
 
-  const abrirExtender = () => { setMsg(''); setNota(''); setDias(15); setModal('extender') }
+  const abrirExtender = () => { setMsg(''); setNota(''); setDias(15); setModoExt('dias'); setFechaExt(''); setModal('extender') }
   const abrirRevertir = (ev) => { setMsg(''); setNota(''); setModal({ tipo: 'revertir', ev }) }
   const cerrarModal = () => { if (!busy) setModal(null) }
   const previewFecha = () => {
@@ -115,9 +117,16 @@ function DetalleCliente({ id, onClose }) {
   }
   const ejecutarExtender = () => {
     if (!nota.trim()) { setMsg('La nota/motivo es obligatoria.'); return }
-    if (!dias || Number(dias) <= 0) { setMsg('Indique días (>0).'); return }
+    const payload = { confirmar: true, nota: nota.trim() }
+    if (modoExt === 'fecha') {
+      if (!fechaExt) { setMsg('Elija una fecha.'); return }
+      payload.nueva_fecha = fechaExt
+    } else {
+      if (!dias || Number(dias) <= 0) { setMsg('Indique días (>0).'); return }
+      payload.dias = Number(dias)
+    }
     setBusy(true); setMsg('')
-    axios.post(`/api/admin/suscripciones/${id}/extender`, { confirmar: true, dias: Number(dias), nota: nota.trim() })
+    axios.post(`/api/admin/suscripciones/${id}/extender`, payload)
       .then(() => { setModal(null); cargar() })
       .catch(e => setMsg(e.response?.data?.detail || 'Error al extender.'))
       .finally(() => setBusy(false))
@@ -240,14 +249,29 @@ function DetalleCliente({ id, onClose }) {
       <div style={modalWrap} onClick={cerrarModal}>
         <div style={modalCard} onClick={e => e.stopPropagation()}>
           <h3 style={{ margin: '0 0 12px', color: 'var(--blue)', fontSize: 16 }}>Extender suscripción</h3>
-          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, margin: '0 0 14px' }}>
-            Vas a extender la suscripción de <strong>{data.empresa.nombre}</strong>{' '}
-            <strong>{dias} día{Number(dias) === 1 ? '' : 's'}</strong>.<br />
-            Vence ahora: <strong>{fmtFecha(data.empresa.vence_en)}</strong> → nueva fecha:{' '}
-            <strong style={{ color: 'var(--blue)' }}>{fmtFecha(previewFecha())}</strong>. No cobra nada.
+          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, margin: '0 0 12px' }}>
+            Extender la suscripción de <strong>{data.empresa.nombre}</strong>. Vence ahora:{' '}
+            <strong>{fmtFecha(data.empresa.vence_en)}</strong>. No cobra nada.
           </p>
-          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Días a extender</label>
-          <input type="number" min="1" style={modalInp} value={dias} onChange={e => setDias(e.target.value)} />
+          {/* Dos formas: por nº de días o hasta una fecha concreta. */}
+          <div style={{ display: 'inline-flex', gap: 4, padding: 3, background: '#f3f4f6', borderRadius: 999, marginBottom: 12 }}>
+            {[['dias', 'Por días'], ['fecha', 'Hasta una fecha']].map(([v, t]) => (
+              <button key={v} onClick={() => setModoExt(v)} style={{ padding: '5px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 600, background: modoExt === v ? 'var(--blue)' : 'transparent', color: modoExt === v ? 'white' : '#6b7280' }}>{t}</button>
+            ))}
+          </div>
+          {modoExt === 'dias' ? (
+            <>
+              <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Días a extender</label>
+              <input type="number" min="1" style={modalInp} value={dias} onChange={e => setDias(e.target.value)} />
+              {Number(dias) > 0 && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Nueva fecha: <strong style={{ color: 'var(--blue)' }}>{fmtFecha(previewFecha())}</strong></div>}
+            </>
+          ) : (
+            <>
+              <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Nueva fecha de vencimiento</label>
+              <input type="date" style={modalInp} value={fechaExt} onChange={e => setFechaExt(e.target.value)} />
+              {fechaExt && <div style={{ fontSize: 12, color: '#6b7280', marginTop: 6 }}>Vencerá el <strong style={{ color: 'var(--blue)' }}>{fmtFecha(fechaExt + 'T00:00:00')}</strong></div>}
+            </>
+          )}
           <label style={{ ...dl, display: 'block', margin: '12px 0 4px' }}>Motivo / nota (obligatorio)</label>
           <input style={modalInp} value={nota} onChange={e => setNota(e.target.value)} placeholder="Ej.: cortesía por incidencia de soporte" />
           {msg && <div style={{ color: 'var(--red)', fontSize: 12, marginTop: 8 }}>{msg}</div>}

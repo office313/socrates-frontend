@@ -30,7 +30,9 @@ function MiSuscripcion() {
   }
   const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
   const venceISO = est.vence_en || est.trial_fin
-  const sinSuscripcion = !est.suscripcion_estado && !venceISO
+  // Suscripción REAL = tiene estado o vencimiento. Si todo está en NULL (BCN/CATPLAN/legacy
+  // sin suscripción gestionada por el sistema) → mensaje. Si es real → plan/estado/vence.
+  const tieneSuscripcionReal = Boolean(est.suscripcion_estado || venceISO)
   const e = ESTADOS[est.suscripcion_estado]
   const metodo = est.metodo
   const dl = { fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }
@@ -39,7 +41,7 @@ function MiSuscripcion() {
   return (
     <div style={ss}>
       <h2 style={ts}>Mi Suscripción</h2>
-      {sinSuscripcion ? (
+      {!tieneSuscripcionReal ? (
         <p style={{ fontSize: 13, color: '#666', margin: 0, lineHeight: 1.6 }}>
           Su suscripción está gestionada por su ejecutivo de cuenta. Para cualquier cambio, contáctenos.
         </p>
