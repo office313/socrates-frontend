@@ -88,6 +88,7 @@ function DetalleCliente({ id, onClose }) {
   const [nota, setNota] = useState('')
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [modoCancelar, setModoCancelar] = useState('al_vencimiento')
 
   // Recarga el detalle (tras una acción → se ven el nuevo estado y el evento de auditoría).
   // setState solo en callbacks async → no es setState síncrono en el efecto.
@@ -127,6 +128,15 @@ function DetalleCliente({ id, onClose }) {
       .catch(e => setMsg(e.response?.data?.detail || 'Error al revertir.'))
       .finally(() => setBusy(false))
   }
+  const abrirCancelar = () => { setMsg(''); setNota(''); setModoCancelar('al_vencimiento'); setModal('cancelar') }
+  const ejecutarCancelar = () => {
+    if (!nota.trim()) { setMsg('La nota/motivo es obligatoria.'); return }
+    setBusy(true); setMsg('')
+    axios.post(`/api/admin/suscripciones/${id}/cancelar`, { confirmar: true, modo: modoCancelar, nota: nota.trim() })
+      .then(() => { setModal(null); cargar() })
+      .catch(e => setMsg(e.response?.data?.detail || 'Error al cancelar.'))
+      .finally(() => setBusy(false))
+  }
 
   return (
     <>
@@ -162,6 +172,7 @@ function DetalleCliente({ id, onClose }) {
             ) : (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
                 <button onClick={abrirExtender} style={accionBtn}>Extender</button>
+                <button onClick={abrirCancelar} style={{ ...accionBtn, background: 'white', color: 'var(--red)', border: '1px solid var(--red)' }}>Cancelar</button>
               </div>
             )}
 
@@ -231,6 +242,44 @@ function DetalleCliente({ id, onClose }) {
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
             <button onClick={cerrarModal} disabled={busy} style={cancelarBtn}>Cancelar</button>
             <button onClick={ejecutarExtender} disabled={busy} style={{ ...accionBtn, opacity: busy ? 0.6 : 1 }}>{busy ? 'Aplicando…' : 'Confirmar extensión'}</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {modal === 'cancelar' && data && (
+      <div style={modalWrap} onClick={cerrarModal}>
+        <div style={modalCard} onClick={e => e.stopPropagation()}>
+          <h3 style={{ margin: '0 0 12px', color: 'var(--blue)', fontSize: 16 }}>Cancelar suscripción</h3>
+          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.6, margin: '0 0 14px' }}>
+            Cancelar la suscripción de <strong>{data.empresa.nombre}</strong>. Elija el modo:
+          </p>
+          <label style={{ display: 'block', border: `2px solid ${modoCancelar === 'al_vencimiento' ? 'var(--blue)' : '#e5e7eb'}`, background: modoCancelar === 'al_vencimiento' ? 'var(--blue-light)' : 'white', borderRadius: 10, padding: 12, marginBottom: 10, cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="radio" checked={modoCancelar === 'al_vencimiento'} onChange={() => setModoCancelar('al_vencimiento')} />
+              <strong style={{ color: 'var(--blue)', fontSize: 13 }}>Al vencimiento</strong>
+            </div>
+            <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, marginLeft: 24 }}>
+              El cliente <strong>conserva el acceso hasta {fmtFecha(data.empresa.vence_en)}</strong>. No se renueva. No se corta nada hoy.
+            </div>
+          </label>
+          <label style={{ display: 'block', border: `2px solid ${modoCancelar === 'cortar_ya' ? 'var(--red)' : '#e5e7eb'}`, background: modoCancelar === 'cortar_ya' ? 'var(--red-light)' : 'white', borderRadius: 10, padding: 12, marginBottom: 14, cursor: 'pointer' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="radio" checked={modoCancelar === 'cortar_ya'} onChange={() => setModoCancelar('cortar_ya')} />
+              <strong style={{ color: 'var(--red)', fontSize: 13 }}>⚠ Cortar ya</strong>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 4, marginLeft: 24 }}>
+              <strong>Suspende el acceso del cliente INMEDIATAMENTE</strong> — no podrá entrar hasta que se reactive (es reversible).
+            </div>
+          </label>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Motivo / nota (obligatorio)</label>
+          <input style={modalInp} value={nota} onChange={e => setNota(e.target.value)} placeholder="Ej.: el cliente solicitó la baja" />
+          {msg && <div style={{ color: 'var(--red)', fontSize: 12, marginTop: 8 }}>{msg}</div>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+            <button onClick={cerrarModal} disabled={busy} style={cancelarBtn}>Volver</button>
+            <button onClick={ejecutarCancelar} disabled={busy} style={{ ...accionBtn, background: modoCancelar === 'cortar_ya' ? 'var(--red)' : 'var(--blue)', opacity: busy ? 0.6 : 1 }}>
+              {busy ? 'Aplicando…' : (modoCancelar === 'cortar_ya' ? 'Cancelar y suspender ahora' : 'Cancelar al vencimiento')}
+            </button>
           </div>
         </div>
       </div>
