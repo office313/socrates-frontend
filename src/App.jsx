@@ -15,6 +15,7 @@ import Settings from './pages/Settings'
 import Clientes from './pages/Clientes'
 import Legal from './pages/Legal'
 import PanelControl from './pages/PanelControl'
+import Suscripciones from './pages/Suscripciones'
 import TicketsSoporte from './pages/TicketsSoporte'
 import PacAdmin from './pages/PacAdmin'
 
@@ -41,6 +42,7 @@ function App() {
               <Route path="/settings" element={<Settings usuario={usuario} />} />
               <Route path="/clientes" element={<Clientes />} />
               <Route path="/panel-control" element={usuario?.rol === 'superadmin' ? <PanelControl /> : <Navigate to="/" replace />} />
+              <Route path="/suscripciones" element={usuario?.rol === 'superadmin' ? <Suscripciones /> : <Navigate to="/" replace />} />
               <Route path="/tickets" element={usuario?.rol === 'superadmin' ? <TicketsSoporte /> : <Navigate to="/" replace />} />
               <Route path="/pac" element={usuario?.rol === 'superadmin' ? <PacAdmin /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -5,6 +5,60 @@ import { useTrack } from '../hooks/useTrack'
 
 const ROLES = ['usuario', 'supervisor', 'superadmin']
 
+// C) Vista del cliente de SU suscripción (solo lo suyo, solo lectura). Reusa /cobro/estado.
+// Maneja con elegancia el caso de campos en NULL (BCN / cuentas sin suscripción gestionada):
+// muestra un mensaje suave en vez de un widget roto. Método de pago method-agnostic.
+function MiSuscripcion() {
+  const [est, setEst] = useState(undefined)  // undefined=cargando, null=error, obj=ok
+  useEffect(() => {
+    let vivo = true
+    axios.get('/api/cobro/estado')
+      .then(r => { if (vivo) setEst(r.data) })
+      .catch(() => { if (vivo) setEst(null) })
+    return () => { vivo = false }
+  }, [])
+
+  const ss = { background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 24, marginBottom: 20 }
+  const ts = { fontSize: 15, fontWeight: 600, color: 'var(--blue)', margin: '0 0 20px', paddingBottom: 12, borderBottom: '1px solid #e5e7eb' }
+  if (est === undefined || est === null) return null
+
+  const ESTADOS = {
+    trialing: { txt: 'Prueba', bg: 'var(--blue-light)', color: 'var(--blue)' },
+    active: { txt: 'Activo', bg: '#e8f5e9', color: '#2e7d32' },
+    past_due: { txt: 'Impago', bg: 'var(--red-light)', color: 'var(--red)' },
+    cancelado: { txt: 'Cancelado', bg: '#f3f4f6', color: '#6b7280' },
+  }
+  const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  const venceISO = est.vence_en || est.trial_fin
+  const sinSuscripcion = !est.suscripcion_estado && !venceISO
+  const e = ESTADOS[est.suscripcion_estado]
+  const metodo = est.metodo
+  const dl = { fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }
+  const dv = { fontSize: 14, color: '#374151', fontWeight: 600 }
+
+  return (
+    <div style={ss}>
+      <h2 style={ts}>Mi Suscripción</h2>
+      {sinSuscripcion ? (
+        <p style={{ fontSize: 13, color: '#666', margin: 0, lineHeight: 1.6 }}>
+          Su suscripción está gestionada por su ejecutivo de cuenta. Para cualquier cambio, contáctenos.
+        </p>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+          <div><div style={dl}>Plan</div><div style={dv}>{est.plan || '—'}</div></div>
+          <div><div style={dl}>Estado</div><div>{e
+            ? <span style={{ background: e.bg, color: e.color, padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
+            : <span style={dv}>—</span>}</div></div>
+          <div><div style={dl}>{est.suscripcion_estado === 'trialing' ? 'Fin de prueba' : 'Vence'}</div><div style={dv}>{fmt(venceISO)}</div></div>
+          <div><div style={dl}>Método de pago</div><div style={dv}>{metodo
+            ? <span><span style={{ color: 'var(--blue)' }}>{metodo.etiqueta}</span>{Object.entries(metodo.detalle || {}).map(([k, v]) => <span key={k} style={{ color: '#6b7280', fontWeight: 400 }}> · {k}: {v}</span>)}</span>
+            : '—'}</div></div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Alertas WhatsApp: Panamá primero y por defecto, resto alfabético (brief).
 // El value del select es el prefijo (es lo que guarda el backend); los países
 // que comparten +1 muestran la primera entrada al recargar — cosmético.
@@ -739,6 +793,8 @@ export default function Settings({ usuario }) {
         )}
         <button onClick={guardarCuenta} style={bs}>Guardar cambios</button>
       </div>
+
+      <MiSuscripcion />
 
       <div style={ss}>
         <h2 style={ts}>Verificación en dos pasos (2FA)</h2>
