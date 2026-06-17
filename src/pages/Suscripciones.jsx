@@ -72,22 +72,64 @@ function Dato({ label, children }) {
   return <div><div style={dl}>{label}</div><div style={dv}>{children}</div></div>
 }
 
+// Estilos de las acciones (Fase 2) y sus modales de confirmación.
+const accionBtn = { padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: 'var(--blue)', color: 'white' }
+const cancelarBtn = { padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', background: '#f3f4f6', color: '#6b7280' }
+const modalWrap = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1100, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }
+const modalCard = { background: 'white', borderRadius: 14, width: 460, maxWidth: '92vw', padding: 22 }
+const modalInp = { width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }
+
 // ============================ VISTA: CLIENTES ============================
 function DetalleCliente({ id, onClose }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(false)
-  useEffect(() => {
-    let vivo = true
+  const [modal, setModal] = useState(null)     // null | 'extender' | {tipo:'revertir', ev}
+  const [dias, setDias] = useState(15)
+  const [nota, setNota] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  // Recarga el detalle (tras una acción → se ven el nuevo estado y el evento de auditoría).
+  // setState solo en callbacks async → no es setState síncrono en el efecto.
+  const cargar = () => {
     axios.get(`/api/admin/suscripciones/${id}`)
-      .then(r => { if (vivo) setData(r.data) })
-      .catch(() => { if (vivo) setError(true) })
-    return () => { vivo = false }
-  }, [id])
+      .then(r => setData(r.data))
+      .catch(() => setError(true))
+  }
+  useEffect(() => { cargar() }, [id])  // eslint-disable-line react-hooks/exhaustive-deps
 
   const th = { padding: '7px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', borderBottom: '1px solid #e5e7eb' }
   const td = { padding: '7px 10px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6', verticalAlign: 'top' }
 
+  const abrirExtender = () => { setMsg(''); setNota(''); setDias(15); setModal('extender') }
+  const abrirRevertir = (ev) => { setMsg(''); setNota(''); setModal({ tipo: 'revertir', ev }) }
+  const cerrarModal = () => { if (!busy) setModal(null) }
+  const previewFecha = () => {
+    const hoy = new Date()
+    const v = data?.empresa?.vence_en ? new Date(data.empresa.vence_en) : null
+    const base = (v && v > hoy) ? new Date(v) : new Date(hoy)
+    base.setDate(base.getDate() + Number(dias || 0))
+    return base.toISOString()
+  }
+  const ejecutarExtender = () => {
+    if (!nota.trim()) { setMsg('La nota/motivo es obligatoria.'); return }
+    if (!dias || Number(dias) <= 0) { setMsg('Indique días (>0).'); return }
+    setBusy(true); setMsg('')
+    axios.post(`/api/admin/suscripciones/${id}/extender`, { confirmar: true, dias: Number(dias), nota: nota.trim() })
+      .then(() => { setModal(null); cargar() })
+      .catch(e => setMsg(e.response?.data?.detail || 'Error al extender.'))
+      .finally(() => setBusy(false))
+  }
+  const ejecutarRevertir = (ev) => {
+    setBusy(true); setMsg('')
+    axios.post(`/api/admin/suscripciones/${id}/eventos/${ev.id}/revertir`, { confirmar: true, nota: nota.trim() })
+      .then(() => { setModal(null); cargar() })
+      .catch(e => setMsg(e.response?.data?.detail || 'Error al revertir.'))
+      .finally(() => setBusy(false))
+  }
+
   return (
+    <>
     <div style={drawerWrap} onClick={onClose}>
       <div style={drawerPanel} onClick={e => e.stopPropagation()}>
         <div style={drawerHead}>
@@ -112,6 +154,17 @@ function DetalleCliente({ id, onClose }) {
               <Dato label="Método de pago"><Metodo metodo={data.empresa.metodo_pago} /></Dato>
               <Dato label="Crédito $1">{`${fmtUSD(data.empresa.credito)} + ITBMS ${fmtUSD(data.empresa.credito_itbms)}`}</Dato>
             </div>
+
+            {/* Acciones manuales (Fase 2). Ocultas si la empresa está protegida (BCN/CATPLAN);
+                el backend además las rechaza con es_protegida(). Por ahora: Extender. */}
+            {data.empresa.protegida ? (
+              <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 20 }}>Cuenta protegida — sin acciones manuales.</div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 20 }}>
+                <button onClick={abrirExtender} style={accionBtn}>Extender</button>
+              </div>
+            )}
+
             <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '0 0 8px' }}>Historial de cobros</h3>
             {data.historial.length === 0 ? (
               <p style={{ color: '#9ca3af', fontSize: 13 }}>Sin cobros registrados.</p>
@@ -139,7 +192,7 @@ function DetalleCliente({ id, onClose }) {
               <p style={{ color: '#9ca3af', fontSize: 13 }}>Sin acciones registradas.</p>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                <thead><tr>{['Fecha', 'Acción', 'Operador', 'Nota'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                <thead><tr>{['Fecha', 'Acción', 'Operador', 'Nota', ''].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
                 <tbody>
                   {data.eventos.map(ev => (
                     <tr key={ev.id}>
@@ -147,6 +200,9 @@ function DetalleCliente({ id, onClose }) {
                       <td style={td}>{ev.accion}</td>
                       <td style={td}>{ev.actor_email || '—'}</td>
                       <td style={td}>{ev.nota || <span style={{ color: '#d1d5db' }}>—</span>}</td>
+                      <td style={td}>{(ev.accion !== 'revertir' && !data.empresa.protegida) ? (
+                        <button onClick={() => abrirRevertir(ev)} style={{ padding: '3px 10px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>Revertir</button>
+                      ) : null}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -156,6 +212,49 @@ function DetalleCliente({ id, onClose }) {
         )}
       </div>
     </div>
+
+    {modal === 'extender' && data && (
+      <div style={modalWrap} onClick={cerrarModal}>
+        <div style={modalCard} onClick={e => e.stopPropagation()}>
+          <h3 style={{ margin: '0 0 12px', color: 'var(--blue)', fontSize: 16 }}>Extender suscripción</h3>
+          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, margin: '0 0 14px' }}>
+            Vas a extender la suscripción de <strong>{data.empresa.nombre}</strong>{' '}
+            <strong>{dias} día{Number(dias) === 1 ? '' : 's'}</strong>.<br />
+            Vence ahora: <strong>{fmtFecha(data.empresa.vence_en)}</strong> → nueva fecha:{' '}
+            <strong style={{ color: 'var(--blue)' }}>{fmtFecha(previewFecha())}</strong>. No cobra nada.
+          </p>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Días a extender</label>
+          <input type="number" min="1" style={modalInp} value={dias} onChange={e => setDias(e.target.value)} />
+          <label style={{ ...dl, display: 'block', margin: '12px 0 4px' }}>Motivo / nota (obligatorio)</label>
+          <input style={modalInp} value={nota} onChange={e => setNota(e.target.value)} placeholder="Ej.: cortesía por incidencia de soporte" />
+          {msg && <div style={{ color: 'var(--red)', fontSize: 12, marginTop: 8 }}>{msg}</div>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+            <button onClick={cerrarModal} disabled={busy} style={cancelarBtn}>Cancelar</button>
+            <button onClick={ejecutarExtender} disabled={busy} style={{ ...accionBtn, opacity: busy ? 0.6 : 1 }}>{busy ? 'Aplicando…' : 'Confirmar extensión'}</button>
+          </div>
+        </div>
+      </div>
+    )}
+
+    {modal?.tipo === 'revertir' && (
+      <div style={modalWrap} onClick={cerrarModal}>
+        <div style={modalCard} onClick={e => e.stopPropagation()}>
+          <h3 style={{ margin: '0 0 12px', color: 'var(--blue)', fontSize: 16 }}>Revertir acción</h3>
+          <p style={{ fontSize: 13, color: '#374151', lineHeight: 1.7, margin: '0 0 14px' }}>
+            Vas a revertir la acción <strong>{modal.ev.accion}</strong> del{' '}
+            <strong>{fmtFechaHora(modal.ev.creado_en)}</strong>. Se restaurará el estado anterior de la suscripción.
+          </p>
+          <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Motivo (opcional)</label>
+          <input style={modalInp} value={nota} onChange={e => setNota(e.target.value)} placeholder="Motivo de la reversión" />
+          {msg && <div style={{ color: 'var(--red)', fontSize: 12, marginTop: 8 }}>{msg}</div>}
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 18 }}>
+            <button onClick={cerrarModal} disabled={busy} style={cancelarBtn}>Cancelar</button>
+            <button onClick={() => ejecutarRevertir(modal.ev)} disabled={busy} style={{ ...accionBtn, opacity: busy ? 0.6 : 1 }}>{busy ? 'Revirtiendo…' : 'Confirmar reversión'}</button>
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   )
 }
 
