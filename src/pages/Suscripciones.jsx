@@ -133,6 +133,25 @@ function DetalleCliente({ id, onClose }) {
                 </tbody>
               </table>
             )}
+
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '22px 0 8px' }}>Historial de acciones</h3>
+            {(!data.eventos || data.eventos.length === 0) ? (
+              <p style={{ color: '#9ca3af', fontSize: 13 }}>Sin acciones registradas.</p>
+            ) : (
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead><tr>{['Fecha', 'Acción', 'Operador', 'Nota'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+                <tbody>
+                  {data.eventos.map(ev => (
+                    <tr key={ev.id}>
+                      <td style={td}>{fmtFechaHora(ev.creado_en)}</td>
+                      <td style={td}>{ev.accion}</td>
+                      <td style={td}>{ev.actor_email || '—'}</td>
+                      <td style={td}>{ev.nota || <span style={{ color: '#d1d5db' }}>—</span>}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         )}
       </div>
