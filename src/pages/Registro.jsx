@@ -4,6 +4,7 @@ import iconoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 import { PAISES } from '../utils/paises'
 import CronometroYappy from '../components/CronometroYappy'
+import { getUtmParaRegistro } from '../utils/utm'
 
 // Icono de cabecera sobrio (sustituye los emojis de sistema). Centrado, navy de marca.
 function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
@@ -296,7 +297,7 @@ export default function Registro() {
     try {
       const r = await fetch('/api/registro/paso1', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, plan }),
+        body: JSON.stringify({ ...form, plan, ...getUtmParaRegistro() }),
       })
       const data = await r.json().catch(() => ({}))
       if (r.ok) {
