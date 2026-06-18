@@ -5,8 +5,14 @@
     <link rel="icon" type="image/svg+xml" href="/static/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Socrates Pro</title>
-    <!-- ANALYTICS_SLOT: Meta Pixel / LinkedIn Insight u otra herramienta. Pendiente de IDs
-         (se aportan vía config .env VITE_*); ver src/utils/analytics.js. -->
+    <!-- ANALYTICS_SLOT -->
+    <!-- Privacy-friendly analytics by Plausible -->
+    <script async src="https://plausible.io/js/pa-L5WLf86QYQ4MHRvtqYkWy.js"></script>
+    <script>
+      window.plausible=window.plausible||function(){(plausible.q=plausible.q||[]).push(arguments)},plausible.init=plausible.init||function(i){plausible.o=i||{}};
+      plausible.init()
+    </script>
+    <!-- Píxeles Meta/LinkedIn: siguen aparcados con constantes vacías (ver src/utils/analytics.js). -->
   </head>
   <body>
     <div id="root"></div>
