@@ -47,7 +47,7 @@ export default function Layout({ usuario, loading, children }) {
   }
 
   // CATPLAN solo puede ver /clientes, /settings, /panel-control, /suscripciones, /accesos, /pac, /tickets (superadmin)
-  const rutasPermitidas = ['/clientes', '/settings', '/panel-control', '/suscripciones', '/accesos', '/pac', '/tickets']
+  const rutasPermitidas = ['/clientes', '/settings', '/panel-control', '/suscripciones', '/accesos', '/emul', '/pac', '/tickets']
   if (esCatplan && !rutasPermitidas.some(r => location.pathname.startsWith(r))) {
     return <Navigate to="/clientes" replace />
   }

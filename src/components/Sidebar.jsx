@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList, Ticket, CreditCard, KeyRound } from 'lucide-react'
+import { Radar, GitCommit, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList, Ticket, CreditCard, KeyRound, Eye } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-icono-rojo.svg'
 
 const getNavItems = (usuario) => {
@@ -77,6 +77,12 @@ export default function Sidebar({ usuario }) {
             <NavLink to="/accesos" style={({ isActive }) => linkStyle(isActive)}>
               <KeyRound size={20} />
               <span style={{ fontSize: 11 }}>Registro</span>
+            </NavLink>
+          )}
+          {usuario?.rol === 'superadmin' && (
+            <NavLink to="/emul" style={({ isActive }) => linkStyle(isActive)}>
+              <Eye size={20} />
+              <span style={{ fontSize: 11 }}>Emul</span>
             </NavLink>
           )}
           {usuario?.rol === 'superadmin' && (

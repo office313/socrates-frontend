@@ -17,6 +17,7 @@ import Legal from './pages/Legal'
 import PanelControl from './pages/PanelControl'
 import Suscripciones from './pages/Suscripciones'
 import Accesos from './pages/Accesos'
+import Emul from './pages/Emul'
 import TicketsSoporte from './pages/TicketsSoporte'
 import PacAdmin from './pages/PacAdmin'
 
@@ -45,6 +46,7 @@ function App() {
               <Route path="/panel-control" element={usuario?.rol === 'superadmin' ? <PanelControl /> : <Navigate to="/" replace />} />
               <Route path="/suscripciones" element={usuario?.rol === 'superadmin' ? <Suscripciones /> : <Navigate to="/" replace />} />
               <Route path="/accesos" element={usuario?.rol === 'superadmin' ? <Accesos /> : <Navigate to="/" replace />} />
+              <Route path="/emul" element={usuario?.rol === 'superadmin' ? <Emul /> : <Navigate to="/" replace />} />
               <Route path="/tickets" element={usuario?.rol === 'superadmin' ? <TicketsSoporte /> : <Navigate to="/" replace />} />
               <Route path="/pac" element={usuario?.rol === 'superadmin' ? <PacAdmin /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />

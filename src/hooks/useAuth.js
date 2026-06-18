@@ -6,7 +6,9 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   const checkAuth = () => {
-    axios.get('/api/me')
+    // skipEmul: el shell del superadmin SIEMPRE se autentica como él mismo, nunca como
+    // el usuario emulado (aunque haya una emulación activa en la pestaña Emul).
+    axios.get('/api/me', { skipEmul: true })
       .then(r => {
         if (r.data && r.data.id) {
           setUsuario(r.data)

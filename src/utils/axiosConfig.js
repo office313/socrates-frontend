@@ -1,5 +1,33 @@
 import axios from 'axios'
 
+// --- Emulación de soporte (pestaña "Emul", solo superadmin) ------------------------
+// Estado EN MEMORIA (no persiste). Mientras está activo, el interceptor de request:
+//   1) añade las cabeceras X-Emular-* a TODA petición salvo las que opten por salir
+//      (`config.skipEmul`), p.ej. la /api/me del shell del superadmin (useAuth), que
+//      debe seguir viéndose como superadmin y no como el cliente emulado;
+//   2) CERROJO FRONTEND: cancela localmente cualquier método != GET (los 5 POST de
+//      "mirar" y cualquier otro), así ni se envían. El backend además los bloquea con
+//      403 (doble cerrojo). Los controles /admin/emular/* se llaman con la emulación
+//      inactiva, así que nunca caen aquí.
+let _emul = null  // { empresaId, usuarioId } | null
+export function setEmulacion(empresaId, usuarioId) { _emul = { empresaId, usuarioId } }
+export function clearEmulacion() { _emul = null }
+export function emulacionActiva() { return _emul }
+
+axios.interceptors.request.use((config) => {
+  if (_emul && !config.skipEmul) {
+    const metodo = (config.method || 'get').toLowerCase()
+    const esControlEmul = (config.url || '').includes('/admin/emular/')
+    if (metodo !== 'get' && !esControlEmul) {
+      return Promise.reject(new axios.Cancel('emulacion-readonly'))
+    }
+    config.headers = config.headers || {}
+    config.headers['X-Emular-Empresa'] = String(_emul.empresaId)
+    config.headers['X-Emular-Usuario'] = String(_emul.usuarioId)
+  }
+  return config
+})
+
 // Interceptor global: cualquier 401 redirige a /app/login.
 //
 // Tras el refactor §3.16 del backend (12-may-2026), las respuestas
