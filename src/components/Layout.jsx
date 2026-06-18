@@ -46,8 +46,8 @@ export default function Layout({ usuario, loading, children }) {
     return <OnboardingModal usuario={usuario} />
   }
 
-  // CATPLAN solo puede ver /clientes, /settings, /panel-control, /pac, /tickets (superadmin)
-  const rutasPermitidas = ['/clientes', '/settings', '/panel-control', '/suscripciones', '/pac', '/tickets']
+  // CATPLAN solo puede ver /clientes, /settings, /panel-control, /suscripciones, /accesos, /pac, /tickets (superadmin)
+  const rutasPermitidas = ['/clientes', '/settings', '/panel-control', '/suscripciones', '/accesos', '/pac', '/tickets']
   if (esCatplan && !rutasPermitidas.some(r => location.pathname.startsWith(r))) {
     return <Navigate to="/clientes" replace />
   }
