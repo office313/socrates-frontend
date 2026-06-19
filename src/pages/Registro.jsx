@@ -4,7 +4,6 @@ import iconoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 import { PAISES } from '../utils/paises'
 import CronometroYappy from '../components/CronometroYappy'
-import BotonYappy from '../components/BotonYappy'
 import { getUtmParaRegistro } from '../utils/utm'
 
 // Códigos de error del Botón de Yappy → mensaje claro para el alta (los demás son genéricos).
@@ -363,10 +362,14 @@ export default function Registro() {
       })
       const data = await r.json().catch(() => ({}))
       if (r.ok) {
-        setResumen(data.resumen)
-        setCobro({ ct: data.ct, monto: data.monto, base: data.base, itbms: data.itbms, modo: data.modo, ordenCreada: data.orden_creada })
-        setPagoEstado('inicio')   // muestra el <btn-yappy>; la orden se acuña al pulsarlo
-        setPaso('pago')
+        // CAMINO PROBADO: en vez de montar el <btn-yappy> aquí, mandamos al cliente a la
+        // pantalla de pago que movió dinero real el 16-jun (/app/pagar). paso2 ya dejó la
+        // transacción PENDING (inicial_trial $1+ITBMS / inicial_completo); esa pantalla acuña
+        // la orden vía /cobro/pagar REUTILIZANDO esa misma PENDING → respeta tipo y monto
+        // (NO cobra la cuota completa). El usuario está activo=False → /cobro/estado da 307 y
+        // Pagar cae en su rama "por token" (sin sesión), igual que una cuenta suspendida.
+        window.location.href = `/app/pagar?ct=${encodeURIComponent(data.ct)}`
+        return
       } else if (r.status === 409 && /trial_no_elegible/.test(data.detail || '')) {
         // Regla D: este número ya gastó su prueba de $1 → ocultar la prueba y ofrecer
         // solo el pago completo, con un mensaje claro (sin el prefijo técnico).
@@ -847,10 +850,11 @@ export default function Registro() {
                     <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Esperando su confirmación en Yappy…</div>
                   </>
                 ) : (
-                  /* Botón de Pago oficial de Yappy (web component compartido): al pulsarlo acuña
-                     la orden (crearOrdenAlta → /cobro/pagar, TTL fresco) y empuja la solicitud al
-                     teléfono. eventSuccess→'esperando' (sondeo); eventError→mensaje, sigue en 'inicio'. */
-                  <BotonYappy onCrearOrden={crearOrdenAlta} onAprobado={onAprobadoAlta} onError={onErrorAlta} />
+                  /* JUBILADO: el alta ya NO monta el <btn-yappy> aquí. Tras paso2 redirige a
+                     /app/pagar (camino probado del 16-jun). Este paso 'pago' quedó inalcanzable
+                     (enviarPaso2 hace window.location.href antes de setPaso('pago')); se deja como
+                     código muerto inofensivo (limpieza fuera de esta tanda). */
+                  null
                 )}
               </>
             )}
