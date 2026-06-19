@@ -601,18 +601,17 @@ export default function Dashboard({ usuario }) {
                           </span>
                         )}
                         {/* Badges de estado (T = en Track, W = en Watchlist del
-                            usuario): outline gris pizarra, mismas dimensiones que
-                            R/Flash. Tono neutro a propósito — el sólido (rojo/azul)
-                            queda para atención; estos solo marcan "ya registrada". */}
+                            usuario): mismo molde exacto que la R (azul sólido,
+                            letra blanca). Única diferencia: la letra. */}
                         {l.en_track && (
                           <span title="En tu Track"
-                            style={{ display: 'inline-block', padding: '2px 6px', background: 'white', color: '#475569', border: '1px solid #cbd5e1', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
+                            style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
                             T
                           </span>
                         )}
                         {l.en_watchlist && (
                           <span title="En tu Watchlist"
-                            style={{ display: 'inline-block', padding: '2px 6px', background: 'white', color: '#475569', border: '1px solid #cbd5e1', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
+                            style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
                             W
                           </span>
                         )}
