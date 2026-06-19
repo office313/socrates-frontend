@@ -502,7 +502,9 @@ export default function TrackFormulario({
           {/* 2. Buscador en Track (inyectado desde Pipeline.jsx). */}
           {buscadorControls}
 
-          {/* 3. Navegación Anterior / N de N / Siguiente */}
+          {/* 3. Navegación Anterior / N de N / Siguiente + ESTADO destacado.
+              El Estado (dato NUESTRO) vive aquí, no en la pastilla de la fuente.
+              Editable: mismo value/onChange que antes → persiste con Guardar. */}
           <div style={{
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 8, flexWrap: 'wrap',
@@ -512,10 +514,27 @@ export default function TrackFormulario({
               <span style={{ fontSize: 18, lineHeight: 1, marginRight: 2 }}>‹</span> Anterior
             </button>
             <div style={{
-              fontSize: 12, fontWeight: 600, color: 'var(--blue-dark)',
-              textAlign: 'center', whiteSpace: 'nowrap',
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              gap: 4, flex: '1 1 auto', minWidth: 0,
             }}>
-              {currentIdx + 1} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>de {items.length}</span>
+              {/* ESTADO destacado: navy corporativo (#0f2d57), texto blanco, mayor.
+                  Flecha ▾ blanca vía SVG con appearance:none — no heredamos el
+                  caret nativo (desaparecería sobre el fondo oscuro). */}
+              <select value={form.estado ?? ''} onChange={e => set('estado', e.target.value)}
+                title="Estado del seguimiento"
+                style={{
+                  appearance: 'none', WebkitAppearance: 'none', MozAppearance: 'none',
+                  maxWidth: '100%',
+                  padding: '10px 38px 10px 16px',
+                  background: `#0f2d57 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat right 14px center`,
+                  color: 'white', fontWeight: 600, fontSize: 15,
+                  border: 'none', borderRadius: 10, cursor: 'pointer', outline: 'none',
+                }}>
+                {ESTADOS.map(o => <option key={o} value={o} style={{ background: 'white', color: 'var(--text)' }}>{o}</option>)}
+              </select>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--blue-dark)', whiteSpace: 'nowrap' }}>
+                {currentIdx + 1} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>de {items.length}</span>
+              </div>
             </div>
             <button onClick={irSiguiente} disabled={!hasNext} title="Siguiente (→)"
               style={navBtnStyle(!hasNext)}>
@@ -590,23 +609,14 @@ export default function TrackFormulario({
               </div>
             )}
 
-            {/* ESTADO — selector editable y NEUTRO (sin color por estado).
-                Movido aquí desde la pestaña General para quedar siempre visible
-                al cambiar de pestaña (esta columna no scrollea con las pestañas).
-                Reusa set('estado',v) → entra en el form y persiste con Guardar,
-                igual que cuando vivía en General. Lista canónica ESTADOS. */}
-            <div style={{ marginBottom: 6 }}>
-              <div style={labelStyle}>ESTADO</div>
-              <select value={form.estado ?? ''} onChange={e => set('estado', e.target.value)}
-                style={baseInputStyle({ fontWeight: 600, appearance: 'auto', padding: '8px 10px', fontSize: 13 })}>
-                {ESTADOS.map(o => <option key={o} value={o}>{o}</option>)}
-              </select>
-              {form.fecha_cierre && (
-                <div style={{ marginTop: 6, fontSize: 12, color: 'var(--text-muted)' }}>
-                  Cierre: <strong style={{ color: 'var(--text)' }}>{fmtFecha(form.fecha_cierre)}</strong>
-                </div>
-              )}
-            </div>
+            {/* Cierre (dato de la FUENTE) — se queda en la pastilla. El selector
+                de ESTADO (dato NUESTRO) se movió a la fila de navegación de arriba,
+                destacado, para no mezclarlo con los datos de la fuente. */}
+            {form.fecha_cierre && (
+              <div style={{ marginBottom: 6, fontSize: 12, color: 'var(--text-muted)' }}>
+                Cierre: <strong style={{ color: 'var(--text)' }}>{fmtFecha(form.fecha_cierre)}</strong>
+              </div>
+            )}
 
             {/* PRECIO OFERTADO */}
             <div style={{ marginBottom: 6 }}>
