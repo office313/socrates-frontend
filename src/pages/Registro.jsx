@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Mail, Smartphone, CheckCircle2, AlertTriangle, RotateCcw, Wrench, ShieldCheck, Check } from 'lucide-react'
+import { Mail, Smartphone, CheckCircle2, AlertTriangle, RotateCcw, Wrench, ShieldCheck, Check, CreditCard } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 import { PAISES } from '../utils/paises'
@@ -69,7 +69,10 @@ export default function Registro() {
   const _planParam = params.get('plan')
   const planInicial = _planParam ? normalizarPlan(_planParam) : 'pro-plus'
 
-  const [paso, setPaso] = useState('datos') // datos | verifica | plan | casi
+  const [paso, setPaso] = useState('datos') // datos | verifica | plan | metodo | pago
+  // Paso 'metodo': método de pago elegido. null = aún no elige; 'yappy' revela el aviso
+  // CATPLAN + el flujo Yappy existente. 'tarjeta' redirige a Stripe (no persiste estado).
+  const [metodoSel, setMetodoSel] = useState(null)
   const [rt, setRt] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -236,7 +239,7 @@ export default function Registro() {
 
   // Comprobar elegibilidad de la prueba de $1 cuando el número de Yappy es válido (regla D).
   useEffect(() => {
-    if (paso !== 'plan' || !yappyTelOk) { setTrialElegible(true); return }
+    if (paso !== 'metodo' || !yappyTelOk) { setTrialElegible(true); return }
     let vivo = true
     fetch(`/api/registro/trial-elegible?yappy_telefono=${encodeURIComponent(yappyTel)}`)
       .then(r => r.ok ? r.json() : null)
@@ -370,6 +373,30 @@ export default function Registro() {
     } catch {
       setError('Error de conexión. Inténtelo de nuevo.')
     } finally {
+      setLoading(false)
+    }
+  }
+
+  // ---- Pago con TARJETA (Stripe Checkout) ----
+  // Conecta con el backend ya construido (Brief 1): crea la sesión de Checkout y devuelve
+  // la URL alojada por Stripe; redirigimos allí. La cuenta se activa por el webhook de
+  // Stripe (igual que Yappy por su IPN). Trial de 5 días por $1 limpio (sin ITBMS).
+  const irACheckoutTarjeta = async () => {
+    setError(''); setLoading(true)
+    try {
+      const r = await fetch('/api/cobro/stripe/checkout', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rt, plan, packs, ciclo }),
+      })
+      const data = await r.json().catch(() => ({}))
+      if (r.ok && data.checkout_url) {
+        window.location.href = data.checkout_url   // redirige a Stripe Checkout (hosted)
+      } else {
+        setError(data.detail || 'No pudimos iniciar el pago con tarjeta. Inténtelo de nuevo.')
+        setLoading(false)
+      }
+    } catch {
+      setError('Error de conexión. Inténtelo de nuevo.')
       setLoading(false)
     }
   }
@@ -623,53 +650,118 @@ export default function Registro() {
               )}
             </div>
 
-            {/* Método de pago: número Yappy (no se cobra ahora; se usa al fin de la prueba) */}
-            <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 11, marginBottom: 10 }}>
-              <Campo label="Su número de Yappy">
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>+507</span>
-                  <input style={{ ...is, flex: 1 }} value={yappyTel} onChange={e => setYappyTel(e.target.value)}
-                    inputMode="tel" placeholder="6123 4567" required />
+            <button type="button" onClick={() => { setError(''); setMetodoSel(null); setPaso('metodo') }} style={btn(true)}>
+              Continuar al pago
+            </button>
+          </div>
+        )}
+
+        {/* PASO 2.5 — ELECCIÓN DE MÉTODO DE PAGO (tarjeta / Yappy) */}
+        {paso === 'metodo' && (
+          <div>
+            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>¿Cómo quiere pagar?</h1>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 12 }}>
+              Su prueba de 5 días empieza hoy. Elija su forma de pago.
+            </p>
+
+            {/* Recordatorio del plan elegido (precio LIMPIO, sin ITBMS) */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', background: 'var(--gray)', borderRadius: 10, padding: '10px 14px', marginBottom: 14 }}>
+              <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
+                Plan <strong style={{ color: 'var(--blue)' }}>{cfg.nombre}</strong>
+                {packs > 0 && ` · +${(planesMeta.usuarios_por_pack || 5) * packs} usuarios`} · {anual ? 'anual' : 'mensual'}
+              </span>
+              <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+                ${totalLanzamiento != null ? totalLanzamiento : totalLista}
+                <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
+              </span>
+            </div>
+
+            {/* Opción principal: TARJETA (Stripe Checkout) */}
+            <button type="button" onClick={irACheckoutTarjeta} disabled={loading} style={{
+              width: '100%', textAlign: 'left', border: '2px solid var(--blue)', background: 'var(--blue-light)',
+              borderRadius: 12, padding: '14px 16px', cursor: loading ? 'default' : 'pointer', marginBottom: 10,
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, opacity: loading ? 0.7 : 1,
+            }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <CreditCard size={22} strokeWidth={1.7} color="var(--blue)" style={{ flexShrink: 0 }} />
+                <span>
+                  <span style={{ display: 'block', fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>
+                    {loading ? 'Abriendo pago seguro…' : 'Tarjeta de crédito'}
+                  </span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Visa · Mastercard</span>
+                </span>
+              </span>
+              <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>🔒 Stripe</span>
+            </button>
+
+            {/* Opción secundaria: YAPPY */}
+            <button type="button" onClick={() => { setError(''); setMetodoSel('yappy') }} style={{
+              width: '100%', textAlign: 'left', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', marginBottom: 10,
+              border: `1px solid ${metodoSel === 'yappy' ? 'var(--blue)' : 'var(--border)'}`, background: 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+            }}>
+              <span>
+                <span style={{ display: 'block', fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>Yappy</span>
+                <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pago desde su teléfono</span>
+              </span>
+              <YappyLogo width={70} />
+            </button>
+
+            {/* Al elegir Yappy: aviso CATPLAN (texto, no modal) + flujo Yappy EXISTENTE */}
+            {metodoSel === 'yappy' && (
+              <div>
+                <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '11px 14px', margin: '4px 0 12px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>
+                  Para pagos con Yappy, la facturación la realiza CATPLAN Security, distribuidor de Sócrates Pro en Panamá, que emitirá factura fiscal con ITBMS (7%). Total de la prueba con Yappy: $1.07.
                 </div>
-              </Campo>
-              <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -6 }}>
-                Su método de pago. Aprobará el cobro en su app de Yappy con PIN o huella.
-              </div>
-              {yappyTel && !yappyTelOk && (
-                <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>El número debe tener 8 dígitos.</div>
-              )}
-            </div>
 
-            {/* Marca: que desde que elige se vea que el pago es por Yappy. */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '0 0 10px', fontSize: 13, color: 'var(--text-muted)' }}>
-              <span>Pago con</span>
-              <YappyLogo width={86} />
-            </div>
+                {/* Número Yappy = método de pago (mismo comportamiento que antes) */}
+                <div style={{ border: '1px solid var(--border)', borderRadius: 10, padding: 11, marginBottom: 10 }}>
+                  <Campo label="Su número de Yappy">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>+507</span>
+                      <input style={{ ...is, flex: 1 }} value={yappyTel} onChange={e => setYappyTel(e.target.value)}
+                        inputMode="tel" placeholder="6123 4567" required />
+                    </div>
+                  </Campo>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: -6 }}>
+                    Su método de pago. Aprobará el cobro en su app de Yappy con PIN o huella.
+                  </div>
+                  {yappyTel && !yappyTelOk && (
+                    <div style={{ fontSize: 12, color: 'var(--red)', marginTop: 6 }}>El número debe tener 8 dígitos.</div>
+                  )}
+                </div>
 
-            {/* Dos caminos: prueba "5 días por $1" (el $1 se descuenta del 1er pago) o alta directa.
-                Regla D: la prueba solo se ofrece si este número de Yappy no la gastó antes. */}
-            {trialElegible ? (
-              <>
-                <button type="button" onClick={() => enviarPaso2('trial')} disabled={loading || !yappyTelOk}
-                  style={btn(!loading && yappyTelOk)}>
-                  {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
+                {trialElegible ? (
+                  <>
+                    <button type="button" onClick={() => enviarPaso2('trial')} disabled={loading || !yappyTelOk}
+                      style={btn(!loading && yappyTelOk)}>
+                      {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
+                    </button>
+                    <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 8px' }}>
+                      $1.07 hoy (con ITBMS); se descuenta del primer pago al acabar la prueba.
+                    </p>
+                  </>
+                ) : (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', textAlign: 'center' }}>
+                    Este número de Yappy ya disfrutó la prueba de $1. Puede suscribirse directamente:
+                  </p>
+                )}
+                <button type="button" onClick={() => enviarPaso2('completo')} disabled={loading || !yappyTelOk}
+                  style={trialElegible ? {
+                    width: '100%', padding: '11px', background: 'white', color: 'var(--blue)',
+                    border: '1px solid var(--blue)', borderRadius: 8, fontSize: 14, fontWeight: 600,
+                    cursor: (loading || !yappyTelOk) ? 'default' : 'pointer', opacity: (loading || !yappyTelOk) ? 0.6 : 1,
+                  } : btn(!loading && yappyTelOk)}>
+                  {trialElegible ? 'Suscribirme ya (sin prueba)' : (loading ? 'Un momento…' : 'Suscribirme ya')}
                 </button>
-                <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 8px' }}>
-                  $1 + ITBMS hoy; se descuenta del primer pago al acabar la prueba.
-                </p>
-              </>
-            ) : (
-              <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', textAlign: 'center' }}>
-                Este número de Yappy ya disfrutó la prueba de $1. Puede suscribirse directamente:
-              </p>
+              </div>
             )}
-            <button type="button" onClick={() => enviarPaso2('completo')} disabled={loading || !yappyTelOk}
-              style={trialElegible ? {
-                width: '100%', padding: '11px', background: 'white', color: 'var(--blue)',
-                border: '1px solid var(--blue)', borderRadius: 8, fontSize: 14, fontWeight: 600,
-                cursor: (loading || !yappyTelOk) ? 'default' : 'pointer', opacity: (loading || !yappyTelOk) ? 0.6 : 1,
-              } : btn(!loading && yappyTelOk)}>
-              {trialElegible ? 'Suscribirme ya (sin prueba)' : (loading ? 'Un momento…' : 'Suscribirme ya')}
+
+            <button type="button" onClick={() => { setError(''); setMetodoSel(null); setPaso('plan') }} style={{
+              display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)',
+              fontSize: 12, fontWeight: 600, cursor: 'pointer', textDecoration: 'underline',
+            }}>
+              ← Volver a los planes
             </button>
           </div>
         )}
