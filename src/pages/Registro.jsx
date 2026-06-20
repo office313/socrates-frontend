@@ -6,11 +6,6 @@ import { PAISES } from '../utils/paises'
 import CronometroYappy from '../components/CronometroYappy'
 import { getUtmParaRegistro } from '../utils/utm'
 
-// Códigos de error del Botón de Yappy → mensaje claro para el alta (los demás son genéricos).
-const ERR_YAPPY_ALTA = { E005: 'Este número no está registrado en Yappy. Verifique el número o use otro.' }
-const msgErrYappyAlta = (c) => ERR_YAPPY_ALTA[String(c || '').toUpperCase()] ||
-  'No se pudo completar el pago con Yappy. Inténtelo de nuevo.'
-
 // Icono de cabecera sobrio (sustituye los emojis de sistema). Centrado, navy de marca.
 function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
   return <Icon size={size} strokeWidth={1.5} color={color} style={{ display: 'block', margin: '0 auto 10px' }} />
@@ -128,7 +123,7 @@ export default function Registro() {
   const [cobro, setCobro] = useState(null)  // { ct, monto, base, itbms, modo, ordenCreada }
   // Estado del pago: esperando | ok | rechazado | expirado | tecnico. Nunca un spinner
   // eterno: el sondeo se rinde con timeout y los estados terminales de Yappy tienen salida.
-  const [pagoEstado, setPagoEstado] = useState('inicio')  // inicio (muestra <btn-yappy>) | esperando | ok | rechazado | expirado | tecnico
+  const [pagoEstado, setPagoEstado] = useState('esperando')
   const [cambiarTel, setCambiarTel] = useState(false)  // mostrar input para corregir el número
   // Reenvío de la verificación: confirmación visible + cooldown (evita pulsaciones repetidas
   // y protege el límite de envíos de Resend).
@@ -214,10 +209,9 @@ export default function Registro() {
   // la cuenta ya está activa → entra a la app. NUNCA spinner eterno: si Yappy devuelve
   // un estado terminal (rechazado/expirado) o se agota el tiempo, salimos a un estado
   // con salidas claras. En staging (sin Yappy real) no sondea; los botones "simular"
-  // confirman. Solo sondea en 'esperando' (tras pulsar el <btn-yappy> y aprobar): en 'inicio'
-  // aún no hay orden acuñada, así que no hay nada que confirmar.
+  // confirman. Si no hay orden creada (Yappy aún no habilitado) tampoco sondea.
   useEffect(() => {
-    if (paso !== 'pago' || !cobro?.ct || esStaging || pagoEstado !== 'esperando') return
+    if (paso !== 'pago' || !cobro?.ct || esStaging || !cobro?.ordenCreada || pagoEstado !== 'esperando') return
     let vivo = true
     let intentos = 0
     // ~5,3 min a 4s: red de seguridad por DETRÁS del cronómetro de 5 min, que es quien marca
@@ -347,14 +341,14 @@ export default function Registro() {
   const yappyTelDigitos = yappyTel.replace(/\D/g, '').replace(/^507/, '')
   const yappyTelOk = yappyTelDigitos.length === 8
 
-  // ---- Paso 2: elegir plan + número Yappy + PREPARAR EL COBRO INICIAL ----
-  //   modo 'trial'    → prueba "5 días por $1";  modo 'completo' → plan entero ("suscribirme ya").
-  // paso2 deja la transacción PENDING + los campos de empresa, pero NO acuña la orden Yappy:
-  // pasamos al paso 'pago' en estado 'inicio', donde el <btn-yappy> acuña la orden EN EL CLIC
-  // (TTL de 5 min fresco) y la empuja al teléfono. La cuenta se activa SOLO al confirmar.
+  // ---- Paso 2: elegir plan + número Yappy + DISPARAR EL COBRO INICIAL ----
+  //   modo 'trial'    → cobra $1 ("5 días por $1");
+  //   modo 'completo' → cobra el plan entero ("suscribirme ya").
+  // El backend crea la orden Yappy (cliente presente); pasamos al paso de pago a
+  // sondear la confirmación. La cuenta se activa SOLO al confirmar.
   const enviarPaso2 = async (modo) => {
     if (!yappyTelOk) { setError('Indique su número de Yappy (móvil de Panamá, 8 dígitos).'); return }
-    setError(''); setLoading(true); setCambiarTel(false)
+    setError(''); setLoading(true); setCambiarTel(false); setPagoEstado('esperando')
     try {
       const r = await fetch('/api/registro/paso2', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -362,14 +356,9 @@ export default function Registro() {
       })
       const data = await r.json().catch(() => ({}))
       if (r.ok) {
-        // CAMINO PROBADO: en vez de montar el <btn-yappy> aquí, mandamos al cliente a la
-        // pantalla de pago que movió dinero real el 16-jun (/app/pagar). paso2 ya dejó la
-        // transacción PENDING (inicial_trial $1+ITBMS / inicial_completo); esa pantalla acuña
-        // la orden vía /cobro/pagar REUTILIZANDO esa misma PENDING → respeta tipo y monto
-        // (NO cobra la cuota completa). El usuario está activo=False → /cobro/estado da 307 y
-        // Pagar cae en su rama "por token" (sin sesión), igual que una cuenta suspendida.
-        window.location.href = `/app/pagar?ct=${encodeURIComponent(data.ct)}`
-        return
+        setResumen(data.resumen)
+        setCobro({ ct: data.ct, monto: data.monto, base: data.base, itbms: data.itbms, modo: data.modo, ordenCreada: data.orden_creada })
+        setPaso('pago')
       } else if (r.status === 409 && /trial_no_elegible/.test(data.detail || '')) {
         // Regla D: este número ya gastó su prueba de $1 → ocultar la prueba y ofrecer
         // solo el pago completo, con un mensaje claro (sin el prefijo técnico).
@@ -384,39 +373,6 @@ export default function Registro() {
       setLoading(false)
     }
   }
-
-  // Acuña la orden del Botón en el CLIC del <btn-yappy> (los 2 POST de /cobro/pagar, que
-  // REUTILIZAN la misma PENDING inicial que dejó paso2 → respeta tipo y monto: inicial_trial
-  // $1+ITBMS, o inicial_completo). Devuelve {transactionId, token, documentName} para que el
-  // componente abra el flujo y empuje la solicitud al teléfono; null si no se pudo (el padre
-  // ya muestra el motivo). La orden nace fresca aquí → el TTL de 5 min no arranca antes.
-  const crearOrdenAlta = async () => {
-    setError('')
-    try {
-      const r = await fetch(`/api/cobro/pagar?ct=${encodeURIComponent(cobro.ct)}`)
-      if (r.status === 503) {
-        setError('El cobro por Yappy se está habilitando. Su cuenta queda guardada; le avisaremos por correo.')
-        return null
-      }
-      const d = await r.json().catch(() => ({}))
-      if (r.ok && d?.ok && d.transactionId && d.token && d.documentName) {
-        return { transactionId: d.transactionId, token: d.token, documentName: d.documentName }
-      }
-      setError(d?.detail || 'No pudimos iniciar el pago. Inténtelo de nuevo.')
-      return null
-    } catch {
-      setError('Error de conexión. Inténtelo de nuevo.')
-      return null
-    }
-  }
-
-  // El cliente aprobó en su app: NO activamos aquí. Pasamos a 'esperando' para que el sondeo
-  // de /cobro/confirmar refleje el COMPLETED que escribirá el IPN (la verdad del cobro).
-  const onAprobadoAlta = () => setPagoEstado((e) => (e === 'ok' ? e : 'esperando'))
-
-  // Error/cancelación del componente Yappy. NO se ha cobrado; se queda en 'inicio' para
-  // que el cliente pueda volver a pulsar el botón.
-  const onErrorAlta = (code) => setError(msgErrYappyAlta(code))
 
   // Centrado robusto que NO recorta: alignItems flex-start + margin:auto en la tarjeta.
   // Si el contenido cabe, queda centrado vertical; si es más alto que el viewport, se
@@ -768,7 +724,7 @@ export default function Registro() {
                   </div>
                 )}
                 <button type="button" onClick={() => enviarPaso2(cobro.modo)} disabled={loading || !yappyTelOk} style={btn(!loading && yappyTelOk)}>
-                  {loading ? 'Un momento…' : (cambiarTel ? 'Reintentar con el nuevo número' : 'Volver a intentar el pago')}
+                  {loading ? 'Reenviando…' : (cambiarTel ? 'Reenviar al nuevo número' : 'Reenviar la solicitud de pago')}
                 </button>
                 {!cambiarTel && (
                   <button type="button" onClick={() => setCambiarTel(true)} style={{
@@ -778,7 +734,7 @@ export default function Registro() {
                     Cambiar de número
                   </button>
                 )}
-                <button type="button" onClick={() => { setPagoEstado('inicio'); setCambiarTel(false); setPaso('plan') }} style={{
+                <button type="button" onClick={() => { setPagoEstado('esperando'); setCambiarTel(false); setPaso('plan') }} style={{
                   background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, fontWeight: 600,
                   cursor: 'pointer', textDecoration: 'underline', marginTop: 12,
                 }}>
@@ -789,9 +745,7 @@ export default function Registro() {
               <>
                 <IconoHeader icon={Smartphone} />
                 <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 12px' }}>
-                  {pagoEstado === 'esperando'
-                    ? `Apruebe el pago de $${cobro.monto?.toFixed(2)} en Yappy`
-                    : `Pague $${cobro.monto?.toFixed(2)} con Yappy`}
+                  Apruebe el pago de ${cobro.monto?.toFixed(2)} en Yappy
                 </h1>
                 {/* Logo oficial de Yappy: da confianza en el momento de aprobar el cobro. */}
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, margin: '0 0 16px', fontSize: 14, color: 'var(--text-muted)' }}>
@@ -810,9 +764,8 @@ export default function Registro() {
                   )}
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16 }}>
-                  {pagoEstado === 'esperando'
-                    ? 'Le enviamos una solicitud a su app de Yappy. Apruébela con su PIN o huella; esta página continúa sola en cuanto se confirme.'
-                    : 'Pulse el botón de Yappy: recibirá la solicitud de pago en su app. Apruébela con su PIN o huella y esta página continuará sola.'}
+                  Le enviamos una solicitud a su app de Yappy. Apruébela con su PIN o huella;
+                  esta página continúa sola en cuanto se confirme.
                   {cobro.modo !== 'completo' && ' Ese $1 se descuenta del primer pago.'}
                 </p>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8, textAlign: 'left' }}>
@@ -841,20 +794,17 @@ export default function Registro() {
                       </div>
                     </div>
                   </>
-                ) : pagoEstado === 'esperando' ? (
+                ) : !cobro.ordenCreada ? (
+                  <p style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                    El cobro por Yappy se está habilitando. Su cuenta queda guardada; le avisaremos por correo.
+                  </p>
+                ) : (
                   <>
-                    {/* Tras pulsar el botón y aprobar en Yappy: cronómetro de 5 min (la orden
-                        caduca a los 5 min, confirmado por Banco General) + sondeo de confirmación.
-                        key={ct} → cada reintento arranca de nuevo en 5:00. */}
+                    {/* Cronómetro de 5 min (la orden Yappy caduca a los 5 min, confirmado por
+                        Banco General). key={ct} → cada reenvío arranca de nuevo en 5:00. */}
                     <CronometroYappy key={cobro.ct} segundos={300} onExpirar={() => setPagoEstado('expirado')} />
                     <div style={{ color: 'var(--text-muted)', fontSize: 13 }}>Esperando su confirmación en Yappy…</div>
                   </>
-                ) : (
-                  /* JUBILADO: el alta ya NO monta el <btn-yappy> aquí. Tras paso2 redirige a
-                     /app/pagar (camino probado del 16-jun). Este paso 'pago' quedó inalcanzable
-                     (enviarPaso2 hace window.location.href antes de setPaso('pago')); se deja como
-                     código muerto inofensivo (limpieza fuera de esta tanda). */
-                  null
                 )}
               </>
             )}
