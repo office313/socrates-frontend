@@ -73,6 +73,8 @@ export default function Registro() {
   // Paso 'metodo': método de pago elegido. null = aún no elige; 'yappy' revela el aviso
   // CATPLAN + el flujo Yappy existente. 'tarjeta' redirige a Stripe (no persiste estado).
   const [metodoSel, setMetodoSel] = useState(null)
+  // Anti-abuso del trial (vía tarjeta): {mensaje, url} si ya usó su prueba → CTA a plan completo.
+  const [bloqueoTarjeta, setBloqueoTarjeta] = useState(null)
   const [rt, setRt] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -390,7 +392,13 @@ export default function Registro() {
       })
       const data = await r.json().catch(() => ({}))
       if (r.ok && data.checkout_url) {
-        window.location.href = data.checkout_url   // redirige a Stripe Checkout (hosted)
+        if (data.trial === false) {
+          // Ya usó su prueba: mensaje amable + confirmación explícita del plan completo.
+          setBloqueoTarjeta({ mensaje: data.mensaje || 'Esta cuenta ya disfrutó su prueba. Puede suscribirse al plan completo.', url: data.checkout_url })
+          setLoading(false)
+        } else {
+          window.location.href = data.checkout_url   // redirige a Stripe Checkout (hosted)
+        }
       } else {
         setError(data.detail || 'No pudimos iniciar el pago con tarjeta. Inténtelo de nuevo.')
         setLoading(false)
@@ -693,6 +701,16 @@ export default function Registro() {
               </span>
               <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>🔒 Stripe</span>
             </button>
+
+            {/* Anti-abuso: ya usó su prueba → mensaje amable + CTA al plan completo (no se cierra la puerta) */}
+            {bloqueoTarjeta && (
+              <div style={{ background: 'var(--blue-light)', border: '1px solid var(--blue)', borderRadius: 10, padding: '12px 14px', marginBottom: 10 }}>
+                <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.5, marginBottom: 10 }}>{bloqueoTarjeta.mensaje}</div>
+                <button type="button" onClick={() => { window.location.href = bloqueoTarjeta.url }} style={btn(true)}>
+                  Continuar al plan completo
+                </button>
+              </div>
+            )}
 
             {/* Opción secundaria: YAPPY */}
             <button type="button" onClick={() => { setError(''); setMetodoSel('yappy') }} style={{
