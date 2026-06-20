@@ -280,9 +280,9 @@ export default function Registro() {
   // Anual = mensual × meses ("2 meses gratis").
   const totalLista = anual ? mensualLista * meses : mensualLista
   const totalLanzamiento = mensualLanz != null ? (anual ? mensualLanz * meses : mensualLanz) : null
-  // Nota: los precios mostrados durante el flujo son la BASE (sin ITBMS), con un discreto
-  // "+ ITBMS". El desglose con impuesto y el total real se muestran SOLO en la pantalla de
-  // pago, con los importes que devuelve el backend (cobro.base/itbms/monto).
+  // Nota: los precios mostrados durante el flujo son la BASE LIMPIA (sin ITBMS). El desglose
+  // con impuesto y el total real se muestran SOLO en la pantalla de pago (cobro Yappy), con
+  // los importes que devuelve el backend (cobro.base/itbms/monto).
 
   // ---- Paso 1: enviar datos ----
   const enviarPaso1 = async (e) => {
@@ -584,7 +584,7 @@ export default function Registro() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
                       <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>{p.nombre}</span>
                       <span style={{ fontWeight: 700, fontSize: 15 }}>
-                        ${pLanz != null ? pLanz : pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo} + ITBMS</span>
+                        ${pLanz != null ? pLanz : pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
                       </span>
                     </div>
                     <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
@@ -626,7 +626,7 @@ export default function Registro() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
                     <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{anual ? 'Cuota anual (luego)' : 'Cuota mensual (luego)'}</span>
                     <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>
-                      ${base}<span style={{ fontSize: 11, fontWeight: 400 }}>{sufijo} + ITBMS</span>
+                      ${base}<span style={{ fontSize: 11, fontWeight: 400 }}>{sufijo}</span>
                     </span>
                   </div>
                 )
@@ -640,7 +640,7 @@ export default function Registro() {
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
                     <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Hoy paga</span>
                     <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
-                      $1<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> + ITBMS</span>
+                      $1
                     </span>
                   </div>
                   <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
