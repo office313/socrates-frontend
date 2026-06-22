@@ -409,6 +409,14 @@ export default function Registro() {
     }
   }
 
+  // Único commit de pago del paso 'metodo': despacha según el método elegido. NO cambia la
+  // mecánica (irACheckoutTarjeta / enviarPaso2 / paso2 / push / IPN) — solo la invoca AQUÍ,
+  // con confirmación explícita, en vez de en el clic del método (evita el disparo accidental).
+  const continuarAlPago = () => {
+    if (metodoSel === 'tarjeta') { irACheckoutTarjeta(); return }
+    if (metodoSel === 'yappy') { enviarPaso2(trialElegible ? 'trial' : 'completo'); return }
+  }
+
   // Centrado robusto que NO recorta: alignItems flex-start + margin:auto en la tarjeta.
   // Si el contenido cabe, queda centrado vertical; si es más alto que el viewport, se
   // ancla arriba y hace scroll natural (sin la parte superior inalcanzable del center).
@@ -684,22 +692,24 @@ export default function Registro() {
               </span>
             </div>
 
-            {/* Opción principal: TARJETA (Stripe Checkout) */}
-            <button type="button" onClick={irACheckoutTarjeta} disabled={loading} style={{
-              width: '100%', textAlign: 'left', border: '2px solid var(--blue)', background: 'var(--blue-light)',
-              borderRadius: 12, padding: '14px 16px', cursor: loading ? 'default' : 'pointer', marginBottom: 10,
-              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, opacity: loading ? 0.7 : 1,
+            {/* Opción: TARJETA (Stripe) — selector PURO, no ejecuta (el commit es "Continuar al pago") */}
+            <button type="button" onClick={() => { setError(''); setMetodoSel('tarjeta') }} style={{
+              width: '100%', textAlign: 'left', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', marginBottom: 10,
+              border: `${metodoSel === 'tarjeta' ? '2px' : '1px'} solid ${metodoSel === 'tarjeta' ? 'var(--blue)' : 'var(--border)'}`,
+              background: metodoSel === 'tarjeta' ? 'var(--blue-light)' : 'white',
+              display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
             }}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                <CreditCard size={22} strokeWidth={1.7} color="var(--blue)" style={{ flexShrink: 0 }} />
+                <CreditCard size={22} strokeWidth={1.7} color={metodoSel === 'tarjeta' ? 'var(--blue)' : 'var(--text-muted)'} style={{ flexShrink: 0 }} />
                 <span>
-                  <span style={{ display: 'block', fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>
-                    {loading ? 'Abriendo pago seguro…' : 'Tarjeta de crédito'}
-                  </span>
-                  <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Visa · Mastercard</span>
+                  <span style={{ display: 'block', fontWeight: 700, color: metodoSel === 'tarjeta' ? 'var(--blue)' : 'var(--text)', fontSize: 15 }}>Tarjeta de crédito</span>
+                  <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pago seguro · 🔒 Stripe</span>
                 </span>
               </span>
-              <span style={{ fontSize: 12, color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>🔒 Stripe</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                <VisaMark />
+                <McMark />
+              </span>
             </button>
 
             {/* Anti-abuso: ya usó su prueba → mensaje amable + CTA al plan completo (no se cierra la puerta) */}
@@ -712,24 +722,26 @@ export default function Registro() {
               </div>
             )}
 
-            {/* Opción secundaria: YAPPY */}
+            {/* Opción: YAPPY — selector PURO */}
             <button type="button" onClick={() => { setError(''); setMetodoSel('yappy') }} style={{
               width: '100%', textAlign: 'left', borderRadius: 12, padding: '14px 16px', cursor: 'pointer', marginBottom: 10,
-              border: `1px solid ${metodoSel === 'yappy' ? 'var(--blue)' : 'var(--border)'}`, background: 'white',
+              border: `${metodoSel === 'yappy' ? '2px' : '1px'} solid ${metodoSel === 'yappy' ? 'var(--blue)' : 'var(--border)'}`,
+              background: metodoSel === 'yappy' ? 'var(--blue-light)' : 'white',
               display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
             }}>
               <span>
-                <span style={{ display: 'block', fontWeight: 700, color: 'var(--text)', fontSize: 15 }}>Yappy</span>
+                <span style={{ display: 'block', fontWeight: 700, color: metodoSel === 'yappy' ? 'var(--blue)' : 'var(--text)', fontSize: 15 }}>Yappy</span>
                 <span style={{ display: 'block', fontSize: 12, color: 'var(--text-muted)', marginTop: 2 }}>Pago desde su teléfono</span>
               </span>
               <YappyLogo width={70} />
             </button>
 
-            {/* Al elegir Yappy: aviso CATPLAN (texto, no modal) + flujo Yappy EXISTENTE */}
+            {/* Al elegir Yappy: aviso CATPLAN + campo de número INLINE. La mecánica
+                (enviarPaso2/paso2/push/IPN) NO cambia; solo se invoca desde "Continuar al pago". */}
             {metodoSel === 'yappy' && (
               <div>
                 <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '11px 14px', margin: '4px 0 12px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                  Para pagos con Yappy, la facturación la realiza CATPLAN Security, distribuidor de Sócrates Pro en Panamá, que emitirá factura fiscal con ITBMS (7%). Total de la prueba con Yappy: $1.07.
+                  Para pagos con Yappy, la facturación la realiza CATPLAN Security, distribuidor de Sócrates Pro en Panamá, que emitirá factura fiscal con ITBMS (7%). Total de la prueba con Yappy: $1.07{trialElegible ? '; se descuenta del primer pago al acabar la prueba.' : '.'}
                 </div>
 
                 {/* Número Yappy = método de pago (mismo comportamiento que antes) */}
@@ -749,31 +761,21 @@ export default function Registro() {
                   )}
                 </div>
 
-                {trialElegible ? (
-                  <>
-                    <button type="button" onClick={() => enviarPaso2('trial')} disabled={loading || !yappyTelOk}
-                      style={btn(!loading && yappyTelOk)}>
-                      {loading ? 'Un momento…' : 'Pruébelo 5 días por solo $1'}
-                    </button>
-                    <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', margin: '6px 0 8px' }}>
-                      $1.07 hoy (con ITBMS); se descuenta del primer pago al acabar la prueba.
-                    </p>
-                  </>
-                ) : (
+                {!trialElegible && (
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', textAlign: 'center' }}>
-                    Este número de Yappy ya disfrutó la prueba de $1. Puede suscribirse directamente:
+                    Este número de Yappy ya disfrutó la prueba de $1. Continuará al plan completo.
                   </p>
                 )}
-                <button type="button" onClick={() => enviarPaso2('completo')} disabled={loading || !yappyTelOk}
-                  style={trialElegible ? {
-                    width: '100%', padding: '11px', background: 'white', color: 'var(--blue)',
-                    border: '1px solid var(--blue)', borderRadius: 8, fontSize: 14, fontWeight: 600,
-                    cursor: (loading || !yappyTelOk) ? 'default' : 'pointer', opacity: (loading || !yappyTelOk) ? 0.6 : 1,
-                  } : btn(!loading && yappyTelOk)}>
-                  {trialElegible ? 'Suscribirme ya (sin prueba)' : (loading ? 'Un momento…' : 'Suscribirme ya')}
-                </button>
               </div>
             )}
+
+            {/* ÚNICO commit de pago: confirma el método elegido. Deshabilitado si no hay método,
+                y si es Yappy hasta que el número tenga 8 dígitos válidos. Despacha en continuarAlPago. */}
+            <button type="button" onClick={continuarAlPago}
+              disabled={!metodoSel || loading || (metodoSel === 'yappy' && !yappyTelOk)}
+              style={btn(!!metodoSel && !loading && !(metodoSel === 'yappy' && !yappyTelOk))}>
+              {loading ? 'Un momento…' : 'Continuar al pago'}
+            </button>
 
             <button type="button" onClick={() => { setError(''); setMetodoSel(null); setPaso('plan') }} style={{
               display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)',
@@ -931,6 +933,25 @@ function YappyLogo({ width = 92 }) {
   return (
     <img src={yappyLogo} alt="Yappy" width={width}
       style={{ height: 'auto', display: 'inline-block', verticalAlign: 'middle' }} />
+  )
+}
+
+// Marcas de tarjeta (SVG inline; sin assets externos) para equilibrar con el logo de Yappy.
+function VisaMark() {
+  return (
+    <svg width="34" height="22" viewBox="0 0 48 32" role="img" aria-label="Visa" style={{ display: 'block' }}>
+      <rect x="0.5" y="0.5" width="47" height="31" rx="4" fill="#fff" stroke="#E6E8EC" />
+      <text x="24" y="21" textAnchor="middle" fontFamily="Arial, Helvetica, sans-serif" fontWeight="700" fontStyle="italic" fontSize="13" fill="#1A1F71">VISA</text>
+    </svg>
+  )
+}
+function McMark() {
+  return (
+    <svg width="34" height="22" viewBox="0 0 48 32" role="img" aria-label="Mastercard" style={{ display: 'block' }}>
+      <rect x="0.5" y="0.5" width="47" height="31" rx="4" fill="#fff" stroke="#E6E8EC" />
+      <circle cx="20" cy="16" r="8" fill="#EB001B" />
+      <circle cx="28" cy="16" r="8" fill="#F79E1B" fillOpacity="0.9" />
+    </svg>
   )
 }
 
