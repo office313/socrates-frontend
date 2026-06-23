@@ -95,6 +95,11 @@ export default function Pagar() {
   const [error, setError] = useState('')
   // Contexto: null (sin saber aún) | 'sesion' (en-app) | 'token' (enlace de correo).
   const [ctx, setCtx] = useState(null)
+  // Pieza C — método de pago elegido en la regularización: 'yappy' (default, mantiene el flujo
+  // actual) | 'tarjeta'. El <btn-yappy> SIEMPRE está montado (solo se oculta por CSS al elegir
+  // tarjeta) → sus 3 useEffect y su cableado NO se tocan. 'tarjeta' redirige a Stripe Checkout.
+  const [metodoPago, setMetodoPago] = useState('yappy')
+  const [cargandoTarjeta, setCargandoTarjeta] = useState(false)
   const [subEstado, setSubEstado] = useState(null)  // 'trialing' | 'active' | … (solo si hay sesión)
   // Plan + precio del cobro, para el encabezado (datos reales de /cobro/estado, no fijos).
   const [planId, setPlanId] = useState(null)        // 'lite' | 'pro' | 'pro-plus'
@@ -253,6 +258,29 @@ export default function Pagar() {
 
   const irApp = () => { window.location.href = '/app' }
 
+  // Pieza C — carril TARJETA: pide al backend una Checkout Session de regularización (cobra el
+  // plan actual un periodo desde hoy, sin trial, sin ITBMS) y redirige a Stripe (hosted). NO toca
+  // el carril Yappy (eventClick/<btn-yappy>/cobro/pagar/cobro/confirmar). Funciona en ambos
+  // contextos (sesión y token-correo): el endpoint es ct-gated.
+  const irACheckoutTarjeta = async () => {
+    setError(''); setCargandoTarjeta(true)
+    try {
+      const r = await fetch('/api/cobro/stripe/regularizar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ct }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (r.ok && d.checkout_url) {
+        window.location.href = d.checkout_url   // redirige a Stripe Checkout (hosted)
+      } else {
+        setError(d.detail || 'No pudimos iniciar el pago con tarjeta. Inténtelo de nuevo.')
+        setCargandoTarjeta(false)
+      }
+    } catch {
+      setError('Error de conexión. Inténtelo de nuevo.'); setCargandoTarjeta(false)
+    }
+  }
+
   // Salida consciente del contexto: con sesión, devolver a la app SIN tocar la prueba;
   // con token (correo), reintentar. Siempre con un "escríbanos" real (mailto).
   const Salidas = ({ conReintento = true }) => (
@@ -306,6 +334,21 @@ export default function Pagar() {
                 </p>
               )}
             </div>
+            {/* Pieza C — selector de método. El <btn-yappy> SIEMPRE montado (solo se oculta por
+                CSS al elegir tarjeta) → su cableado y sus 3 useEffect NO se tocan. */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              {[['yappy', 'Yappy'], ['tarjeta', 'Tarjeta']].map(([val, label]) => (
+                <button key={val} type="button" onClick={() => { setError(''); setMetodoPago(val) }} style={{
+                  flex: 1, padding: '9px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                  border: `${metodoPago === val ? '2px' : '1px'} solid ${metodoPago === val ? 'var(--blue)' : 'var(--border)'}`,
+                  background: metodoPago === val ? 'var(--blue-light)' : 'white',
+                  color: metodoPago === val ? 'var(--blue)' : 'var(--text)',
+                }}>{label}</button>
+              ))}
+            </div>
+
+            {/* ── Carril YAPPY: byte-idéntico, solo envuelto en visibilidad (NUNCA se desmonta) ── */}
+            <div style={{ display: metodoPago === 'yappy' ? 'block' : 'none' }}>
             <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 20, textAlign: 'center' }}>
               Al pulsar recibirá una solicitud de pago en su app de Yappy. Apruébela con su PIN o huella.
             </p>
@@ -358,6 +401,23 @@ export default function Pagar() {
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
               <span>Pago seguro con</span><YappyLogo width={66} />
             </div>
+            </div>{/* ── fin carril Yappy ── */}
+
+            {/* ── Carril TARJETA (Pieza C) — regularización → Stripe Checkout hosted ── */}
+            {metodoPago === 'tarjeta' && (
+              <div>
+                <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16, textAlign: 'center' }}>
+                  La tarjeta queda enganchada para los próximos cobros automáticamente. Pago en US$ sin ITBMS.
+                </p>
+                <button type="button" onClick={irACheckoutTarjeta} disabled={cargandoTarjeta} style={btnPrimary(!cargandoTarjeta)}>
+                  {cargandoTarjeta ? 'Abriendo pago seguro…' : 'Pagar con tarjeta'}
+                </button>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginTop: 12, fontSize: 12, color: 'var(--text-muted)' }}>
+                  <span>🔒 Stripe · Visa · Mastercard</span>
+                </div>
+              </div>
+            )}
+
             {/* Tras un error, ofrecer también la salida contextual (no si el pago es forzado). */}
             {fase === 'error' && ctx === 'sesion' && !forzado && (
               <button type="button" onClick={irApp} style={{ ...btnSecundario, marginTop: 8 }}>

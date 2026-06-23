@@ -77,6 +77,14 @@ export default function Login() {
           <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16 }}>{error}</div>
         )}
 
+        {/* Pieza C — tras pagar la regularización con tarjeta, Stripe redirige aquí (?pago=ok).
+            El webhook reactiva en paralelo; el cliente inicia sesión y ya entra activo. */}
+        {new URLSearchParams(window.location.search).get('pago') === 'ok' && (
+          <div style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: 16, lineHeight: 1.5 }}>
+            <strong>Pago recibido.</strong> Inicie sesión para continuar — su cuenta ya quedó al día.
+          </div>
+        )}
+
         {paso === 'credenciales' ? (
           <form onSubmit={handleCredenciales}>
             <div style={{ marginBottom: 16 }}>
