@@ -3,7 +3,6 @@ import { Smartphone, CheckCircle2, AlertTriangle, Wrench } from 'lucide-react'
 import logoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
 import CronometroYappy from '../components/CronometroYappy'
-import { exigePago } from '../utils/suscripcion'
 
 // Icono de cabecera sobrio (sustituye emojis de sistema). Centrado, navy de marca.
 function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
@@ -135,8 +134,9 @@ export default function Pagar() {
           setPlanId(d.plan || null)
           setMontoBase(typeof d.monto_base === 'number' ? d.monto_base : null)
           setCiclo(d.ciclo || null)
-          // ¿el pago es forzado? MISMA regla que el gate del Layout (util compartido, gracia 0).
-          setForzado(exigePago(d))
+          // ¿el pago es forzado? Pieza D: leemos `exige_pago` del backend (fuente única que ya
+          // respeta la gracia). MISMA señal que el gate del Layout → cuentan la misma historia.
+          setForzado(!!d.exige_pago)
         } else { setCtx('token') }
       })
       .catch(() => { if (vivo) setCtx('token') })

@@ -28,21 +28,26 @@ export default function CobroBanner({ estado: estadoProp }) {
   }, [estadoProp])
 
   if (!estado) return null
-  const { suscripcion_estado, cobro_pendiente, ct, trial_fin } = estado
+  const { suscripcion_estado, cobro_pendiente, ct, trial_fin, gracia_hasta } = estado
   // Suscripción activa y al día → no se muestra nada.
   if (suscripcion_estado === 'active' && !cobro_pendiente) return null
 
   const pagar = ct ? `/app/pagar?ct=${encodeURIComponent(ct)}` : null
   const diasTrial = diasHasta(trial_fin)
+  const diasGracia = diasHasta(gracia_hasta)   // Pieza D — días que quedan de gracia (impago)
 
   let mensaje, urgente = false
-  if (cobro_pendiente) {
-    mensaje = 'Tiene un pago pendiente para mantener su cuenta activa.'
-    urgente = true
-  } else if (suscripcion_estado === 'trialing' && diasTrial != null) {
+  if (suscripcion_estado === 'trialing' && diasTrial != null) {
+    // Trial: su propia cuenta atrás (no se toca).
     mensaje = diasTrial <= 0
       ? 'Su prueba termina hoy.'
       : `Su prueba termina en ${diasTrial} ${diasTrial === 1 ? 'día' : 'días'}.`
+  } else if (cobro_pendiente || suscripcion_estado === 'past_due') {
+    // Pieza D — IMPAGO: contador de gracia restante; al agotarse, aviso de regularizar.
+    mensaje = (diasGracia != null && diasGracia > 0)
+      ? `Le quedan ${diasGracia} ${diasGracia === 1 ? 'día' : 'días'} para regularizar su pago.`
+      : 'Debe regularizar su pago para mantener su cuenta activa.'
+    urgente = true
   } else {
     return null
   }

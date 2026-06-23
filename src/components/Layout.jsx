@@ -4,7 +4,6 @@ import Sidebar from './Sidebar'
 import SoporteWidget from './SoporteWidget'
 import OnboardingModal from './OnboardingModal'
 import CobroBanner from './CobroBanner'
-import { exigePago } from '../utils/suscripcion'
 
 const CATPLAN_ID = 2
 
@@ -52,12 +51,13 @@ export default function Layout({ usuario, loading, children }) {
     return <Navigate to="/clientes" replace />
   }
 
-  // Redirección al pago al vencer (gracia 0). Esperamos a tener el estado antes de decidir
-  // (para no parpadear la app ni rebotar). /pagar vive FUERA del Layout → sin bucle.
-  // BCN/CATPLAN/legacy (campos en NULL) nunca cumplen exigePago → entran directo.
+  // Redirección al pago. Pieza D: leemos `cobro.exige_pago` del backend (fuente de verdad ÚNICA
+  // que ya respeta la gracia: trial=0, impago=2 días). Jubilamos la copia local `exigePago`.
+  // Esperamos a tener el estado antes de decidir (sin parpadeo). /pagar vive FUERA del Layout.
+  // BCN/CATPLAN/legacy y los impagos EN GRACIA → exige_pago False → entran directo.
   if (!esCatplan) {
     if (cobro === undefined) return cargando
-    if (exigePago(cobro)) {
+    if (cobro?.exige_pago) {
       const ct = cobro?.ct ? `?ct=${encodeURIComponent(cobro.ct)}` : ''
       return <Navigate to={`/pagar${ct}`} replace />
     }
