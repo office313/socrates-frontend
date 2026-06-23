@@ -48,6 +48,35 @@ const ERRORES = {
   token_expirado: 'El enlace de verificación caducó. Pida uno nuevo desde su email o vuelva a registrarse.',
 }
 
+// CAMBIO 1 — Provincias y comarcas de Panamá. El select solo aparece si país = 'Panamá';
+// el valor guardado es el nombre (string), compatible con empresas.provincia (String libre).
+const PROVINCIAS_PANAMA = [
+  'Bocas del Toro', 'Coclé', 'Colón', 'Chiriquí', 'Darién', 'Herrera',
+  'Los Santos', 'Panamá', 'Panamá Oeste', 'Veraguas',
+  'Emberá-Wounaan', 'Guna Yala', 'Ngäbe-Buglé', 'Naso Tjër Di', 'Comarca Madugandí',
+]
+
+// CAMBIO 2 — Prefijos del teléfono de CONTACTO (NO el de Yappy). Banderas emoji, sin librería.
+// +1 lo comparten EE.UU./Canadá/Rep. Dominicana → entradas distintas por país (clave = pais).
+// Se guarda "<code> <número local>" como UN solo string en form.telefono.
+const PREFIJOS_TEL = [
+  { pais: 'Panamá', code: '+507', flag: '🇵🇦' },
+  { pais: 'Costa Rica', code: '+506', flag: '🇨🇷' },
+  { pais: 'Nicaragua', code: '+505', flag: '🇳🇮' },
+  { pais: 'Honduras', code: '+504', flag: '🇭🇳' },
+  { pais: 'El Salvador', code: '+503', flag: '🇸🇻' },
+  { pais: 'Guatemala', code: '+502', flag: '🇬🇹' },
+  { pais: 'Belice', code: '+501', flag: '🇧🇿' },
+  { pais: 'México', code: '+52', flag: '🇲🇽' },
+  { pais: 'Colombia', code: '+57', flag: '🇨🇴' },
+  { pais: 'Venezuela', code: '+58', flag: '🇻🇪' },
+  { pais: 'Ecuador', code: '+593', flag: '🇪🇨' },
+  { pais: 'Perú', code: '+51', flag: '🇵🇪' },
+  { pais: 'Rep. Dominicana', code: '+1', flag: '🇩🇴' },
+  { pais: 'Estados Unidos', code: '+1', flag: '🇺🇸' },
+  { pais: 'Canadá', code: '+1', flag: '🇨🇦' },
+]
+
 // Medidor simple de seguridad de la contraseña.
 function fuerzaPassword(p) {
   if (!p) return { nivel: 0, label: '', color: 'var(--border)' }
@@ -111,6 +140,16 @@ export default function Registro() {
   // Cuando el alta choca con una cuenta YA existente (email o RUC de un cliente
   // activo), mostramos acciones de salida (login / recuperar) en vez de un error seco.
   const [cuentaExiste, setCuentaExiste] = useState(false)
+
+  // CAMBIO 2 — teléfono de CONTACTO: país del prefijo (clave única, default Panamá) + número
+  // local. Se componen en form.telefono = "<code> <local>" (un solo string). NO es Yappy.
+  const [telPais, setTelPais] = useState('Panamá')
+  const [telLocal, setTelLocal] = useState('')
+  // Recompone form.telefono ante cualquier cambio de prefijo o de número local.
+  const componerTel = (pais, local) => {
+    const code = (PREFIJOS_TEL.find(p => p.pais === pais) || PREFIJOS_TEL[0]).code
+    setForm({ ...form, telefono: local.trim() ? `${code} ${local.trim()}` : '' })
+  }
 
   // Paso 2
   const [planesMeta, setPlanesMeta] = useState(PLANES_FALLBACK)
@@ -505,7 +544,16 @@ export default function Registro() {
             <Campo label="Dirección"><input style={is} value={form.direccion} onChange={setF('direccion')} required /></Campo>
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}><Campo label="Ciudad"><input style={is} value={form.ciudad} onChange={setF('ciudad')} required /></Campo></div>
-              <div style={{ flex: 1 }}><Campo label="Provincia"><input style={is} value={form.provincia} onChange={setF('provincia')} required /></Campo></div>
+              <div style={{ flex: 1 }}><Campo label="Provincia">
+                {form.pais === 'Panamá' ? (
+                  <select style={{ ...is, appearance: 'auto' }} value={form.provincia} onChange={setF('provincia')} required>
+                    <option value="">Seleccione provincia…</option>
+                    {PROVINCIAS_PANAMA.map(p => <option key={p} value={p}>{p}</option>)}
+                  </select>
+                ) : (
+                  <input style={is} value={form.provincia} onChange={setF('provincia')} required />
+                )}
+              </Campo></div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}><Campo label="País">
@@ -515,7 +563,18 @@ export default function Registro() {
               </Campo></div>
               <div style={{ flex: 1 }}><Campo label="Código postal (opcional)"><input style={is} value={form.codigo_postal} onChange={setF('codigo_postal')} /></Campo></div>
             </div>
-            <Campo label="Teléfono"><input style={is} value={form.telefono} onChange={setF('telefono')} required /></Campo>
+            <Campo label="Teléfono de contacto">
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select style={{ ...is, appearance: 'auto', flex: '0 0 auto', width: 'auto', maxWidth: '48%' }}
+                  value={telPais} onChange={e => { setTelPais(e.target.value); componerTel(e.target.value, telLocal) }}
+                  aria-label="Prefijo país">
+                  {PREFIJOS_TEL.map(p => <option key={p.pais} value={p.pais}>{p.flag} {p.pais} {p.code}</option>)}
+                </select>
+                <input style={{ ...is, flex: 1 }} value={telLocal}
+                  onChange={e => { setTelLocal(e.target.value); componerTel(telPais, e.target.value) }}
+                  inputMode="tel" placeholder="6894 6359" required />
+              </div>
+            </Campo>
 
             <button type="submit" disabled={loading} style={{ ...btn(!loading), marginTop: 8 }}>
               {loading ? 'Creando...' : 'Continuar'}
@@ -709,6 +768,7 @@ export default function Registro() {
               <span style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 <VisaMark />
                 <McMark />
+                <ApplePayMark />
               </span>
             </button>
 
@@ -951,6 +1011,19 @@ function McMark() {
       <rect x="0.5" y="0.5" width="47" height="31" rx="4" fill="#fff" stroke="#E6E8EC" />
       <circle cx="20" cy="16" r="8" fill="#EB001B" />
       <circle cx="28" cy="16" r="8" fill="#F79E1B" fillOpacity="0.9" />
+    </svg>
+  )
+}
+// CAMBIO 3 — Apple Pay: logo DECORATIVO (confianza visual). No toca Stripe/dominio/Checkout;
+// Apple Pay ya aparece solo en el Checkout hosted de Stripe.
+function ApplePayMark() {
+  return (
+    <svg width="40" height="22" viewBox="0 0 56 32" role="img" aria-label="Apple Pay" style={{ display: 'block' }}>
+      <rect x="0.5" y="0.5" width="55" height="31" rx="4" fill="#000" />
+      <g transform="translate(8,7)" fill="#fff">
+        <path d="M12.3 11.2c-.5.7-1 1.3-1.8 1.3-.8 0-1-.5-1.9-.5-.9 0-1.2.5-1.9.5-.8 0-1.4-.7-1.9-1.4-1.4-2-1.6-4.6-.7-6 .6-.9 1.6-1.5 2.6-1.5.8 0 1.4.5 1.9.5.5 0 1.2-.6 2.1-.5.4 0 1.5.2 2.2 1.2-.1 0-1.3.8-1.3 2.3 0 1.8 1.6 2.4 1.6 2.4 0 .1-.3.9-.8 1.7zM10.5 1.5c.4-.5.7-1.2.6-1.9-.6 0-1.3.4-1.7.9-.4.4-.7 1.1-.6 1.8.7.1 1.3-.3 1.7-.8z" />
+      </g>
+      <text x="29" y="21" fontFamily="Arial, Helvetica, sans-serif" fontWeight="600" fontSize="13" fill="#fff">Pay</text>
     </svg>
   )
 }
