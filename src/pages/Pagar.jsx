@@ -70,6 +70,12 @@ function precioPlan(monto, ciclo) {
   if (typeof monto !== 'number' || Number.isNaN(monto)) return null
   return `US$ ${monto.toFixed(2)}/${ciclo === 'anual' ? 'año' : 'mes'}`
 }
+// Días que faltan hasta una fecha ISO (espejo de CobroBanner.diasHasta). null si no hay fecha.
+function diasHasta(iso) {
+  if (!iso) return null
+  const ms = new Date(iso).getTime() - Date.now()
+  return Math.ceil(ms / 86400000)
+}
 
 const card = { background: 'white', borderRadius: 16, padding: 40, width: '100%', maxWidth: 420, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }
 // Botón de acción principal en navy de marca (NO verde): coherente con el <btn-yappy>
@@ -104,6 +110,9 @@ export default function Pagar() {
   const [planId, setPlanId] = useState(null)        // 'lite' | 'pro' | 'pro-plus'
   const [montoBase, setMontoBase] = useState(null)  // base SIN impuesto (el ITBMS se indica aparte)
   const [ciclo, setCiclo] = useState(null)          // 'mensual' | 'anual'
+  // Fix UX — para el mensaje de estado/contador de gracia (campos que ya llegan en /cobro/estado).
+  const [trialFin, setTrialFin] = useState(null)
+  const [graciaHasta, setGraciaHasta] = useState(null)
   // Estado terminal del cobro cuando NO se aplicó (DECLINED/EXPIRED/…), para la pantalla
   // 'fallido' — un no-op sobre la suscripción (la prueba/cuenta sigue intacta).
   const [resultadoFallo, setResultadoFallo] = useState('')
@@ -134,6 +143,8 @@ export default function Pagar() {
           setPlanId(d.plan || null)
           setMontoBase(typeof d.monto_base === 'number' ? d.monto_base : null)
           setCiclo(d.ciclo || null)
+          setTrialFin(d.trial_fin || null)
+          setGraciaHasta(d.gracia_hasta || null)
           // ¿el pago es forzado? Pieza D: leemos `exige_pago` del backend (fuente única que ya
           // respeta la gracia). MISMA señal que el gate del Layout → cuentan la misma historia.
           setForzado(!!d.exige_pago)
@@ -298,6 +309,33 @@ export default function Pagar() {
     </div>
   )
 
+  // Fix UX — Mensaje de estado: explica POR QUÉ el cliente está en esta pantalla, derivado de
+  // los campos que ya llegan en /cobro/estado. `forzado` (=exige_pago del backend) es la señal
+  // ÚNICA de "gracia agotada/suspendido"; `diasHasta(gracia_hasta)` solo da el número del contador
+  // mientras aún hay gracia. Sin sesión (token de correo) no tenemos datos finos → genérico.
+  // Colores por gravedad: azul (info), ámbar (aviso con cuenta atrás), rojo (suspendido).
+  const AZUL = { bg: 'var(--blue-light)', fg: 'var(--blue)' }
+  const AMBAR = { bg: '#FFF7ED', fg: '#B45309' }
+  const ROJO = { bg: 'var(--red-light)', fg: 'var(--red)' }
+  let estadoMsg = null
+  if (ctx === 'token') {
+    estadoMsg = { texto: 'Regulariza tu pago para reactivar tu cuenta.', ...AZUL }
+  } else if (ctx === 'sesion') {
+    const dTrial = diasHasta(trialFin)
+    const dGracia = diasHasta(graciaHasta)
+    if (subEstado === 'trialing' && dTrial != null && dTrial <= 0) {
+      estadoMsg = { texto: 'Tu prueba terminó. Suscríbete para continuar.', ...AZUL }
+    } else if (subEstado === 'past_due' || forzado) {
+      if (forzado) {
+        estadoMsg = { texto: 'Tu cuenta está suspendida por falta de pago. Regulariza para reactivarla.', ...ROJO }
+      } else if (dGracia != null && dGracia >= 1) {
+        estadoMsg = { texto: `Tu pago no se procesó. Te ${dGracia === 1 ? 'queda 1 día' : `quedan ${dGracia} días`} para regularizar antes de que se suspenda el acceso.`, ...AMBAR }
+      } else {
+        estadoMsg = { texto: 'Tu pago no se procesó. Regulariza hoy para no perder el acceso.', ...AMBAR }
+      }
+    }
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
       <div style={card}>
@@ -320,6 +358,13 @@ export default function Pagar() {
 
         {(fase === 'inicio' || fase === 'error') && (
           <>
+            {/* Fix UX — Mensaje de estado (arriba del todo, sobre plan/precio/botones): explica
+                por qué está aquí + cuenta atrás de gracia. Color por gravedad (azul/ámbar/rojo). */}
+            {estadoMsg && (
+              <div style={{ background: estadoMsg.bg, color: estadoMsg.fg, padding: '11px 14px', borderRadius: 8, fontSize: 13, fontWeight: 600, lineHeight: 1.5, textAlign: 'center', marginBottom: 16 }}>
+                {estadoMsg.texto}
+              </div>
+            )}
             {/* Encabezado: el PLAN que se contrata (protagonista, navy de marca) + su precio/
                 ciclo, con datos reales de /cobro/estado. Sin nombre de plan (contexto token o
                 desconocido) → título neutro, nunca el redundante "Pagar con Yappy" (lo dice el botón). */}
@@ -330,7 +375,11 @@ export default function Pagar() {
               {precioPlan(montoBase, ciclo) && (
                 <p style={{ fontSize: 14, color: 'var(--text)', fontWeight: 600, margin: '4px 0 0' }}>
                   {precioPlan(montoBase, ciclo)}
-                  <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> + 7% ITBMS</span>
+                  {/* Fix UX — el ITBMS solo aplica a Yappy (CATPLAN/PA). En tarjeta (LLC/US$) el
+                      precio va limpio, coherente con el "sin ITBMS" del carril tarjeta. */}
+                  {metodoPago === 'yappy' && (
+                    <span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}> + 7% ITBMS</span>
+                  )}
                 </p>
               )}
             </div>
@@ -407,7 +456,7 @@ export default function Pagar() {
             {metodoPago === 'tarjeta' && (
               <div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16, textAlign: 'center' }}>
-                  La tarjeta queda enganchada para los próximos cobros automáticamente. Pago en US$ sin ITBMS.
+                  La tarjeta se utilizará para los próximos cobros automáticamente. Pago en US$ sin ITBMS.
                 </p>
                 <button type="button" onClick={irACheckoutTarjeta} disabled={cargandoTarjeta} style={btnPrimary(!cargandoTarjeta)}>
                   {cargandoTarjeta ? 'Abriendo pago seguro…' : 'Pagar con tarjeta'}
