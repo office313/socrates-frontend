@@ -6,8 +6,8 @@ import { RefreshCw, Download, Megaphone, X, Users, Building2, Trash2, ListChecks
 // /api/marketing/* (backend ya desplegado). Marca navy, sobriedad. Tono operativo.
 
 const TAMANOS = ['Grande', 'Mediana', 'Pequeña', 'Micro']
-const FUNNEL = ['frio', 'contactado', 'visito_landing', 'en_trial', 'cliente', 'descartado']
-const FUNNEL_LABEL = { frio: 'Frío', contactado: 'Contactado', visito_landing: 'Visitó landing', en_trial: 'En trial', cliente: 'Cliente', descartado: 'Descartado' }
+const FUNNEL = ['frio', 'contactado', 'demo_agendada', 'visito_landing', 'en_trial', 'cliente', 'descartado']
+const FUNNEL_LABEL = { frio: 'Frío', contactado: 'Contactado', demo_agendada: 'Demo agendada', visito_landing: 'Visitó landing', en_trial: 'En trial', cliente: 'Cliente', descartado: 'Descartado' }
 const PROVINCIAS = ['Panamá', 'Panamá Oeste', 'Chiriquí', 'Veraguas', 'Herrera', 'Los Santos',
   'Coclé', 'Colón', 'Bocas del Toro', 'Darién', 'Ngöbe Buglé', 'Guna Yala', 'Emberá']
 const CANALES = ['anuncio', 'llamada', 'email', 'otro']
@@ -15,6 +15,7 @@ const CANALES = ['anuncio', 'llamada', 'email', 'otro']
 const FUNNEL_COLOR = {
   frio: { bg: '#f3f4f6', color: '#6b7280' },
   contactado: { bg: 'var(--blue-light)', color: 'var(--blue)' },
+  demo_agendada: { bg: '#d1f5ee', color: '#0f766e' },
   visito_landing: { bg: '#fff8e1', color: '#b7791f' },
   en_trial: { bg: '#e8f0fb', color: 'var(--blue-dark)' },
   cliente: { bg: '#e8f5e9', color: '#2e7d32' },
@@ -437,6 +438,25 @@ function DrawerEmpresa({ ruc, onClose, onFunnel, mostrar }) {
                   <tr key={c.id}><td style={td}>{c.nombre}</td><td style={td}>{c.canal || '—'}</td><td style={td}>{fmtFecha(c.fecha)}</td><td style={td}>{c.estado_individual}</td></tr>
                 ))}</tbody>
               </table>
+            )}
+
+            <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue-dark)', margin: '20px 0 8px' }}>Demo</h3>
+            {(d.demo_inscritos || []).length > 0 ? (
+              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 12 }}>
+                <thead><tr>{['Inscrito', 'Correos extra', 'Fecha'].map(h => <th key={h} style={{ ...th, cursor: 'default' }}>{h}</th>)}</tr></thead>
+                <tbody>{d.demo_inscritos.map((x, i) => (
+                  <tr key={i}><td style={td}>{x.nombre}</td><td style={{ ...td, color: '#6b7280' }}>{(x.emails_adicionales || []).join(', ') || '—'}</td><td style={td}>{fmtFecha(x.creado_en)}</td></tr>
+                ))}</tbody>
+              </table>
+            ) : <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 12 }}>Sin inscripciones a la demo.</div>}
+            {d.enlace_demo && (
+              <div>
+                <div style={lbl}>Enlace de inscripción a la demo (para los correos de campaña)</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <input readOnly value={d.enlace_demo} style={{ ...inp, fontSize: 11, color: '#6b7280' }} onFocus={e => e.target.select()} />
+                  <button onClick={() => { navigator.clipboard && navigator.clipboard.writeText(d.enlace_demo); mostrar('Enlace copiado') }} style={{ ...btnGhost, padding: '7px 12px', fontSize: 12 }}>Copiar</button>
+                </div>
+              </div>
             )}
           </div>
         )}

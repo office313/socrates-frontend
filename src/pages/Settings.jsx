@@ -612,6 +612,8 @@ export default function Settings({ usuario }) {
   const [telefonoPais, setTelefonoPais] = useState(usuario?.telefono_pais || '+507')
   const [telefonoCelular, setTelefonoCelular] = useState(usuario?.telefono_celular || '')
   const [whatsappOptin, setWhatsappOptin] = useState(Boolean(usuario?.whatsapp_optin))
+  // Resumen diario por email: ON por defecto (true salvo que el backend diga false).
+  const [emailOptin, setEmailOptin] = useState(usuario?.email_optin !== false)
   const [modo, setModo] = useState('amplio')
   const [modoKeywords, setModoKeywords] = useState('compartido')
   const [totp, setTotp] = useState(false)
@@ -666,6 +668,7 @@ export default function Settings({ usuario }) {
       payload.telefono_celular = telefonoCelular
       payload.whatsapp_optin = whatsappOptin
     }
+    payload.email_optin = emailOptin
     axios.post('/api/cuenta', payload)
       .then(r => {
         if (r.data.ok) { mostrarMsg('Datos actualizados'); setPasswordActual(''); setPasswordNuevo('') }
@@ -793,6 +796,16 @@ export default function Settings({ usuario }) {
             </p>
           </div>
         )}
+        <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16, marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#444', marginBottom: 12 }}>Resumen diario por email</div>
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#333', cursor: 'pointer' }}>
+            <input type="checkbox" checked={emailOptin} onChange={e => setEmailOptin(e.target.checked)} />
+            Deseo recibir el resumen diario de licitaciones por email
+          </label>
+          <p style={{ fontSize: 11, color: '#999', margin: '6px 0 0 24px' }}>
+            Le enviamos un email (días laborables, 10:30 AM) con las licitaciones nuevas que coinciden con sus criterios. Puede desactivarlo cuando quiera.
+          </p>
+        </div>
         <button onClick={guardarCuenta} style={bs}>Guardar cambios</button>
       </div>
 

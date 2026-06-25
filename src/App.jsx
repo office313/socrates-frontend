@@ -16,6 +16,7 @@ import Clientes from './pages/Clientes'
 import Legal from './pages/Legal'
 import PanelControl from './pages/PanelControl'
 import Marketing from './pages/Marketing'
+import Demo from './pages/Demo'
 import Suscripciones from './pages/Suscripciones'
 import Accesos from './pages/Accesos'
 import Emul from './pages/Emul'
@@ -33,6 +34,7 @@ function App() {
         <Route path="/recuperar" element={<Recuperar />} />
         <Route path="/restablecer" element={<Restablecer />} />
         <Route path="/pagar" element={<Pagar />} />
+        <Route path="/demo" element={<Demo />} />
         <Route path="/*" element={
           <Layout usuario={usuario} loading={loading}>
             <Routes>
