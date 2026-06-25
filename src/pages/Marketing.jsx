@@ -299,6 +299,21 @@ function TablaEmpresas({ rows, total, soloSel, cargando, orden, dir, ordenar, on
   const pageAllSel = pageRucs.length > 0 && pageRucs.every(r => sel.has(r))
   const pageSomeSel = pageRucs.some(r => sel.has(r))
   const togglePage = () => pageAllSel ? quitarMuchos(pageRucs) : addMuchos(pageRucs)
+  // Selección por rango con Shift (estilo Excel), SOLO dentro de la página visible;
+  // suma/quita en el MISMO carrito persistente. El ancla se resetea al cambiar de
+  // página o de modo (no cruza páginas).
+  const anchorRef = useRef(null)
+  useEffect(() => { anchorRef.current = null }, [page, soloSel])
+  const handleCheck = (ev, i, ruc) => {
+    if (ev.shiftKey && anchorRef.current !== null) {
+      const a = Math.min(anchorRef.current, i), b = Math.max(anchorRef.current, i)
+      const rango = rows.slice(a, b + 1).map(r => r.ruc)
+      sel.has(ruc) ? quitarMuchos(rango) : addMuchos(rango)   // el toggle de la fila clicada se aplica a todo el rango
+    } else {
+      toggleRuc(ruc)
+    }
+    anchorRef.current = i
+  }
   const NCOLS = COLS.length + 1
   return (
     <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
@@ -328,14 +343,14 @@ function TablaEmpresas({ rows, total, soloSel, cargando, orden, dir, ordenar, on
             )}
           </thead>
           <tbody>
-            {rows.map(e => {
+            {rows.map((e, i) => {
               const marcada = sel.has(e.ruc)
               return (
               <tr key={e.ruc} onClick={() => onRow(e.ruc)} style={{ cursor: 'pointer', background: marcada ? '#f3f7fe' : 'white' }}
                 onMouseEnter={ev => ev.currentTarget.style.background = '#eef4fd'}
                 onMouseLeave={ev => ev.currentTarget.style.background = marcada ? '#f3f7fe' : 'white'}>
                 <td style={{ ...td, textAlign: 'center' }} onClick={ev => ev.stopPropagation()}>
-                  <input type="checkbox" checked={marcada} onChange={() => toggleRuc(e.ruc)} />
+                  <input type="checkbox" checked={marcada} onClick={ev => handleCheck(ev, i, e.ruc)} onChange={() => {}} />
                 </td>
                 <td style={{ ...td, fontWeight: 600, color: 'var(--blue-dark)', maxWidth: 240 }}>{e.nombre || '—'}</td>
                 <td style={{ ...td, color: '#6b7280', fontFamily: 'monospace', fontSize: 11 }}>{e.ruc}</td>
@@ -671,7 +686,7 @@ function VistaEventos({ mostrar }) {
               <>
                 <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--blue-dark)' }}>{vigente.titulo || 'Demostración'}</div>
                 <div style={{ fontSize: 14, color: '#374151', marginTop: 4 }}>{fmtFecha(vigente.fecha)} · {vigente.hora} <span style={{ color: '#9ca3af' }}>(hora de Panamá)</span></div>
-                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, wordBreak: 'break-all' }}>{vigente.meet_url}</div>
+                <div style={{ fontSize: 12, marginTop: 4, wordBreak: 'break-all' }}><a href={vigente.meet_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>{vigente.meet_url}</a></div>
                 <div style={{ fontSize: 12, color: '#0f766e', fontWeight: 600, marginTop: 6 }}>{vigente.inscritos} inscrito(s)</div>
               </>
             ) : <div style={{ fontSize: 14, color: '#9ca3af' }}>No hay ningún evento vigente. Cree uno para que el formulario de inscripción funcione.</div>}
