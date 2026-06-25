@@ -15,6 +15,7 @@ import Settings from './pages/Settings'
 import Clientes from './pages/Clientes'
 import Legal from './pages/Legal'
 import PanelControl from './pages/PanelControl'
+import Marketing from './pages/Marketing'
 import Suscripciones from './pages/Suscripciones'
 import Accesos from './pages/Accesos'
 import Emul from './pages/Emul'
@@ -49,6 +50,7 @@ function App() {
               <Route path="/emul" element={usuario?.rol === 'superadmin' ? <Emul /> : <Navigate to="/" replace />} />
               <Route path="/tickets" element={usuario?.rol === 'superadmin' ? <TicketsSoporte /> : <Navigate to="/" replace />} />
               <Route path="/pac" element={usuario?.rol === 'superadmin' ? <PacAdmin /> : <Navigate to="/" replace />} />
+              <Route path="/marketing" element={usuario?.rol === 'superadmin' ? <Marketing /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>
