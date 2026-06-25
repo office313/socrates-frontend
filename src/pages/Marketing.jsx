@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import axios from 'axios'
-import { RefreshCw, Download, Megaphone, X, Users, Building2, Trash2, ListChecks, Eraser } from 'lucide-react'
+import { RefreshCw, Download, Megaphone, X, Users, Building2, Trash2, ListChecks, Eraser, Calendar, Pencil } from 'lucide-react'
 
 // CRM de marketing (superadmin). Herramienta interna de operador. Construido contra
 // /api/marketing/* (backend ya desplegado). Marca navy, sobriedad. Tono operativo.
@@ -195,7 +195,7 @@ export default function Marketing() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: '#eef1f5', borderRadius: 8, padding: 4, width: 'fit-content' }}>
-        {[['empresas', 'Empresas', Building2], ['campanas', 'Campañas', Users]].map(([k, label, Icon]) => (
+        {[['empresas', 'Empresas', Building2], ['campanas', 'Campañas', Users], ['eventos', 'Eventos', Calendar]].map(([k, label, Icon]) => (
           <button key={k} onClick={() => setVista(k)} style={{
             padding: '7px 18px', borderRadius: 6, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer',
             display: 'inline-flex', alignItems: 'center', gap: 6,
@@ -220,8 +220,10 @@ export default function Marketing() {
             page={page} totalPaginas={totalPaginas} setPage={setPage}
             sel={sel} toggleRuc={toggleRuc} addMuchos={addMuchos} quitarMuchos={quitarMuchos} selTodoFiltro={selTodoFiltro} />
         </>
-      ) : (
+      ) : vista === 'campanas' ? (
         <VistaCampanas mostrar={mostrar} />
+      ) : (
+        <VistaEventos mostrar={mostrar} />
       )}
 
       {rucSel && <DrawerEmpresa ruc={rucSel} onClose={() => setRucSel(null)} onFunnel={cargar} mostrar={mostrar} />}
@@ -627,6 +629,95 @@ function DrawerCampana({ id, onClose, onBorrar }) {
           </div>
         )}
       </div>
+    </div>
+  )
+}
+
+
+function VistaEventos({ mostrar }) {
+  const [lista, setLista] = useState([])
+  const [editando, setEditando] = useState(null)   // null | 'nuevo' | id
+  const [form, setForm] = useState({ titulo: '', fecha: '', hora: '10:00 a.m.', meet_url: 'https://meet.google.com/mvb-hnnt-osn' })
+  const cargar = useCallback(() => {
+    axios.get('/api/marketing/eventos').then(r => setLista(r.data.resultados)).catch(() => mostrar('Error cargando eventos', false))
+  }, [])
+  useEffect(() => { cargar() }, [cargar])
+  const vigente = lista.find(e => e.vigente)
+  const historico = lista.filter(e => !e.vigente)
+  const setF = (k, v) => setForm(f => ({ ...f, [k]: v }))
+
+  const abrirNuevo = () => { setForm({ titulo: '', fecha: '', hora: '10:00 a.m.', meet_url: vigente?.meet_url || 'https://meet.google.com/mvb-hnnt-osn' }); setEditando('nuevo') }
+  const abrirEditar = (ev) => { setForm({ titulo: ev.titulo || '', fecha: ev.fecha, hora: ev.hora, meet_url: ev.meet_url }); setEditando(ev.id) }
+  const guardar = () => {
+    if (!form.fecha || !form.meet_url.trim()) { mostrar('Indique fecha y enlace de Meet', false); return }
+    const req = editando === 'nuevo' ? axios.post('/api/marketing/eventos', form) : axios.patch('/api/marketing/eventos/' + editando, form)
+    req.then(() => { mostrar(editando === 'nuevo' ? 'Evento creado y marcado como vigente' : 'Evento actualizado'); setEditando(null); cargar() })
+      .catch(() => mostrar('No se pudo guardar el evento', false))
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+        <div style={{ fontSize: 13, color: '#6b7280' }}>Una sesión vigente a la vez. Usted elige la fecha de cada evento; los pasados quedan en el histórico.</div>
+        <button style={btnPrimary} onClick={abrirNuevo}><Calendar size={15} /> Crear nuevo evento</button>
+      </div>
+
+      {/* Vigente */}
+      <div style={{ ...card, marginBottom: 16, borderLeft: '4px solid var(--blue)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--blue)', textTransform: 'uppercase', letterSpacing: .5, marginBottom: 6 }}>Evento vigente</div>
+            {vigente ? (
+              <>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--blue-dark)' }}>{vigente.titulo || 'Demostración'}</div>
+                <div style={{ fontSize: 14, color: '#374151', marginTop: 4 }}>{fmtFecha(vigente.fecha)} · {vigente.hora} <span style={{ color: '#9ca3af' }}>(hora de Panamá)</span></div>
+                <div style={{ fontSize: 12, color: '#6b7280', marginTop: 4, wordBreak: 'break-all' }}>{vigente.meet_url}</div>
+                <div style={{ fontSize: 12, color: '#0f766e', fontWeight: 600, marginTop: 6 }}>{vigente.inscritos} inscrito(s)</div>
+              </>
+            ) : <div style={{ fontSize: 14, color: '#9ca3af' }}>No hay ningún evento vigente. Cree uno para que el formulario de inscripción funcione.</div>}
+          </div>
+          {vigente && <button style={{ ...btnGhost, padding: '7px 12px', fontSize: 12 }} onClick={() => abrirEditar(vigente)}><Pencil size={14} /> Editar</button>}
+        </div>
+      </div>
+
+      {/* Histórico */}
+      <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
+        <div style={{ padding: '10px 14px', fontSize: 12, fontWeight: 700, color: '#6b7280', borderBottom: '1px solid #f3f4f6' }}>Histórico</div>
+        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+          <thead><tr>{['Título', 'Fecha', 'Meet', 'Inscritos'].map(h => <th key={h} style={{ ...th, cursor: 'default' }}>{h}</th>)}</tr></thead>
+          <tbody>
+            {historico.map(ev => (
+              <tr key={ev.id}>
+                <td style={{ ...td, fontWeight: 600, color: 'var(--blue-dark)' }}>{ev.titulo || '—'}</td>
+                <td style={td}>{fmtFecha(ev.fecha)}</td>
+                <td style={{ ...td, color: '#9ca3af', fontSize: 11, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.meet_url}</td>
+                <td style={{ ...td, textAlign: 'center' }}>{ev.inscritos}</td>
+              </tr>
+            ))}
+            {historico.length === 0 && <tr><td colSpan={4} style={{ ...td, textAlign: 'center', color: '#9ca3af', padding: 28 }}>Sin eventos pasados todavía.</td></tr>}
+          </tbody>
+        </table>
+      </div>
+
+      {editando && (
+        <div style={modalWrap} onClick={() => setEditando(null)}>
+          <div style={modalCard} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: 17, fontWeight: 700, color: 'var(--blue-dark)', margin: '0 0 16px' }}>{editando === 'nuevo' ? 'Crear evento (será el vigente)' : 'Editar evento vigente'}</h2>
+            <div style={{ display: 'grid', gap: 12 }}>
+              <div><label style={lbl}>Título (opcional)</label><input style={inp} value={form.titulo} onChange={e => setF('titulo', e.target.value)} placeholder="Demostración general" /></div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div><label style={lbl}>Fecha</label><input style={inp} type="date" value={form.fecha} onChange={e => setF('fecha', e.target.value)} /></div>
+                <div><label style={lbl}>Hora (Panamá)</label><input style={inp} value={form.hora} onChange={e => setF('hora', e.target.value)} placeholder="10:00 a.m." /></div>
+              </div>
+              <div><label style={lbl}>Enlace de Google Meet</label><input style={inp} value={form.meet_url} onChange={e => setF('meet_url', e.target.value)} /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 18 }}>
+              <button onClick={() => setEditando(null)} style={{ ...btnGhost, flex: 1, justifyContent: 'center', border: '1px solid #e5e7eb', color: '#6b7280' }}>Cancelar</button>
+              <button onClick={guardar} style={{ ...btnPrimary, flex: 1, justifyContent: 'center' }}>{editando === 'nuevo' ? 'Crear y dejar vigente' : 'Guardar cambios'}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
