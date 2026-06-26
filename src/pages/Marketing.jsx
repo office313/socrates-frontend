@@ -21,6 +21,11 @@ const FUNNEL_COLOR = {
   cliente: { bg: '#e8f5e9', color: '#2e7d32' },
   descartado: { bg: 'var(--red-light)', color: 'var(--red)' },
 }
+const TIPO_PERSONA_LABEL = {
+  juridica: { txt: 'Jurídica', color: 'var(--blue)' },
+  fisica: { txt: 'Física', color: '#0f766e' },
+  indeterminado: { txt: 'Indet.', color: '#9ca3af' },
+}
 const VALIDEZ_COLOR = {
   sin_validar: { bg: '#f3f4f6', color: '#6b7280' },
   valido: { bg: '#e8f5e9', color: '#2e7d32' },
@@ -49,10 +54,11 @@ function buildParams(f) {
   if (f.activa_dias !== '' && f.activa_dias != null) p.activa_desde = isoHaceDias(f.activa_dias)
   if (f.q) p.q = f.q
   if (f.campanas) p.campanas = f.campanas
+  if (f.tipo_persona) p.tipo_persona = f.tipo_persona
   return p
 }
 
-const FILTRO_VACIO = { tamano: '', provincia: '', estado_funnel: '', ganadas_min: '', monto_min: '', monto_max: '', activa_dias: '', q: '', campanas: '' }
+const FILTRO_VACIO = { tamano: '', provincia: '', estado_funnel: '', ganadas_min: '', monto_min: '', monto_max: '', activa_dias: '', q: '', campanas: '', tipo_persona: '' }
 
 // estilos
 const card = { background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 16 }
@@ -258,6 +264,9 @@ function FiltroBar({ filtros, setF, limpiar, total, cargando }) {
         <div><label style={lbl}>Campañas</label><select style={inp} value={f.campanas} onChange={e => setF('campanas', e.target.value)}>
           <option value="">Todas</option><option value="sin">Sin campañas (frescos)</option><option value="con">Con campañas</option>
         </select></div>
+        <div title="Persona jurídica (empresa registrada) vs física (cédula). Para segmentar la plantilla de la campaña."><label style={lbl}>Tipo de persona</label><select style={inp} value={f.tipo_persona} onChange={e => setF('tipo_persona', e.target.value)}>
+          <option value="">Todas</option><option value="juridica">Jurídica (empresa)</option><option value="fisica">Física (persona)</option><option value="indeterminado">Indeterminado</option>
+        </select></div>
         <div title="Disponible en Fase 2"><label style={lbl}>Sector</label><select style={{ ...inp, background: '#f3f4f6', color: '#9ca3af' }} disabled><option>Fase 2</option></select></div>
       </div>
     </div>
@@ -290,7 +299,7 @@ function SelBar({ sel, soloSel, verSoloSel, vaciarSel, onExportar, onCampana }) 
 function TablaEmpresas({ rows, total, soloSel, cargando, orden, dir, ordenar, onRow, page, totalPaginas, setPage,
                          sel, toggleRuc, addMuchos, quitarMuchos, selTodoFiltro }) {
   const COLS = [
-    ['Nombre', 'nombre'], ['RUC', 'ruc'], ['Provincia', 'provincia'], ['Tamaño', 'tamano'],
+    ['Nombre', 'nombre'], ['RUC', 'ruc'], ['Provincia', 'provincia'], ['Tamaño', 'tamano'], ['Tipo', ''],
     ['Ganadas', 'ganadas'], ['Monto total', 'monto'], ['Última adj.', 'reciente'],
     ['Funnel', 'estado_funnel'], ['Contactos', 'contactos'], ['Campañas', 'campanas'],
   ]
@@ -356,6 +365,9 @@ function TablaEmpresas({ rows, total, soloSel, cargando, orden, dir, ordenar, on
                 <td style={{ ...td, color: '#6b7280', fontFamily: 'monospace', fontSize: 11 }}>{e.ruc}</td>
                 <td style={td}>{e.provincia || '—'}</td>
                 <td style={td}>{e.tamano || '—'}</td>
+                <td style={td}>{TIPO_PERSONA_LABEL[e.tipo_persona]
+                  ? <span style={{ fontSize: 11, fontWeight: 600, color: TIPO_PERSONA_LABEL[e.tipo_persona].color }}>{TIPO_PERSONA_LABEL[e.tipo_persona].txt}</span>
+                  : <span style={{ color: '#c4c8cf' }}>—</span>}</td>
                 <td style={{ ...td, textAlign: 'right' }}>{e.licitaciones_ganadas}</td>
                 <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{fmtUSD(e.monto_total_ganado)}</td>
                 <td style={td}>{fmtFecha(e.fecha_ultima_adjudicacion)}</td>
