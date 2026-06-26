@@ -569,10 +569,24 @@ function ModalCampana({ modo, filtros, total, seleccion, onClose, mostrar }) {
 function VistaCampanas({ mostrar }) {
   const [lista, setLista] = useState([])
   const [sel, setSel] = useState(null)
+  const [sincronizando, setSincronizando] = useState(false)
+  const [syncRes, setSyncRes] = useState(null)
   const cargar = useCallback(() => {
     axios.get('/api/marketing/campanas').then(r => setLista(r.data.resultados)).catch(() => mostrar('Error cargando campañas', false))
   }, [])
   useEffect(() => { cargar() }, [cargar])
+
+  const sincronizar = () => {
+    setSincronizando(true); setSyncRes(null)
+    axios.post('/api/marketing/campanas/sincronizar')
+      .then(r => {
+        setSyncRes(r.data)
+        mostrar(`Brevo: ${r.data.campanas_nuevas} campaña(s) nueva(s), ${r.data.campanas_ya_estaban} ya estaban`)
+        cargar()
+      })
+      .catch(e => mostrar(e?.response?.data?.detail || 'No se pudo sincronizar con Brevo', false))
+      .finally(() => setSincronizando(false))
+  }
 
   const borrar = (id, nombre) => {
     if (!window.confirm(`¿Seguro que desea borrar la campaña "${nombre}"? Se eliminarán también sus contactos registrados.`)) return
@@ -583,6 +597,23 @@ function VistaCampanas({ mostrar }) {
   const delBtn = { background: 'white', color: 'var(--red)', border: '1px solid #f0d2d0', borderRadius: 6, padding: '4px 8px', cursor: 'pointer', display: 'inline-flex' }
 
   return (
+    <>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+      <p style={{ fontSize: 12.5, color: '#6b7280', margin: 0 }}>Las campañas enviadas desde Brevo se registran aquí y cruzan automáticamente con las empresas del CRM.</p>
+      <button style={{ ...btnGhost, opacity: sincronizando ? 0.6 : 1 }} onClick={sincronizar} disabled={sincronizando}>
+        <RefreshCw size={15} className={sincronizando ? 'spin' : ''} /> {sincronizando ? 'Sincronizando…' : 'Sincronizar campañas'}
+      </button>
+    </div>
+    {syncRes && (
+      <div style={{ marginBottom: 14, padding: '12px 16px', borderRadius: 8, background: '#eef3fb', border: '1px solid #d9e3f3', fontSize: 12.5, color: '#374151' }}>
+        <strong style={{ color: 'var(--blue-dark)' }}>Sincronización con Brevo:</strong> {syncRes.campanas_detectadas} campaña(s) enviada(s) detectada(s) · <strong>{syncRes.campanas_nuevas}</strong> nueva(s) · {syncRes.campanas_ya_estaban} ya registrada(s).
+        {(syncRes.detalle || []).filter(d => d.contactos_cruzados !== undefined).map(d => (
+          <div key={d.brevo_id} style={{ marginTop: 6, color: '#4b5563' }}>
+            · <strong>{d.nombre}</strong> ({d.fecha || 's/f'}): {d.destinatarios} destinatario(s) → {d.empresas_cruzadas} empresa(s) cruzada(s), {d.contactos_cruzados} contacto(s); {d.sin_cruzar} sin cruzar.
+          </div>
+        ))}
+      </div>
+    )}
     <div style={{ ...card, padding: 0, overflow: 'hidden' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
         <thead><tr>{['Campaña', 'Canal', 'Fecha', 'Contactos', 'Creada', ''].map(h => <th key={h} style={{ ...th, cursor: 'default' }}>{h}</th>)}</tr></thead>
@@ -600,11 +631,12 @@ function VistaCampanas({ mostrar }) {
               </td>
             </tr>
           ))}
-          {lista.length === 0 && <tr><td colSpan={6} style={{ ...td, textAlign: 'center', color: '#9ca3af', padding: 32 }}>Aún no hay campañas. Cree una desde la pestaña Empresas con un filtro.</td></tr>}
+          {lista.length === 0 && <tr><td colSpan={6} style={{ ...td, textAlign: 'center', color: '#9ca3af', padding: 32 }}>Aún no hay campañas. Pulse «Sincronizar campañas» para traer las de Brevo, o créela desde Empresas con un filtro.</td></tr>}
         </tbody>
       </table>
       {sel && <DrawerCampana id={sel} onClose={() => setSel(null)} onBorrar={borrar} />}
     </div>
+    </>
   )
 }
 
