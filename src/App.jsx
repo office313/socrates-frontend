@@ -22,6 +22,7 @@ import Accesos from './pages/Accesos'
 import Emul from './pages/Emul'
 import TicketsSoporte from './pages/TicketsSoporte'
 import PacAdmin from './pages/PacAdmin'
+import TokensRegistro from './pages/TokensRegistro'
 
 function App() {
   const { usuario, loading } = useAuth()
@@ -52,6 +53,7 @@ function App() {
               <Route path="/emul" element={usuario?.rol === 'superadmin' ? <Emul /> : <Navigate to="/" replace />} />
               <Route path="/tickets" element={usuario?.rol === 'superadmin' ? <TicketsSoporte /> : <Navigate to="/" replace />} />
               <Route path="/pac" element={usuario?.rol === 'superadmin' ? <PacAdmin /> : <Navigate to="/" replace />} />
+              <Route path="/tokens" element={usuario?.rol === 'superadmin' ? <TokensRegistro /> : <Navigate to="/" replace />} />
               <Route path="/marketing" element={usuario?.rol === 'superadmin' ? <Marketing /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

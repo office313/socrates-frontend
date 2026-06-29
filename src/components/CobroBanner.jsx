@@ -64,8 +64,8 @@ export default function CobroBanner({ estado: estadoProp }) {
       {pagar && (
         <a href={pagar} style={{
           padding: '6px 16px', borderRadius: 8, textDecoration: 'none', fontWeight: 700,
-          background: urgente ? 'var(--red)' : '#00C0A3', color: 'white',
-        }}>Pagar con Yappy</a>
+          background: urgente ? 'var(--red)' : 'var(--blue)', color: 'white',
+        }}>Pagar ahora</a>
       )}
     </div>
   )

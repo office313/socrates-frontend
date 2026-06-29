@@ -162,6 +162,16 @@ export default function Registro() {
   // gastó, ocultamos el botón de prueba y solo ofrecemos el pago completo.
   const [trialElegible, setTrialElegible] = useState(true)
 
+  // Código de PROMOCIÓN (alta nueva): se teclea en el paso de pago EN VEZ de pagar.
+  const [tokenAcceso, setTokenAcceso] = useState('')
+  const [tokenError, setTokenError] = useState('')
+  // Código de REGISTRO (empresa existente): se teclea en el PRIMER paso; no rellena datos.
+  const [tokenRegistro, setTokenRegistro] = useState('')
+  const [tokenRegistroError, setTokenRegistroError] = useState('')
+  // Los códigos son la excepción: ocultos tras un enlace discreto al pie (se despliegan al clic).
+  const [mostrarCodReg, setMostrarCodReg] = useState(false)
+  const [mostrarCodPromo, setMostrarCodPromo] = useState(false)
+
   // Paso 3 (pago)
   const [resumen, setResumen] = useState(null)
   const [cobro, setCobro] = useState(null)  // { ct, monto, base, itbms, modo, ordenCreada }
@@ -448,6 +458,66 @@ export default function Registro() {
     }
   }
 
+  // Formatea lo que se teclea: mayúsculas, solo alfanumérico, guion auto tras 4 (XXXX-XXXX).
+  const fmtCodigo = (v) => {
+    const c = (v || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8)
+    return c.length > 4 ? `${c.slice(0, 4)}-${c.slice(4)}` : c
+  }
+
+  // CÓDIGO DE REGISTRO (empresa existente): se teclea en el PRIMER paso. Reconoce la
+  // empresa, activa el trial de 5 días sin pago y hace auto-login → /app. No rellena datos.
+  const canjearCodigoRegistro = async () => {
+    const tk = tokenRegistro.trim()
+    if (!tk) { setTokenRegistroError('Introduzca su código de registro.'); return }
+    setTokenRegistroError(''); setLoading(true)
+    try {
+      const r = await fetch('/api/registro/token/canjear', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: tk }),
+      })
+      const data = await r.json().catch(() => ({}))
+      if (r.ok && data.ok) {
+        window.location.href = '/app'   // auto-login: entra directo a la configuración
+      } else {
+        setTokenRegistroError(
+          data.detail === 'token_tipo' ? 'Este es un código de promoción: introdúzcalo en el paso de pago, no aquí.'
+          : data.detail?.startsWith('token_') ? 'Código no válido, ya usado o caducado.'
+          : (data.detail || 'No se pudo usar el código.'))
+        setLoading(false)
+      }
+    } catch {
+      setTokenRegistroError('Error de conexión. Inténtelo de nuevo.')
+      setLoading(false)
+    }
+  }
+
+  // Código de PROMOCIÓN (tipo 1): EN VEZ de pagar, canjea el código. El backend
+  // activa el trial de 5 días sobre esta misma alta (sesión de registro abierta) → /app.
+  const canjearTokenAcceso = async () => {
+    const tk = tokenAcceso.trim()
+    if (!tk) { setTokenError('Introduzca su código de acceso.'); return }
+    setTokenError(''); setLoading(true)
+    try {
+      const r = await fetch('/api/registro/canjear-token', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rt, token: tk }),
+      })
+      const data = await r.json().catch(() => ({}))
+      if (r.ok && data.ok) {
+        window.location.href = '/app'   // mismo final que el éxito de pago
+      } else {
+        setTokenError(
+          data.detail === 'token_tipo' ? 'Este es un código de registro: introdúzcalo en la primera pantalla, no aquí.'
+          : data.detail?.startsWith('token_') ? 'Código no válido, ya usado o caducado.'
+          : (data.detail || 'No se pudo canjear el código.'))
+        setLoading(false)
+      }
+    } catch {
+      setTokenError('Error de conexión. Inténtelo de nuevo.')
+      setLoading(false)
+    }
+  }
+
   // Único commit de pago del paso 'metodo': despacha según el método elegido. NO cambia la
   // mecánica (irACheckoutTarjeta / enviarPaso2 / paso2 / push / IPN) — solo la invoca AQUÍ,
   // con confirmación explícita, en vez de en el clic del método (evita el disparo accidental).
@@ -582,6 +652,32 @@ export default function Registro() {
             <p style={{ textAlign: 'center', fontSize: 12, color: 'var(--text-muted)', marginTop: 14 }}>
               ¿Ya tiene cuenta? <a href="/app/login" style={{ color: 'var(--blue)', fontWeight: 600 }}>Inicie sesión</a>
             </p>
+
+            {/* Código de REGISTRO — discreto al pie: la mayoría rellena el formulario normal.
+                Solo quien tiene código lo despliega. type="button" para no enviar el alta. */}
+            <div style={{ textAlign: 'center', marginTop: 10 }}>
+              {!mostrarCodReg ? (
+                <button type="button" onClick={() => setMostrarCodReg(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+                  ¿Tienes un código de registro? Introdúcelo aquí
+                </button>
+              ) : (
+                <div style={{ textAlign: 'left', marginTop: 4 }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={tokenRegistro} autoFocus
+                      onChange={e => { setTokenRegistro(fmtCodigo(e.target.value)); setTokenRegistroError('') }}
+                      onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); canjearCodigoRegistro() } }}
+                      placeholder="XXXX-XXXX" maxLength={9}
+                      style={{ ...is, flex: 1, textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }} />
+                    <button type="button" onClick={canjearCodigoRegistro} disabled={loading || !tokenRegistro.trim()}
+                      style={{ padding: '0 16px', background: (loading || !tokenRegistro.trim()) ? '#ccc' : 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 14, fontWeight: 600, border: 'none', cursor: (loading || !tokenRegistro.trim()) ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+                      Continuar
+                    </button>
+                  </div>
+                  {tokenRegistroError && <p style={{ color: 'var(--red)', fontSize: 12, margin: '6px 0 0' }}>{tokenRegistroError}</p>}
+                </div>
+              )}
+            </div>
           </form>
         )}
 
@@ -836,6 +932,31 @@ export default function Registro() {
               style={btn(!!metodoSel && !loading && !(metodoSel === 'yappy' && !yappyTelOk))}>
               {loading ? 'Un momento…' : 'Continuar al pago'}
             </button>
+
+            {/* Código de PROMOCIÓN — discreto al pie: la vía normal es pagar. Solo quien tiene
+                código lo despliega; así no se revela la vía sin pago a la mayoría. */}
+            <div style={{ marginTop: 18, paddingTop: 14, borderTop: '1px solid var(--border)', textAlign: 'center' }}>
+              {!mostrarCodPromo ? (
+                <button type="button" onClick={() => setMostrarCodPromo(true)}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 12, cursor: 'pointer', textDecoration: 'underline' }}>
+                  ¿Tienes un código de acceso? Introdúcelo aquí
+                </button>
+              ) : (
+                <div style={{ textAlign: 'left' }}>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    <input value={tokenAcceso} autoFocus
+                      onChange={e => { setTokenAcceso(fmtCodigo(e.target.value)); setTokenError('') }}
+                      placeholder="XXXX-XXXX" maxLength={9}
+                      style={{ flex: 1, padding: '10px 12px', border: '1px solid var(--border)', borderRadius: 8, fontSize: 14, outline: 'none', textTransform: 'uppercase', letterSpacing: 2, fontWeight: 700 }} />
+                    <button type="button" onClick={canjearTokenAcceso} disabled={loading || !tokenAcceso.trim()}
+                      style={{ padding: '10px 16px', background: (loading || !tokenAcceso.trim()) ? '#ccc' : 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 14, fontWeight: 600, border: 'none', cursor: (loading || !tokenAcceso.trim()) ? 'default' : 'pointer', whiteSpace: 'nowrap' }}>
+                      Canjear
+                    </button>
+                  </div>
+                  {tokenError && <p style={{ color: 'var(--red)', fontSize: 12, margin: '6px 0 0' }}>{tokenError}</p>}
+                </div>
+              )}
+            </div>
 
             <button type="button" onClick={() => { setError(''); setMetodoSel(null); setPaso('plan') }} style={{
               display: 'block', margin: '14px auto 0', background: 'none', border: 'none', color: 'var(--text-muted)',

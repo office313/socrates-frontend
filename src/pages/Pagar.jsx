@@ -100,10 +100,11 @@ export default function Pagar() {
   const [error, setError] = useState('')
   // Contexto: null (sin saber aún) | 'sesion' (en-app) | 'token' (enlace de correo).
   const [ctx, setCtx] = useState(null)
-  // Pieza C — método de pago elegido en la regularización: 'yappy' (default, mantiene el flujo
-  // actual) | 'tarjeta'. El <btn-yappy> SIEMPRE está montado (solo se oculta por CSS al elegir
-  // tarjeta) → sus 3 useEffect y su cableado NO se tocan. 'tarjeta' redirige a Stripe Checkout.
-  const [metodoPago, setMetodoPago] = useState('yappy')
+  // Pieza C — método de pago elegido en la regularización: null (SIN preselección) | 'yappy' |
+  // 'tarjeta'. El valor por defecto lo decide el backend (`metodo_preferido` de /cobro/estado):
+  // el método del cobro del $1 si lo pagó, o null si entró por código (elige libremente). El
+  // <btn-yappy> SIEMPRE está montado (solo se oculta por CSS) → sus 3 useEffect NO se tocan.
+  const [metodoPago, setMetodoPago] = useState(null)
   const [cargandoTarjeta, setCargandoTarjeta] = useState(false)
   const [subEstado, setSubEstado] = useState(null)  // 'trialing' | 'active' | … (solo si hay sesión)
   // Plan + precio del cobro, para el encabezado (datos reales de /cobro/estado, no fijos).
@@ -140,6 +141,9 @@ export default function Pagar() {
         if (!vivo) return
         if (d) {
           setCtx('sesion'); setSubEstado(d.suscripcion_estado || null)
+          // Preselección por comodidad (no forzada): el método del cobro del $1 si lo pagó;
+          // null si entró por código → el cliente elige. Cambiar de método siempre permitido.
+          setMetodoPago(d.metodo_preferido || null)
           setPlanId(d.plan || null)
           setMontoBase(typeof d.monto_base === 'number' ? d.monto_base : null)
           setCiclo(d.ciclo || null)
@@ -395,6 +399,13 @@ export default function Pagar() {
                 }}>{label}</button>
               ))}
             </div>
+
+            {/* Sin preselección (entró por código): invita a elegir, sin forzar ninguno. */}
+            {!metodoPago && (
+              <p style={{ fontSize: 13, color: 'var(--text-muted)', textAlign: 'center', marginBottom: 16 }}>
+                Elija cómo desea pagar su suscripción.
+              </p>
+            )}
 
             {/* ── Carril YAPPY: byte-idéntico, solo envuelto en visibilidad (NUNCA se desmonta) ── */}
             <div style={{ display: metodoPago === 'yappy' ? 'block' : 'none' }}>

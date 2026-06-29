@@ -192,6 +192,39 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
   )
 }
 
+// Muestra el código de registro recién generado (formato corto que el cliente teclea).
+// Caduca a 1 mes y es de un solo uso (se lo recordamos al superadmin).
+function ModalToken({ info, onClose, onCopy }) {
+  const copiar = () => {
+    navigator.clipboard?.writeText(info.codigo).then(() => onCopy && onCopy()).catch(() => {})
+  }
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ background: 'white', borderRadius: 16, width: 460, overflow: 'hidden' }}>
+        <div style={{ padding: '16px 24px', background: '#2e7d32' }}>
+          <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>Código de registro</h2>
+        </div>
+        <div style={{ padding: 24 }}>
+          <p style={{ fontSize: 13, color: '#444', margin: '0 0 16px', lineHeight: 1.6 }}>
+            Dicte o envíe este código a <strong>{info.empresa}</strong>. Lo introduce en el primer
+            paso del registro: activa su prueba gratuita sin pagar. Es de <strong>un solo uso</strong> y
+            <strong> caduca en 1 mes</strong>.
+          </p>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+            <div style={{ flex: 1, textAlign: 'center', padding: '14px 12px', background: '#f1f8f2', border: '1px solid #cfe8d4', borderRadius: 10, fontSize: 28, fontWeight: 800, letterSpacing: 3, color: '#1b5e20', fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace' }}>
+              {info.codigo}
+            </div>
+            <button onClick={copiar} style={{ padding: '14px 18px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', whiteSpace: 'nowrap' }}>Copiar</button>
+          </div>
+        </div>
+        <div style={{ padding: '16px 24px', borderTop: '1px solid #e5e7eb', display: 'flex', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: '#f5f5f5', color: '#666', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Cerrar</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function Clientes() {
   const [empresas, setEmpresas] = useState([])
   const [usuariosPorEmpresa, setUsuariosPorEmpresa] = useState({})
@@ -200,8 +233,18 @@ export default function Clientes() {
   const [modalUsuario, setModalUsuario] = useState(null)
   const [empresaSeleccionada, setEmpresaSeleccionada] = useState(null)
   const [msg, setMsg] = useState('')
+  const [tokenInfo, setTokenInfo] = useState(null)   // { url, empresa } del token generado
 
   const mostrarMsg = (texto) => { setMsg(texto); setTimeout(() => setMsg(''), 3000) }
+
+  // Código de REGISTRO (acceso sin pago) atado a esta empresa. El backend solo lo permite
+  // si la empresa sigue 'pendiente' (lead a medias, sin pagar). El cliente lo teclea en el
+  // primer paso del registro.
+  const generarToken = (e) => {
+    axios.post(`/api/admin/empresas/${e.id}/token-acceso`)
+      .then(r => setTokenInfo({ codigo: r.data.codigo, empresa: e.nombre }))
+      .catch(err => mostrarMsg(err.response?.data?.detail || 'No se pudo generar el código'))
+  }
 
   const cargarEmpresas = () => {
     axios.get('/api/admin/empresas').then(r => {
@@ -264,6 +307,7 @@ export default function Clientes() {
     <div style={{ padding: 24 }}>
       {modalEmpresa !== null && <ModalEmpresa empresa={modalEmpresa} onClose={() => setModalEmpresa(null)} onSave={guardarEmpresa} />}
       {modalUsuario !== null && <ModalUsuario empresa={empresaSeleccionada} usuarioEditar={modalUsuario} onClose={() => setModalUsuario(null)} onSave={guardarUsuario} />}
+      {tokenInfo !== null && <ModalToken info={tokenInfo} onClose={() => setTokenInfo(null)} onCopy={() => mostrarMsg('Enlace copiado')} />}
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Panel de Clientes</h1>
@@ -297,6 +341,7 @@ export default function Clientes() {
                 </div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                   <button onClick={e2 => { e2.stopPropagation(); setModalEmpresa(e) }} style={{ padding: '5px 12px', background: 'var(--blue-light)', color: 'var(--blue)', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Editar</button>
+                  <button onClick={e2 => { e2.stopPropagation(); generarToken(e) }} style={{ padding: '5px 12px', background: '#e8f5e9', color: '#2e7d32', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Generar token</button>
                   <button onClick={e2 => { e2.stopPropagation(); eliminarEmpresa(e.id) }} style={{ padding: '5px 12px', background: '#ffebee', color: '#c62828', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>Eliminar</button>
                   <span style={{ color: '#aaa', fontSize: 18 }}>{isExpanded ? '▲' : '▼'}</span>
                 </div>
