@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
+import { TableVirtuoso } from 'react-virtuoso'
 import { Radar } from 'lucide-react'
 import RadarSync from '../components/RadarSync'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
@@ -26,6 +27,105 @@ function resaltarKeywords(texto, keywords) {
   })
   return resultado
 }
+
+// === Radar virtualizado (TableVirtuoso) ==================================
+// Una sola definición de columnas, compartida por el <colgroup> (fija los anchos con
+// table-layout:fixed → las columnas NO saltan al virtualizar) y por la cabecera sticky.
+// 'Descripción' sin ancho → absorbe el espacio restante.
+const RADAR_COLS = [
+  { h: '',            w: 56,    align: 'left'  },
+  { h: 'No. Acto',    w: 200,   align: 'left'  },
+  { h: 'Institución', w: '22%', align: 'left'  },
+  { h: 'Descripción', w: null,  align: 'left'  },
+  { h: 'Keywords',    w: '15%', align: 'left'  },
+  { h: 'Cierre',      w: 96,    align: 'left'  },
+  { h: 'Precio Ref.', w: 110,   align: 'right' },
+]
+
+// Celdas de una fila del Radar. Memoizada: solo re-renderiza si cambia la licitación,
+// su estado de lectura (negrita) o su urgencia. Devuelve los <td> (TableVirtuoso los
+// envuelve en el <tr>). Idéntico molde de badges/columnas que la tabla original.
+const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente }) {
+  const publicaYcierraHoy = l.fecha_publicacion &&
+    (l.fecha_publicacion || '').substring(0, 10) === (l.fecha_cierre || '').substring(0, 10)
+  const badge = { display: 'inline-block', padding: '2px 6px', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }
+  return (
+    <>
+      <td style={{ padding: '10px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
+        <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+          {l.numero_convocatoria > 1 && (
+            <span title={`Relanzamiento — Convocatoria #${l.numero_convocatoria}`} style={{ ...badge, background: '#0f2d57' }}>R</span>
+          )}
+          {publicaYcierraHoy && (
+            <span title="Publicada y cierra hoy" style={{ ...badge, background: 'var(--red, #d32f2f)' }}>⚡</span>
+          )}
+          {l.en_track && (
+            <span title="En tu Track" style={{ ...badge, background: '#0f2d57' }}>T</span>
+          )}
+          {l.en_watchlist && (
+            <span title="En tu Watchlist" style={{ ...badge, background: '#0f2d57' }}>W</span>
+          )}
+        </span>
+      </td>
+      <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.numero_acto}</td>
+      <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(l.institucion || '-').substring(0, 45)}</td>
+      <td style={{ padding: '10px 16px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {l.categoria_ia && (
+          <span style={{ display: 'inline-block', marginRight: 6, padding: '1px 7px', background: '#eef1f5', color: 'var(--blue)', borderRadius: 8, fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap' }}>
+            {l.categoria_ia}
+          </span>
+        )}
+        {(l.descripcion || '-').substring(0, 90)}...
+      </td>
+      <td style={{ padding: '10px 16px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+        {(l.keywords || []).slice(0, 3).map(k => (
+          <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
+        ))}
+      </td>
+      <td style={{ padding: '10px 16px', color: urgente ? '#d32f2f' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
+      <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(l.presupuesto)}</td>
+    </>
+  )
+})
+
+// <table> con colgroup (anchos fijos) — conserva el borderCollapse/sticky que pone
+// TableVirtuoso (no lo piso: solo añado width/tableLayout/fontSize).
+const RadarTable = forwardRef(function RadarTable(props, ref) {
+  return (
+    <table {...props} ref={ref} style={{ ...props.style, width: '100%', tableLayout: 'fixed', fontSize: 12 }}>
+      <colgroup>
+        {RADAR_COLS.map((c, i) => <col key={i} style={c.w != null ? { width: c.w } : undefined} />)}
+      </colgroup>
+      {props.children}
+    </table>
+  )
+})
+
+// <tr>: zebra por el índice ABSOLUTO del item (data-index), no el de la ventana visible;
+// clic en la fila → abre el modal (vía context.onRow para no recrear componentes).
+const RadarRow = ({ context, ...props }) => {
+  const idx = props['data-index'] ?? 0
+  return (
+    <tr {...props}
+      style={{ ...props.style, background: idx % 2 === 0 ? 'white' : '#fafafa', borderLeft: '3px solid transparent', cursor: 'pointer' }}
+      onClick={() => context.onRow(idx)} />
+  )
+}
+
+const RADAR_TABLE_COMPONENTS = { Table: RadarTable, TableRow: RadarRow }
+
+// Cabecera fija (sticky la hace TableVirtuoso). Anchos los manda el colgroup.
+const renderRadarHeader = () => (
+  <tr style={{ background: '#f8f9fa' }}>
+    {RADAR_COLS.map((col, i) => (
+      <th key={i} style={{
+        padding: '10px 16px', textAlign: col.align, fontWeight: 600,
+        color: 'var(--text-muted)', borderBottom: '1px solid var(--border)',
+        fontSize: 11, background: '#f8f9fa',
+      }}>{col.h}</th>
+    ))}
+  </tr>
+)
 
 function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipeline, enWatchlist, tieneTrack, onNoLeida }) {
   const resumenIA = useResumenIA(lic.id)
@@ -226,7 +326,7 @@ export default function Dashboard({ usuario }) {
 
   useEffect(() => {
     Promise.allSettled([
-      axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=500&ordenar=fecha_cierre&direccion=asc'),
+      axios.get('/api/licitaciones?estado=Vigente&pagina=1&cantidad=0&ordenar=fecha_cierre&direccion=asc'),
       axios.get('/api/ultima-sync'),
       axios.get('/api/pipeline'),
       axios.get('/api/watchlist'),
@@ -305,18 +405,23 @@ export default function Dashboard({ usuario }) {
 
   const esHoy = (f) => f && f.substring(0, 10) === hoy
 
-  const baseFiltrada = filtro === 'pipeline'
-    ? licitaciones.filter(l => numerosPipeline.has(l.numero_acto))
-    : filtro === 'watchlist'
-    ? licitaciones.filter(l => numerosWatchlist.has(l.numero_acto))
-    : filtro === 'noleidas'
-    ? licitaciones.filter(l => !vistas.has(l.numero_acto))
-    : licitaciones.filter(l => filtro === 'hoy' ? esHoy(l.fecha_cierre) : true)
-
-  // Filtro adicional por categoría IA (multi-select). Vacío = todas.
-  const licitacionesFiltradas = categoriasFiltro.length === 0
-    ? baseFiltrada
-    : baseFiltrada.filter(l => categoriasFiltro.includes(l.categoria_ia))
+  // Filtrado client-side (igual que antes), ahora memoizado: con todas las
+  // licitaciones cargadas conviene no recalcular en cada render.
+  const licitacionesFiltradas = useMemo(() => {
+    const base = filtro === 'pipeline'
+      ? licitaciones.filter(l => numerosPipeline.has(l.numero_acto))
+      : filtro === 'watchlist'
+      ? licitaciones.filter(l => numerosWatchlist.has(l.numero_acto))
+      : filtro === 'noleidas'
+      ? licitaciones.filter(l => !vistas.has(l.numero_acto))
+      : filtro === 'hoy'
+      ? licitaciones.filter(l => (l.fecha_cierre || '').substring(0, 10) === hoy)
+      : licitaciones
+    // Filtro adicional por categoría IA (multi-select). Vacío = todas.
+    return categoriasFiltro.length === 0
+      ? base
+      : base.filter(l => categoriasFiltro.includes(l.categoria_ia))
+  }, [licitaciones, filtro, numerosPipeline, numerosWatchlist, vistas, categoriasFiltro, hoy])
 
   const noLeidasCount = licitaciones.filter(l => !vistas.has(l.numero_acto)).length
 
@@ -498,149 +603,57 @@ export default function Dashboard({ usuario }) {
             )}
           </span>
         </div>
-        {/* Scroll container dedicado para la tabla: el thead se queda
-            pegado arriba (sticky top: 0 relativo a este container, no
-            al viewport). Mismo enfoque que Track tras 8e29d48 — más
-            robusto que el hardcoded top: 176 que había antes. */}
-        <div style={{
-          overflowX: 'hidden',
-          overflowY: 'auto',
-          maxHeight: 'calc(100vh - 380px)',
-          minHeight: 400,
-        }}>
+        {/* Listado virtualizado (TableVirtuoso): conserva <table>/<thead>/<tbody>
+            reales y el sticky thead; solo se montan las filas visibles aunque el
+            array tenga miles. El scroller lo provee virtuoso (alto fijo). */}
         {loading ? (
-          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>Cargando...</div>
+          <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-muted)', minHeight: 400 }}>Cargando...</div>
+        ) : licitacionesFiltradas.length === 0 ? (
+          <div style={{ minHeight: 400, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 40, textAlign: 'center', color: 'var(--text-muted)' }}>
+            {filtro === 'watchlist' ? (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 14, color: 'var(--text)' }}>No tiene licitaciones del Radar en su Watchlist todavía.</span>
+                <span style={{ fontSize: 12 }}>Márquelas con la estrella desde el listado completo para verlas aquí.</span>
+                <button onClick={() => setFiltro('todas')}
+                  style={{ marginTop: 4, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Ver listado completo
+                </button>
+              </div>
+            ) : filtro === 'hoy' ? (
+              <span style={{ fontSize: 14, color: 'var(--text)' }}>Ninguna de sus coincidencias cierra hoy.</span>
+            ) : filtro === 'noleidas' ? (
+              <span style={{ fontSize: 14, color: 'var(--text)' }}>No tiene licitaciones sin leer.</span>
+            ) : filtro === 'pipeline' ? (
+              <span style={{ fontSize: 14, color: 'var(--text)' }}>Ninguna licitación del Radar está en su Track todavía.</span>
+            ) : (
+              /* filtro 'todas': caso real de 0 coincidencias con las keywords */
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
+                <Radar size={30} strokeWidth={1.5} color="var(--text-muted)" style={{ marginBottom: 2 }} />
+                <span style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600 }}>Aún no hay licitaciones vigentes para sus palabras clave</span>
+                <span style={{ fontSize: 12.5, maxWidth: 440, lineHeight: 1.55 }}>
+                  En cuanto se publique una licitación vigente que coincida, aparecerá aquí automáticamente. El Radar se actualiza varias veces al día.
+                </span>
+                <button onClick={() => window.location.assign('/app/keywords')}
+                  style={{ marginTop: 6, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  Revisar mis palabras clave
+                </button>
+              </div>
+            )}
+          </div>
         ) : (
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-            <thead>
-              <tr style={{ background: '#f8f9fa' }}>
-                {[
-                  {h: '',             w: '45px'},
-                  {h: 'No. Acto',     w: '220px'},
-                  {h: 'Institución',  w: '20%'},
-                  {h: 'Descripción',  w: 'auto'},
-                  {h: 'Keywords',     w: '13%'},
-                  {h: 'Cierre',       w: '90px'},
-                  {h: 'Precio Ref.',  w: '110px'},
-                ].map((col, i) => (
-                  <th key={i} style={{
-                    padding: '10px 16px',
-                    textAlign: i > 5 ? 'right' : 'left',
-                    fontWeight: 600,
-                    color: 'var(--text-muted)',
-                    borderBottom: '1px solid var(--border)',
-                    fontSize: 11,
-                    width: col.w,
-                    position: 'sticky',
-                    top: 0,
-                    background: '#f8f9fa',
-                    zIndex: 2,
-                  }}>{col.h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {licitacionesFiltradas.length === 0 ? (
-                <tr>
-                  <td colSpan={7} style={{ padding: 60, textAlign: 'center', color: 'var(--text-muted)' }}>
-                    {filtro === 'watchlist' ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
-                        <span style={{ fontSize: 14, color: 'var(--text)' }}>No tiene licitaciones del Radar en su Watchlist todavía.</span>
-                        <span style={{ fontSize: 12 }}>Márquelas con la estrella desde el listado completo para verlas aquí.</span>
-                        <button onClick={() => setFiltro('todas')}
-                          style={{ marginTop: 4, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          Ver listado completo
-                        </button>
-                      </div>
-                    ) : filtro === 'hoy' ? (
-                      <span style={{ fontSize: 14, color: 'var(--text)' }}>Ninguna de sus coincidencias cierra hoy.</span>
-                    ) : filtro === 'noleidas' ? (
-                      <span style={{ fontSize: 14, color: 'var(--text)' }}>No tiene licitaciones sin leer.</span>
-                    ) : filtro === 'pipeline' ? (
-                      <span style={{ fontSize: 14, color: 'var(--text)' }}>Ninguna licitación del Radar está en su Track todavía.</span>
-                    ) : (
-                      /* filtro 'todas': caso real de 0 coincidencias con las keywords */
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
-                        <Radar size={30} strokeWidth={1.5} color="var(--text-muted)" style={{ marginBottom: 2 }} />
-                        <span style={{ fontSize: 15, color: 'var(--text)', fontWeight: 600 }}>Aún no hay licitaciones vigentes para sus palabras clave</span>
-                        <span style={{ fontSize: 12.5, maxWidth: 440, lineHeight: 1.55 }}>
-                          En cuanto se publique una licitación vigente que coincida, aparecerá aquí automáticamente. El Radar se actualiza varias veces al día.
-                        </span>
-                        <button onClick={() => window.location.assign('/app/keywords')}
-                          style={{ marginTop: 6, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                          Revisar mis palabras clave
-                        </button>
-                      </div>
-                    )}
-                  </td>
-                </tr>
-              ) : licitacionesFiltradas.map((l, i) => {
-                const vista = vistas.has(l.numero_acto)
-                const urgente = esHoy(l.fecha_cierre)
-                const bg = i % 2 === 0 ? 'white' : '#fafafa'
-                return (
-                  <tr key={l.numero_acto}
-                    style={{ background: bg, borderLeft: '3px solid transparent', cursor: 'pointer' }}
-                    onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}>
-                    <td style={{ padding: '10px 8px', textAlign: 'center', whiteSpace: 'nowrap' }}>
-                      <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
-                        {/* Badge R (relanzamiento): R blanca sobre azul corporativo,
-                            mismas dimensiones que el Flash. Coexisten lado a lado. */}
-                        {l.numero_convocatoria > 1 && (
-                          <span title={`Relanzamiento — Convocatoria #${l.numero_convocatoria}`}
-                            style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
-                            R
-                          </span>
-                        )}
-                        {l.fecha_publicacion &&
-                         (l.fecha_publicacion || '').substring(0, 10) ===
-                         (l.fecha_cierre || '').substring(0, 10) && (
-                          <span title="Publicada y cierra hoy"
-                            style={{ display: 'inline-block', padding: '2px 6px', background: 'var(--red, #d32f2f)', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
-                            ⚡
-                          </span>
-                        )}
-                        {/* Badges de estado (T = en Track, W = en Watchlist del
-                            usuario): mismo molde exacto que la R (azul sólido,
-                            letra blanca). Única diferencia: la letra. */}
-                        {l.en_track && (
-                          <span title="En tu Track"
-                            style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
-                            T
-                          </span>
-                        )}
-                        {l.en_watchlist && (
-                          <span title="En tu Watchlist"
-                            style={{ display: 'inline-block', padding: '2px 6px', background: '#0f2d57', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }}>
-                            W
-                          </span>
-                        )}
-                      </span>
-                    </td>
-                    <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700 }}>{l.numero_acto}</td>
-                    <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600 }}>{(l.institucion || '-').substring(0, 45)}</td>
-                    <td style={{ padding: '10px 16px', color: '#666' }}>
-                      {l.categoria_ia && (
-                        <span style={{ display: 'inline-block', marginRight: 6, padding: '1px 7px', background: '#eef1f5', color: 'var(--blue)', borderRadius: 8, fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                          {l.categoria_ia}
-                        </span>
-                      )}
-                      {(l.descripcion || '-').substring(0, 90)}...
-                    </td>
-                    <td style={{ padding: '10px 16px' }}>
-                      {(l.keywords || []).slice(0, 3).map(k => (
-                        <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
-                      ))}
-                    </td>
-                    <td style={{ padding: '10px 16px', color: urgente ? '#d32f2f' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
-                    <td style={{ padding: '10px 16px', textAlign: 'right' }}>{fmt(l.presupuesto)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
+          <TableVirtuoso
+            data={licitacionesFiltradas}
+            style={{ height: 'max(400px, calc(100vh - 380px))', borderRadius: '0 0 12px 12px' }}
+            components={RADAR_TABLE_COMPONENTS}
+            context={{ onRow: (idx) => { const l = licitacionesFiltradas[idx]; if (l) { marcarVista(l.numero_acto); setModalDetalle(l) } } }}
+            defaultItemHeight={41}
+            increaseViewportBy={400}
+            fixedHeaderContent={renderRadarHeader}
+            itemContent={(index, l) => (
+              <FilaRadarCeldas l={l} vista={vistas.has(l.numero_acto)} urgente={esHoy(l.fecha_cierre)} />
+            )}
+          />
         )}
-        </div>
       </div>
     </div>
   )
