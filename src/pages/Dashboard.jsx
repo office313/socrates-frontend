@@ -10,6 +10,7 @@ import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/Resu
 import { useTrack } from '../hooks/useTrack'
 import PliegoIframe from '../components/PliegoIframe'
 import SelectorEmpresa from '../components/SelectorEmpresa'
+import { emulacionActiva } from '../utils/axiosConfig'
 
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
@@ -263,15 +264,19 @@ export default function Dashboard({ usuario }) {
   const hoy = new Date().toLocaleDateString('en-CA', { timeZone: 'America/Panama' })
 
   const marcarVista = (numeroActo) => {
+    // Emul (solo lectura): no marcar visto NI localmente NI en backend. Emular debe
+    // reflejar el estado EXACTO del cliente sin modificarlo (ni pintar la fila).
+    if (emulacionActiva()) return
     if (vistas.has(numeroActo)) return
     setVistas(prev => new Set([...prev, numeroActo]))
-    axios.post(`/api/vistas/${numeroActo}`)
+    axios.post(`/api/vistas/${numeroActo}`).catch(() => {})
   }
 
   // Marca la licitación como NO leída (revierte el marcado automático que
   // hace marcarVista al abrir el modal). Optimista: actualiza el estado
   // local ya y revierte si el DELETE falla.
   const marcarNoLeida = async (numeroActo) => {
+    if (emulacionActiva()) return
     setVistas(prev => {
       const s = new Set(prev)
       s.delete(numeroActo)
@@ -426,6 +431,7 @@ export default function Dashboard({ usuario }) {
   const noLeidasCount = licitaciones.filter(l => !vistas.has(l.numero_acto)).length
 
   const marcarTodasLeidas = async () => {
+    if (emulacionActiva()) return
     const nuevasMarcadas = licitacionesFiltradas
       .map(l => l.numero_acto)
       .filter(n => !vistas.has(n))
