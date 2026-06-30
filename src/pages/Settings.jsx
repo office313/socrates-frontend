@@ -614,6 +614,8 @@ export default function Settings({ usuario }) {
   const [whatsappOptin, setWhatsappOptin] = useState(Boolean(usuario?.whatsapp_optin))
   // Resumen diario por email: ON por defecto (true salvo que el backend diga false).
   const [emailOptin, setEmailOptin] = useState(usuario?.email_optin !== false)
+  // Formato del email: 'digest' (general, por defecto) | 'por_item' (uno por licitación).
+  const [modoEmail, setModoEmail] = useState(usuario?.modo_email_alertas === 'por_item' ? 'por_item' : 'digest')
   const [modo, setModo] = useState('amplio')
   const [modoKeywords, setModoKeywords] = useState('compartido')
   const [totp, setTotp] = useState(false)
@@ -669,6 +671,7 @@ export default function Settings({ usuario }) {
       payload.whatsapp_optin = whatsappOptin
     }
     payload.email_optin = emailOptin
+    payload.modo_email_alertas = modoEmail
     axios.post('/api/cuenta', payload)
       .then(r => {
         if (r.data.ok) { mostrarMsg('Datos actualizados'); setPasswordActual(''); setPasswordNuevo('') }
@@ -797,14 +800,30 @@ export default function Settings({ usuario }) {
           </div>
         )}
         <div style={{ borderTop: '1px solid #e5e7eb', paddingTop: 16, marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: '#444', marginBottom: 12 }}>Resumen diario por email</div>
+          <div style={{ fontSize: 13, fontWeight: 600, color: '#444', marginBottom: 12 }}>Alertas por email</div>
           <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: '#333', cursor: 'pointer' }}>
             <input type="checkbox" checked={emailOptin} onChange={e => setEmailOptin(e.target.checked)} />
-            Deseo recibir el resumen diario de licitaciones por email
+            Deseo recibir alertas de licitaciones por email
           </label>
-          <p style={{ fontSize: 11, color: '#999', margin: '6px 0 0 24px' }}>
-            Le enviamos un email (días laborables, 10:30 AM) con las licitaciones nuevas que coinciden con sus criterios. Puede desactivarlo cuando quiera.
-          </p>
+          {emailOptin && (
+            <div style={{ margin: '12px 0 0 24px' }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 8 }}>¿Cómo desea recibirlas?</div>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#333', cursor: 'pointer', marginBottom: 8 }}>
+                <input type="radio" name="modoEmail" checked={modoEmail === 'digest'} onChange={() => setModoEmail('digest')} style={{ marginTop: 2 }} />
+                <span>
+                  <strong>Un email general</strong> con todas las licitaciones nuevas
+                  <span style={{ display: 'block', fontSize: 11, color: '#999', marginTop: 2 }}>Un solo correo (días laborables) que reúne todas las nuevas que coinciden con sus criterios.</span>
+                </span>
+              </label>
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 13, color: '#333', cursor: 'pointer' }}>
+                <input type="radio" name="modoEmail" checked={modoEmail === 'por_item'} onChange={() => setModoEmail('por_item')} style={{ marginTop: 2 }} />
+                <span>
+                  <strong>Un email por cada licitación</strong>
+                  <span style={{ display: 'block', fontSize: 11, color: '#999', marginTop: 2 }}>Un correo individual por cada licitación nueva. Solo afecta a las que aparezcan a partir de ahora; no recibirá el histórico.</span>
+                </span>
+              </label>
+            </div>
+          )}
         </div>
         <button onClick={guardarCuenta} style={bs}>Guardar cambios</button>
       </div>
