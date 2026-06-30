@@ -36,9 +36,9 @@ function resaltarKeywords(texto, keywords) {
 const RADAR_COLS = [
   { h: '',            w: 56,    align: 'left'  },
   { h: 'No. Acto',    w: 200,   align: 'left'  },
-  { h: 'Institución', w: '22%', align: 'left'  },
-  { h: 'Descripción', w: null,  align: 'left'  },
-  { h: 'Keywords',    w: '15%', align: 'left'  },
+  { h: 'Institución', w: 190,     align: 'left'  },
+  { h: 'Descripción', w: null,    align: 'left'  },
+  { h: 'Keywords',    w: '10.5%', align: 'left'  },
   { h: 'Cierre',      w: 96,    align: 'left'  },
   { h: 'Precio Ref.', w: 110,   align: 'right' },
 ]
@@ -71,12 +71,7 @@ const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente }) {
       <td style={{ padding: '10px 16px', color: 'var(--blue)', fontWeight: vista ? 400 : 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.numero_acto}</td>
       <td style={{ padding: '10px 16px', fontWeight: vista ? 400 : 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{(l.institucion || '-').substring(0, 45)}</td>
       <td style={{ padding: '10px 16px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-        {l.categoria_ia && (
-          <span style={{ display: 'inline-block', marginRight: 6, padding: '1px 7px', background: '#eef1f5', color: 'var(--blue)', borderRadius: 8, fontSize: 10, fontWeight: 600, whiteSpace: 'nowrap' }}>
-            {l.categoria_ia}
-          </span>
-        )}
-        {(l.descripcion || '-').substring(0, 90)}...
+        {l.descripcion || '-'}
       </td>
       <td style={{ padding: '10px 16px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
         {(l.keywords || []).slice(0, 3).map(k => (
@@ -171,6 +166,12 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
             <div style={{ marginBottom: 16 }}>
               <p style={{ fontSize: 11, fontWeight: 600, color: '#888', marginBottom: 6 }}>DETALLES</p>
               <div style={{ fontSize: 12, color: '#444', lineHeight: 2 }}>
+                {lic.categoria_ia && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span style={{ color: '#888' }}>Sector</span>
+                    <span style={{ fontWeight: 600 }}>{lic.categoria_ia}</span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                   <span style={{ color: '#888' }}>Cierre</span>
                   <span style={{ fontWeight: 600 }}>{fmtFecha(lic.fecha_cierre)}</span>
