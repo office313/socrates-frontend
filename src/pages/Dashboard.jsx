@@ -15,8 +15,18 @@ import { emulacionActiva } from '../utils/axiosConfig'
 const fmt = (v) => v ? '$' + Number(v).toLocaleString('en-US', { minimumFractionDigits: 2 }) : '-'
 const fmtFecha = (f) => {
   if (!f) return '-'
-  const p = f.substring(0, 10).split('-')
-  return p[2] + '-' + p[1] + '-' + p[0]
+  const p = f.substring(0, 10).split('-')   // [YYYY, MM, DD]
+  const dm = p[2] + '-' + p[1]              // DD-MM (sin año, como el ejemplo "02-07 2:00 PM")
+  const hm = f.substring(11, 16)            // "HH:MM" (24h) si la trae
+  // Solo-fecha (rangos sin hora publicada) → "11:59 PM" (fin del día): uniforma la
+  // columna y refleja que vencen al final del día, coherente con el orden interno (2359).
+  // PURAMENTE VISUAL: la BD sigue guardando solo-fecha; no se escribe nada.
+  if (!/^\d{2}:\d{2}$/.test(hm)) return `${dm} 11:59 PM`
+  const hh = parseInt(hm.substring(0, 2), 10)
+  const mm = hm.substring(3, 5)
+  const ampm = hh < 12 ? 'AM' : 'PM'        // 00-11 AM, 12-23 PM
+  const h12 = (hh % 12) === 0 ? 12 : (hh % 12)  // 0→12 (medianoche), 12→12 (mediodía)
+  return `${dm} ${h12}:${mm} ${ampm}`
 }
 
 function resaltarKeywords(texto, keywords) {
