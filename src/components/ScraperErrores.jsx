@@ -17,6 +17,14 @@ const CRONS = [
   'adjudicaciones_v2',
   'run_acp_vigentes',
   'run_acp_awards',
+  // Instrumentados vía run_cron.py (Tema 2).
+  'sdi',
+  'seguimiento_derivados',
+  'wa_alertas',
+  'cobros_cron',
+  'email_digest',
+  'email_item',
+  'cron_agenda_bridge',
 ]
 
 const TIPO_COLOR = {

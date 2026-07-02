@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import axios from 'axios'
 
 // Agenda de crons del backend (scraping + mantenimiento). Muestra la próxima
 // ejecución de cada uno, calculada en zona horaria de Panamá (America/Panama,
@@ -12,35 +13,10 @@ import { useState, useEffect } from 'react'
 // Si un cron tiene claves L-V y S-D mezcladas, ambas listas aplican según el
 // día. TODOS se suma al set del día sea cual sea.
 
-const CRONS = [
-  {
-    label: 'Sync PanamaCompra',
-    horarios: {
-      'L-V': ['07:30', '08:30', '09:30', '10:45', '11:30', '12:30', '13:30', '14:30', '15:30', '16:30', '17:30'],
-      'S-D': ['18:00'],
-    },
-  },
-  {
-    label: 'ACP vigentes',
-    horarios: { 'L-V': ['10:00', '12:50'], 'S-D': ['17:00'] },
-  },
-  {
-    label: 'ACP awards',
-    horarios: { 'L-V': ['10:20', '13:10'], 'S-D': ['17:20'] },
-  },
-  {
-    label: 'Adjudicaciones V3',
-    horarios: { 'TODOS': ['19:00'] },
-  },
-  {
-    label: 'Adjudicaciones V2',
-    horarios: { 'TODOS': ['21:00'] },
-  },
-  {
-    label: 'Limpieza nocturna',
-    horarios: { 'TODOS': ['00:05'] },
-  },
-]
+// La lista de crons ya NO está hardcodeada: se lee de GET /api/admin/cron-agenda,
+// espejo del crontab real de SCRAPERS (poblado por el puente cada 2h). Cada cron
+// trae schedule_json {tipo:'fijo'|'intervalo', horarios/cada_min, resumen} en hora
+// Panamá; el cálculo de "próxima ejecución" de abajo lo consume.
 
 // Reloj-pared de Panamá. Extrae year/month/day/hour/minute/second tratando
 // la zona horaria de Panamá como referencia. Funciona desde un navegador en
@@ -73,26 +49,39 @@ function panamaDow(Y, M, D) {
 
 const DOW_ES = ['domingo', 'lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado']
 
-function horariosDelDia(cron, dow) {
+function horariosDelDia(horarios, dow) {
   const esWeekend = dow === 0 || dow === 6
   const claveDia = esWeekend ? 'S-D' : 'L-V'
   const lista = [
-    ...(cron.horarios[claveDia] || []),
-    ...(cron.horarios['TODOS'] || []),
+    ...(horarios[claveDia] || []),
+    ...(horarios['TODOS'] || []),
   ]
   return [...new Set(lista)].sort()
 }
 
+// ¿aplica un cron de intervalo en este día de la semana? (dias: TODOS|L-V|S-D)
+function diaAplicaIntervalo(dias, dow) {
+  if (dias === 'TODOS' || !dias) return true
+  const esWeekend = dow === 0 || dow === 6
+  return dias === 'S-D' ? esWeekend : !esWeekend
+}
+
 // Próxima ejecución del cron a partir del wall clock actual de Panamá.
 // Devuelve { Y, M, D, h, m, offsetDias, deltaMs } o null si no aplica en 7 días.
+// Despacha por schedule_json.tipo: 'fijo' (lista HH:MM por clase-día) o
+// 'intervalo' (cada N min). La matemática 'fijo' es la de siempre.
 function proximaEjecucion(cron, ahora) {
+  const sj = cron.schedule_json || {}
+  const nowMs = panamaWallMs(ahora.year, ahora.month, ahora.day, ahora.hour, ahora.minute, ahora.second)
+  if (sj.tipo === 'intervalo') return proximaIntervalo(sj, ahora, nowMs)
+  const horarios = sj.horarios || {}
   for (let off = 0; off < 8; off++) {
     const base = new Date(Date.UTC(ahora.year, ahora.month - 1, ahora.day) + off * 86400000)
     const Y = base.getUTCFullYear()
     const M = base.getUTCMonth() + 1
     const D = base.getUTCDate()
     const dow = base.getUTCDay()
-    const aplicables = horariosDelDia(cron, dow)
+    const aplicables = horariosDelDia(horarios, dow)
     for (const hhmm of aplicables) {
       const [h, m] = hhmm.split(':').map(Number)
       const esHoy = off === 0
@@ -101,10 +90,32 @@ function proximaEjecucion(cron, ahora) {
         (h === ahora.hour && m > ahora.minute)
       if (enFuturo) {
         const targetMs = panamaWallMs(Y, M, D, h, m, 0)
-        const nowMs = panamaWallMs(ahora.year, ahora.month, ahora.day, ahora.hour, ahora.minute, ahora.second)
         return { Y, M, D, h, m, offsetDias: off, deltaMs: targetMs - nowMs, dow }
       }
     }
+  }
+  return null
+}
+
+// Próxima ejecución de un cron de intervalo (p.ej. */5): el siguiente múltiplo
+// de cada_min estrictamente futuro, en un día que aplique (dias).
+function proximaIntervalo(sj, ahora, nowMs) {
+  const cada = sj.cada_min || 1
+  for (let off = 0; off < 8; off++) {
+    const base = new Date(Date.UTC(ahora.year, ahora.month - 1, ahora.day) + off * 86400000)
+    const Y = base.getUTCFullYear()
+    const M = base.getUTCMonth() + 1
+    const D = base.getUTCDate()
+    const dow = base.getUTCDay()
+    if (!diaAplicaIntervalo(sj.dias, dow)) continue
+    // minuto-del-día desde el que buscar: hoy, estrictamente después del actual.
+    const desde = off === 0 ? ahora.hour * 60 + ahora.minute + 1 : 0
+    const next = Math.ceil(desde / cada) * cada
+    if (next >= 1440) continue  // no cabe hoy → siguiente día aplicable
+    const h = Math.floor(next / 60)
+    const m = next % 60
+    const targetMs = panamaWallMs(Y, M, D, h, m, 0)
+    return { Y, M, D, h, m, offsetDias: off, deltaMs: targetMs - nowMs, dow }
   }
   return null
 }
@@ -130,17 +141,34 @@ function fmtCuando(prox) {
   return `${dia} ${hh}:${mm}`
 }
 
+// "actualizado hace X" — frescura del espejo (refrescado_en del puente).
+function fmtActualizado(iso) {
+  if (!iso) return ''
+  const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+  if (min < 0) return 'actualizado ahora'
+  if (min < 1) return 'actualizado hace <1m'
+  if (min < 60) return `actualizado hace ${min}m`
+  const h = Math.floor(min / 60)
+  return `actualizado hace ${h}h${min % 60 ? ` ${min % 60}m` : ''}`
+}
+
 export default function CronAgenda() {
-  // Tick cada 30s para refrescar los countdowns sin esperar el polling de 2.5s
-  // del monitor. setInterval con dependencia vacía: un solo timer por montaje.
+  const [crons, setCrons] = useState([])
+  const [refrescadoEn, setRefrescadoEn] = useState(null)
+  // Tick cada 30s para refrescar los countdowns sin esperar el polling del monitor.
   const [, setTick] = useState(0)
+  useEffect(() => {
+    axios.get('/api/admin/cron-agenda')
+      .then(r => { setCrons(r.data?.crons || []); setRefrescadoEn(r.data?.refrescado_en || null) })
+      .catch(() => {})
+  }, [])
   useEffect(() => {
     const id = setInterval(() => setTick(t => t + 1), 30 * 1000)
     return () => clearInterval(id)
   }, [])
 
   const ahora = panamaWallClock()
-  const filas = CRONS
+  const filas = crons
     .map(c => ({ cron: c, prox: proximaEjecucion(c, ahora) }))
     .sort((a, b) => {
       if (!a.prox) return 1
@@ -150,10 +178,11 @@ export default function CronAgenda() {
 
   return (
     <div style={{ maxWidth: 1200 }}>
-      <h2 style={{
-        fontSize: 16, fontWeight: 600, color: 'var(--blue)',
-        margin: '0 0 12px 0',
-      }}>Próximos crons</h2>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, margin: '0 0 12px 0' }}>
+        <h2 style={{ fontSize: 16, fontWeight: 600, color: 'var(--blue)', margin: 0 }}>Próximos crons</h2>
+        {refrescadoEn &&
+          <span style={{ fontSize: 11, color: '#98a2b3' }}>{fmtActualizado(refrescadoEn)}</span>}
+      </div>
 
       <div style={{
         background: 'white', borderRadius: 12, padding: '4px 0',
@@ -172,14 +201,14 @@ export default function CronAgenda() {
             </tr>
           </thead>
           <tbody>
+            {filas.length === 0 &&
+              <tr><td colSpan={4} style={{ padding: '12px 14px', color: '#98a2b3' }}>Cargando…</td></tr>}
             {filas.map(({ cron, prox }, i) => {
-              const horarioResumen = Object.entries(cron.horarios)
-                .map(([k, hs]) => `${k}: ${hs.join(' · ')}`)
-                .join('  /  ')
+              const horarioResumen = cron.schedule_json?.resumen || ''
               return (
-                <tr key={cron.label} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
+                <tr key={cron.slug} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
                   <td style={{ padding: '8px 14px', fontWeight: 600, color: 'var(--blue-dark)' }}>
-                    {cron.label}
+                    {cron.nombre}
                   </td>
                   <td style={{ padding: '8px 14px', color: 'var(--blue)', fontWeight: 600, whiteSpace: 'nowrap' }}>
                     {prox ? fmtDelta(prox.deltaMs) : '—'}
