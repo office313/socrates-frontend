@@ -10,11 +10,24 @@ import axios from 'axios'
 const RESULTADO_COLOR = {
   'Éxito': { bg: '#e8f5e9', color: '#2e7d32' },
   'Fallo': { bg: 'var(--red-light)', color: 'var(--red)' },
+  // Registro = alta/onboarding (sesión sin activar). Azul apagado: ni éxito (verde)
+  // ni fallo (rojo) — un alta no es ni bueno ni malo, es informativo.
+  'Registro': { bg: '#e7edf7', color: '#3f5c8f' },
 }
 
 function Chip({ label, mapa = RESULTADO_COLOR }) {
   const c = mapa[label] || { bg: '#f3f4f6', color: '#6b7280' }
   return <span style={{ background: c.bg, color: c.color, padding: '2px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</span>
+}
+
+// Etiqueta del evento desde el `resultado` que ya deriva el backend (fallo>registro>
+// exito). Fallback defensivo a `exito` para eventos sin `resultado` (no debería pasar).
+function etiquetaAcceso(ev) {
+  const r = ev.resultado
+  if (r === 'registro') return 'Registro'
+  if (r === 'fallo') return 'Fallo'
+  if (r === 'exito') return 'Éxito'
+  return ev.exito ? 'Éxito' : 'Fallo'
 }
 
 // Hora Panamá (UTC-5) forzada en la presentación, sea cual sea el huso del navegador.
@@ -50,7 +63,7 @@ function DetalleAcceso({ ev, onClose }) {
         <div style={{ padding: 22 }}>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14, marginBottom: 20 }}>
             <Dato label="Fecha y hora (Panamá)">{fmtFechaHora(ev.creado_en)}</Dato>
-            <Dato label="Resultado"><Chip label={ev.exito ? 'Éxito' : 'Fallo'} /></Dato>
+            <Dato label="Resultado"><Chip label={etiquetaAcceso(ev)} /></Dato>
             <Dato label="Email intentado">{ev.email_intento}</Dato>
             <Dato label="Empresa">{ev.empresa || <span style={{ color: '#d1d5db' }}>— (email no reconocido)</span>}</Dato>
             <Dato label="IP">{ev.ip || '—'}</Dato>
@@ -133,6 +146,7 @@ function VistaAccesos() {
             <option value="">Todos</option>
             <option value="true">Éxito</option>
             <option value="false">Fallo</option>
+            <option value="registro">Registro</option>
           </select>
         </div>
         <div>
@@ -156,7 +170,7 @@ function VistaAccesos() {
               <tr key={ev.id} onClick={() => setSel(ev)} style={{ cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                 <td style={td}>{fmtFechaHora(ev.creado_en)}</td>
-                <td style={td}><Chip label={ev.exito ? 'Éxito' : 'Fallo'} /></td>
+                <td style={td}><Chip label={etiquetaAcceso(ev)} /></td>
                 <td style={td}><span style={{ fontWeight: 600, color: 'var(--blue)' }}>{ev.email_intento}</span></td>
                 <td style={td}>{ev.empresa || <span style={{ color: '#d1d5db' }}>—</span>}</td>
                 <td style={td}>{ev.ip || <span style={{ color: '#d1d5db' }}>—</span>}</td>
