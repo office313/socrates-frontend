@@ -401,7 +401,8 @@ export default function Registro() {
   // El backend crea la orden Yappy (cliente presente); pasamos al paso de pago a
   // sondear la confirmación. La cuenta se activa SOLO al confirmar.
   const enviarPaso2 = async (modo) => {
-    if (!yappyTelOk) { setError('Indique su número de Yappy (móvil de Panamá, 8 dígitos).'); return }
+    // El Yappy solo hace falta para el pago COMPLETO; el trial ya no cobra el $1.
+    if (modo === 'completo' && !yappyTelOk) { setError('Indique su número de Yappy (móvil de Panamá, 8 dígitos).'); return }
     setError(''); setLoading(true); setCambiarTel(false); setPagoEstado('esperando')
     try {
       const r = await fetch('/api/registro/paso2', {
@@ -409,7 +410,9 @@ export default function Registro() {
         body: JSON.stringify({ rt, plan, packs, ciclo, metodo_pago: 'yappy', yappy_telefono: yappyTel, modo }),
       })
       const data = await r.json().catch(() => ({}))
-      if (r.ok) {
+      if (r.ok && data.redirect) {
+        window.location.href = data.redirect   // trial GRATIS activado → /app (mismo final que el canje de token)
+      } else if (r.ok) {
         setResumen(data.resumen)
         setCobro({ ct: data.ct, monto: data.monto, base: data.base, itbms: data.itbms, modo: data.modo, ordenCreada: data.orden_creada })
         setPaso('pago')
@@ -804,25 +807,21 @@ export default function Registro() {
               })()}
               {/* La promoción de Track ya se muestra en la tarjeta del plan; aquí se omite
                   para no duplicar y ganar altura. */}
-              {/* Trial-first: dejar claro que HOY paga $1, no la cuota entera. La cuota de
-                  arriba es lo que se cobra al terminar la prueba (menos ese $1). */}
+              {/* Trial SIN pago (nuevo flujo): no se cobra nada hoy. La cuota de arriba es
+                  lo que se cobra al terminar la prueba de 5 días. */}
               {trialElegible && (
-                <>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)' }}>Hoy paga</span>
-                    <span style={{ fontSize: 22, fontWeight: 800, color: 'var(--text)' }}>
-                      $1
-                    </span>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                    Prueba de 5 días por $1. Al terminar, se cobra la cuota indicada arriba, menos ese $1 ya abonado.
-                  </div>
-                </>
+                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
+                  <strong style={{ color: 'var(--text)' }}>Pruébelo 5 días</strong> sin pagar hoy. Al terminar la prueba, se cobra la cuota indicada arriba.
+                </div>
               )}
             </div>
 
-            <button type="button" onClick={() => { setError(''); setMetodoSel(null); setPaso('metodo') }} style={btn(true)}>
-              Continuar al pago
+            <button type="button"
+              onClick={trialElegible
+                ? () => enviarPaso2('trial')                                       /* trial GRATIS: activa y entra a /app */
+                : () => { setError(''); setMetodoSel(null); setPaso('metodo') }}   /* completo: pasa al paso de pago */
+              disabled={loading} style={btn(!loading)}>
+              {loading ? 'Un momento…' : (trialElegible ? 'Comenzar prueba de 5 días' : 'Continuar al pago')}
             </button>
           </div>
         )}
