@@ -46,8 +46,8 @@ export default function TokensRegistro() {
     <div style={{ padding: 24 }}>
       <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>Códigos de promoción</h1>
       <p style={{ fontSize: 13, color: '#888', margin: '0 0 24px' }}>
-        Genere un código corto que el cliente teclea en el paso de pago de un alta nueva: sustituye
-        el pago de $1 y activa el trial de 5 días. Un solo uso, caduca en 1 mes. No salta la
+        Genere un código corto que el cliente teclea en el paso de pago de un alta nueva: activa
+        el trial de 5 días sin pago. Un solo uso, caduca en 1 mes. No salta la
         verificación de email. (Para recuperar una empresa existente, use "Generar código" en el Panel de Clientes.)
       </p>
 

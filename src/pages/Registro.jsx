@@ -420,7 +420,7 @@ export default function Registro() {
         // Regla D: este número ya gastó su prueba de $1 → ocultar la prueba y ofrecer
         // solo el pago completo, con un mensaje claro (sin el prefijo técnico).
         setTrialElegible(false)
-        setError('Ya disfrutó la prueba de $1 con este número de Yappy. Puede suscribirse directamente con "Suscribirme ya".')
+        setError('Su empresa ya utilizó su periodo de prueba. Puede suscribirse directamente al plan.')
       } else {
         setError(data.detail || 'No pudimos guardar su plan. Inténtelo de nuevo.')
       }
@@ -811,7 +811,7 @@ export default function Registro() {
                   lo que se cobra al terminar la prueba de 5 días. */}
               {trialElegible && (
                 <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                  <strong style={{ color: 'var(--text)' }}>Pruébelo 5 días</strong> sin pagar hoy. Al terminar la prueba, se cobra la cuota indicada arriba.
+                  <strong style={{ color: 'var(--text)' }}>Pruébelo sin costo.</strong> Al terminar la prueba de 5 días, se cobra la cuota indicada arriba.
                 </div>
               )}
             </div>
@@ -896,7 +896,7 @@ export default function Registro() {
             {metodoSel === 'yappy' && (
               <div>
                 <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '11px 14px', margin: '4px 0 12px', fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.55 }}>
-                  Para pagos con Yappy, la facturación la realiza CATPLAN Security, distribuidor de Sócrates Pro en Panamá, que emitirá factura fiscal con ITBMS (7%). Total de la prueba con Yappy: $1.07{trialElegible ? '; se descuenta del primer pago al acabar la prueba.' : '.'}
+                  Para pagos con Yappy, la facturación la realiza CATPLAN Security, distribuidor de Sócrates Pro en Panamá, que emitirá factura fiscal con ITBMS (7%).
                 </div>
 
                 {/* Número Yappy = método de pago (mismo comportamiento que antes) */}
@@ -918,7 +918,7 @@ export default function Registro() {
 
                 {!trialElegible && (
                   <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 12px', textAlign: 'center' }}>
-                    Este número de Yappy ya disfrutó la prueba de $1. Continuará al plan completo.
+                    Su empresa ya utilizó su periodo de prueba; continuará al plan completo.
                   </p>
                 )}
               </div>
@@ -1046,19 +1046,13 @@ export default function Registro() {
                 </div>
                 {/* Desglose completo y transparente SOLO aquí: es lo que se cobra de verdad. */}
                 <div style={{ background: 'var(--gray)', borderRadius: 10, padding: '12px 16px', margin: '0 0 16px', textAlign: 'left' }}>
-                  <Linea label={cobro.modo === 'completo' ? 'Subtotal' : 'Prueba (5 días)'} valor={`$${cobro.base?.toFixed(2)}`} />
+                  <Linea label="Subtotal" valor={`$${cobro.base?.toFixed(2)}`} />
                   <Linea label="ITBMS (7%)" valor={`$${cobro.itbms?.toFixed(2)}`} />
                   <Linea label="Total a pagar" valor={`$${cobro.monto?.toFixed(2)}`} fuerte />
-                  {cobro.modo !== 'completo' && (
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-                      Este $1 (+ ITBMS) se descuenta del primer pago al terminar la prueba.
-                    </div>
-                  )}
                 </div>
                 <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6, marginBottom: 16 }}>
                   Le enviamos una solicitud a su app de Yappy. Apruébela con su PIN o huella;
                   esta página continúa sola en cuanto se confirme.
-                  {cobro.modo !== 'completo' && ' Ese $1 se descuenta del primer pago.'}
                 </p>
                 <div style={{ display: 'flex', gap: 10, marginBottom: 20, padding: '12px 14px', background: 'var(--blue-light)', borderRadius: 8, textAlign: 'left' }}>
                   <ShieldCheck size={20} strokeWidth={1.8} color="var(--blue)" style={{ flexShrink: 0, marginTop: 1 }} />
