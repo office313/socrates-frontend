@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Chip, venceTexto, Metodo, DetalleClienteBody } from './Suscripciones'
+import { Chip, venceTexto, Metodo, DetalleClienteBody, VistaTransacciones } from './Suscripciones'
 import { ModalEmpresa, ModalUsuario, ModalToken, VincularUsuario } from './Clientes'
 
 // Panel UNIFICADO Clientes + Suscripción (superadmin). Lista con lo esencial de suscripción
@@ -39,6 +39,7 @@ export default function ClientesUnificado() {
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(null)                       // fila de suscripción seleccionada
   const [fichaTab, setFichaTab] = useState('suscripcion')
+  const [vista, setVista] = useState('clientes')             // 'clientes' (lista+ficha) | 'transacciones' (libro global)
   const [modalEmpresa, setModalEmpresa] = useState(null)
   const [modalUsuario, setModalUsuario] = useState(null)
   const [tokenInfo, setTokenInfo] = useState(null)
@@ -119,11 +120,19 @@ export default function ClientesUnificado() {
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
         <h1 style={{ fontSize: 22, fontWeight: 700, color: 'var(--blue)', margin: 0 }}>Clientes</h1>
-        <button onClick={() => setModalEmpresa({})} style={bs}>+ Nueva Empresa</button>
+        {vista === 'clientes' && <button onClick={() => setModalEmpresa({})} style={bs}>+ Nueva Empresa</button>}
+      </div>
+
+      {/* Dos vistas: Clientes (lista+ficha) | Transacciones (libro global de cobros) */}
+      <div style={{ display: 'inline-flex', gap: 4, padding: 4, background: 'var(--blue-light)', borderRadius: 999, marginBottom: 20 }}>
+        {[['clientes', 'Clientes'], ['transacciones', 'Transacciones']].map(([v, t]) => (
+          <button key={v} onClick={() => { setVista(v); setSel(null) }} style={{ padding: '8px 18px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 14, fontWeight: 600, background: vista === v ? 'var(--blue)' : 'transparent', color: vista === v ? 'white' : 'var(--blue)' }}>{t}</button>
+        ))}
       </div>
 
       {msg && <div style={{ background: '#e8f5e9', color: '#2e7d32', padding: '10px 16px', borderRadius: 8, marginBottom: 16, fontSize: 13 }}>{msg}</div>}
 
+      {vista === 'transacciones' ? <VistaTransacciones /> : (<>
       {/* Filtros: estado (chips) + plan + búsqueda */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
         {FILTROS.map(([val, label]) => (
@@ -233,6 +242,7 @@ export default function ClientesUnificado() {
           </div>
         </div>
       )}
+      </>)}
     </div>
   )
 }

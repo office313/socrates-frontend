@@ -483,7 +483,7 @@ function DetalleTransaccion({ tx, onClose }) {
 
 const ESTADOS_FILTRO = ['', 'COMPLETED', 'PENDING', 'DECLINED', 'EXPIRED', 'CANCELLED', 'REVERSED', 'FAILED']
 
-function VistaTransacciones() {
+export function VistaTransacciones() {
   const [q, setQ] = useState('')
   const [estado, setEstado] = useState('')
   const [desde, setDesde] = useState('')
