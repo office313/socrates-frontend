@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList, Ticket, CreditCard, KeyRound, Eye, Megaphone, Gift } from 'lucide-react'
+import { Radar, GitCommit, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList, Ticket, KeyRound, Eye, Megaphone, Gift, MailCheck } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-icono-rojo.svg'
 
 const getNavItems = (usuario) => {
@@ -67,12 +67,8 @@ export default function Sidebar({ usuario }) {
               <span style={{ fontSize: 11 }}>CRM</span>
             </NavLink>
           )}
-          {usuario?.rol === 'superadmin' && (
-            <NavLink to="/suscripciones" style={({ isActive }) => linkStyle(isActive)}>
-              <CreditCard size={20} />
-              <span style={{ fontSize: 11 }}>Suscrip.</span>
-            </NavLink>
-          )}
+          {/* "Suscrip." retirado del menú: fusionado en "Clientes" (Clientes | Transacciones).
+              La ruta /suscripciones sigue viva por URL directa como red de seguridad; se retira del todo más adelante. */}
           {usuario?.rol === 'superadmin' && (
             <NavLink to="/tickets" style={({ isActive }) => linkStyle(isActive)}>
               <Ticket size={20} />
@@ -101,6 +97,12 @@ export default function Sidebar({ usuario }) {
             <NavLink to="/tokens" style={({ isActive }) => linkStyle(isActive)}>
               <Gift size={20} />
               <span style={{ fontSize: 11 }}>Tokens</span>
+            </NavLink>
+          )}
+          {usuario?.rol === 'superadmin' && (
+            <NavLink to="/emails-estado" style={({ isActive }) => linkStyle(isActive)}>
+              <MailCheck size={20} />
+              <span style={{ fontSize: 11 }}>Emails</span>
             </NavLink>
           )}
         </nav>
