@@ -6,7 +6,7 @@ const ROLES = ['usuario', 'supervisor']
 // Vincular un usuario existente (por email) a una empresa. Si el email no existe,
 // el backend crea el usuario con email de bienvenida; si ya existe, solo le añade
 // el acceso a esta empresa (sin email).
-function VincularUsuario({ empresaId, onResult }) {
+export function VincularUsuario({ empresaId, onResult }) {
   const [email, setEmail] = useState('')
   const [rol, setRol] = useState('usuario')
   const [loading, setLoading] = useState(false)
@@ -47,7 +47,7 @@ function VincularUsuario({ empresaId, onResult }) {
   )
 }
 
-function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
+export function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
   const esNuevo = !usuarioEditar?.id
   const [form, setForm] = useState(usuarioEditar || { nombre: '', email: '', password: '', confirmar: '', rol: 'usuario', telefono: '' })
   const [error, setError] = useState('')
@@ -112,7 +112,7 @@ function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
   )
 }
 
-function ModalEmpresa({ empresa, onClose, onSave }) {
+export function ModalEmpresa({ empresa, onClose, onSave }) {
   const esNuevo = !empresa?.id
   const [form, setForm] = useState(empresa || { nombre: '', ruc: '', direccion: '', codigo_proveedor: '', telefono: '', email: '', cedula_representante: '', nombre_representante: '', usuarios_permitidos: 5, limite_consultas_legales_mes: 100, modulo_track: 1, track_expira_en: '' })
   const set = (k, v) => setForm(f => ({ ...f, [k]: v }))
@@ -194,7 +194,7 @@ function ModalEmpresa({ empresa, onClose, onSave }) {
 
 // Muestra el código de registro recién generado (formato corto que el cliente teclea).
 // Caduca a 1 mes y es de un solo uso (se lo recordamos al superadmin).
-function ModalToken({ info, onClose, onCopy }) {
+export function ModalToken({ info, onClose, onCopy }) {
   const copiar = () => {
     navigator.clipboard?.writeText(info.codigo).then(() => onCopy && onCopy()).catch(() => {})
   }

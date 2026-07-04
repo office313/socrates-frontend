@@ -12,7 +12,7 @@ import Analytics from './pages/Analytics'
 import Keywords from './pages/Keywords'
 import Watchlist from './pages/Watchlist'
 import Settings from './pages/Settings'
-import Clientes from './pages/Clientes'
+import ClientesUnificado from './pages/ClientesUnificado'
 import Legal from './pages/Legal'
 import PanelControl from './pages/PanelControl'
 import Marketing from './pages/Marketing'
@@ -23,6 +23,7 @@ import Emul from './pages/Emul'
 import TicketsSoporte from './pages/TicketsSoporte'
 import PacAdmin from './pages/PacAdmin'
 import TokensRegistro from './pages/TokensRegistro'
+import EstadoEmails from './pages/EstadoEmails'
 
 function App() {
   const { usuario, loading } = useAuth()
@@ -46,13 +47,14 @@ function App() {
               <Route path="/pipeline" element={usuario?.modulos?.track ? <Pipeline usuario={usuario} /> : <Navigate to="/" replace />} />
               <Route path="/keywords" element={<Keywords />} />
               <Route path="/settings" element={<Settings usuario={usuario} />} />
-              <Route path="/clientes" element={<Clientes />} />
+              <Route path="/clientes" element={<ClientesUnificado />} />
               <Route path="/panel-control" element={usuario?.rol === 'superadmin' ? <PanelControl /> : <Navigate to="/" replace />} />
               <Route path="/suscripciones" element={usuario?.rol === 'superadmin' ? <Suscripciones /> : <Navigate to="/" replace />} />
               <Route path="/accesos" element={usuario?.rol === 'superadmin' ? <Accesos /> : <Navigate to="/" replace />} />
               <Route path="/emul" element={usuario?.rol === 'superadmin' ? <Emul /> : <Navigate to="/" replace />} />
               <Route path="/tickets" element={usuario?.rol === 'superadmin' ? <TicketsSoporte /> : <Navigate to="/" replace />} />
               <Route path="/pac" element={usuario?.rol === 'superadmin' ? <PacAdmin /> : <Navigate to="/" replace />} />
+              <Route path="/emails-estado" element={usuario?.rol === 'superadmin' ? <EstadoEmails /> : <Navigate to="/" replace />} />
               <Route path="/tokens" element={usuario?.rol === 'superadmin' ? <TokensRegistro /> : <Navigate to="/" replace />} />
               <Route path="/marketing" element={usuario?.rol === 'superadmin' ? <Marketing /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />

@@ -6,14 +6,14 @@ import axios from 'axios'
 //  - "Transacciones": todos los cobros, buscable (localizar un pago concreto y actuar).
 // Las ACCIONES (extender/cancelar/pago manual) son Fase 2, con su blindaje.
 
-const ESTADO_COLOR = {
+export const ESTADO_COLOR = {
   Prueba: { bg: 'var(--blue-light)', color: 'var(--blue)' },
   Activo: { bg: '#e8f5e9', color: '#2e7d32' },
   Impago: { bg: 'var(--red-light)', color: 'var(--red)' },
   Cancelado: { bg: '#f3f4f6', color: '#6b7280' },
   '—': { bg: '#f3f4f6', color: '#9ca3af' },
 }
-const ESTADO_COBRO_COLOR = {
+export const ESTADO_COBRO_COLOR = {
   COMPLETED: { bg: '#e8f5e9', color: '#2e7d32' },
   PENDING: { bg: '#fff8e1', color: '#b7791f' },
   EXPIRED: { bg: '#f3f4f6', color: '#6b7280' },
@@ -23,12 +23,12 @@ const ESTADO_COBRO_COLOR = {
   FAILED: { bg: 'var(--red-light)', color: 'var(--red)' },
 }
 
-function Chip({ label, mapa = ESTADO_COLOR }) {
+export function Chip({ label, mapa = ESTADO_COLOR }) {
   const c = mapa[label] || { bg: '#f3f4f6', color: '#6b7280' }
   return <span style={{ background: c.bg, color: c.color, padding: '2px 10px', borderRadius: 10, fontSize: 11, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</span>
 }
 
-function fmtFecha(iso) {
+export function fmtFecha(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' })
 }
@@ -36,11 +36,11 @@ function fmtFechaHora(iso) {
   if (!iso) return '—'
   return new Date(iso).toLocaleString('es-PA', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
-function fmtUSD(n) {
+export function fmtUSD(n) {
   if (typeof n !== 'number' || Number.isNaN(n)) return '—'
   return `US$ ${n.toFixed(2)}`
 }
-function venceTexto(s) {
+export function venceTexto(s) {
   if (!s.vence_en) return '—'
   const d = s.dias_restantes
   const fecha = fmtFecha(s.vence_en)
@@ -51,7 +51,7 @@ function venceTexto(s) {
 }
 
 // Render method-agnostic del método de pago: etiqueta + lista genérica clave→valor.
-function Metodo({ metodo }) {
+export function Metodo({ metodo }) {
   if (!metodo) return <span style={{ color: '#9ca3af' }}>—</span>
   const entradas = Object.entries(metodo.detalle || {})
   return (
@@ -80,7 +80,7 @@ const modalCard = { background: 'white', borderRadius: 14, width: 460, maxWidth:
 const modalInp = { width: '100%', padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }
 
 // ============================ VISTA: CLIENTES ============================
-function DetalleCliente({ id, onClose }) {
+export function DetalleClienteBody({ id, onEmpresa }) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(false)
   const [modal, setModal] = useState(null)     // null | 'extender' | {tipo:'revertir', ev}
@@ -97,7 +97,7 @@ function DetalleCliente({ id, onClose }) {
   // setState solo en callbacks async → no es setState síncrono en el efecto.
   const cargar = () => {
     axios.get(`/api/admin/suscripciones/${id}`)
-      .then(r => setData(r.data))
+      .then(r => { setData(r.data); if (onEmpresa) onEmpresa(r.data.empresa) })
       .catch(() => setError(true))
   }
   useEffect(() => { cargar() }, [id])  // eslint-disable-line react-hooks/exhaustive-deps
@@ -160,14 +160,8 @@ function DetalleCliente({ id, onClose }) {
 
   return (
     <>
-    <div style={drawerWrap} onClick={onClose}>
-      <div style={drawerPanel} onClick={e => e.stopPropagation()}>
-        <div style={drawerHead}>
-          <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>{data ? data.empresa.nombre : 'Cargando…'}</h2>
-          <button onClick={onClose} style={cerrarBtn}>Cerrar</button>
-        </div>
-        {error && <div style={{ padding: 24, color: 'var(--red)', fontSize: 13 }}>No se pudo cargar el detalle.</div>}
-        {data && (
+    {error && <div style={{ padding: 24, color: 'var(--red)', fontSize: 13 }}>No se pudo cargar el detalle.</div>}
+    {data && (
           <div style={{ padding: 22 }}>
             {data.empresa.protegida && (
               <div style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '8px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, marginBottom: 16 }}>
@@ -242,8 +236,6 @@ function DetalleCliente({ id, onClose }) {
             )}
           </div>
         )}
-      </div>
-    </div>
 
     {modal === 'extender' && data && (
       <div style={modalWrap} onClick={cerrarModal}>
@@ -365,6 +357,22 @@ function DetalleCliente({ id, onClose }) {
       </div>
     )}
     </>
+  )
+}
+
+// Wrapper fino: el shell del drawer (título + Cerrar) envolviendo el cuerpo reutilizable.
+function DetalleCliente({ id, onClose }) {
+  const [empresa, setEmpresa] = useState(null)
+  return (
+    <div style={drawerWrap} onClick={onClose}>
+      <div style={drawerPanel} onClick={e => e.stopPropagation()}>
+        <div style={drawerHead}>
+          <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>{empresa ? empresa.nombre : 'Cargando…'}</h2>
+          <button onClick={onClose} style={cerrarBtn}>Cerrar</button>
+        </div>
+        <DetalleClienteBody id={id} onEmpresa={setEmpresa} />
+      </div>
+    </div>
   )
 }
 
