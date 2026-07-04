@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
-import { Chip, venceTexto, Metodo, DetalleClienteBody, VistaTransacciones } from './Suscripciones'
+import { Chip, venceTexto, Metodo, DetalleClienteBody, VistaTransacciones, fmtFecha } from './Suscripciones'
 import { ModalEmpresa, ModalUsuario, ModalToken, VincularUsuario } from './Clientes'
 
 // Panel UNIFICADO Clientes + Suscripción (superadmin). Lista con lo esencial de suscripción
@@ -164,7 +164,14 @@ export default function ClientesUnificado() {
                   {s.protegida && <span style={{ marginLeft: 8, fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>protegida</span>}
                   <div style={{ fontSize: 11, color: '#9ca3af' }}>{s.ruc ? `RUC ${s.ruc}` : 'Sin RUC'}</div>
                 </td>
-                <td style={td}>{s.plan || '—'}</td>
+                <td style={td}>
+                  {s.plan || '—'}
+                  {s.cortesia_hasta && (
+                    <div style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap' }}>
+                      🎁 cortesía · hasta {fmtFecha(s.cortesia_hasta)}
+                    </div>
+                  )}
+                </td>
                 <td style={td}><Chip label={s.estado_label} /></td>
                 <td style={{ ...td, color: venceColor(s), fontWeight: s.dias_restantes != null && s.dias_restantes <= 7 ? 600 : 400 }}>{venceTexto(s)}</td>
                 <td style={td}>{s.usuarios_count}/{s.usuarios_permitidos}</td>
@@ -176,7 +183,7 @@ export default function ClientesUnificado() {
 
       {/* FICHA en drawer lateral */}
       {sel && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }} onClick={() => setSel(null)}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }} onClick={() => { setSel(null); cargarLista() }}>
           <div style={{ background: 'white', width: 600, maxWidth: '94vw', height: '100%', overflow: 'auto', boxShadow: '-8px 0 30px rgba(0,0,0,0.15)' }} onClick={e => e.stopPropagation()}>
             <div style={{ padding: '16px 22px', background: 'var(--blue)', position: 'sticky', top: 0, zIndex: 2 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -184,7 +191,7 @@ export default function ClientesUnificado() {
                   <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>{sel.nombre}</h2>
                   <Chip label={sel.estado_label} />
                 </div>
-                <button onClick={() => setSel(null)} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cerrar</button>
+                <button onClick={() => { setSel(null); cargarLista() }} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cerrar</button>
               </div>
               {/* acciones de empresa */}
               <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
