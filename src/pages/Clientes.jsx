@@ -63,7 +63,7 @@ export function ModalUsuario({ empresa, usuarioEditar, onClose, onSave }) {
   }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: 480, overflow: 'hidden' }}>
         <div style={{ padding: '16px 24px', background: 'var(--blue)' }}>
           <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>
@@ -120,7 +120,7 @@ export function ModalEmpresa({ empresa, onClose, onSave }) {
   const ls = { display: 'block', fontSize: 11, fontWeight: 600, color: '#666', marginBottom: 4 }
 
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: 600, maxHeight: '90vh', overflow: 'auto' }}>
         <div style={{ padding: '16px 24px', background: 'var(--blue)', position: 'sticky', top: 0 }}>
           <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>{esNuevo ? 'Nueva Empresa' : 'Editar Empresa'}</h2>
@@ -199,7 +199,7 @@ export function ModalToken({ info, onClose, onCopy }) {
     navigator.clipboard?.writeText(info.codigo).then(() => onCopy && onCopy()).catch(() => {})
   }
   return (
-    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 1200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ background: 'white', borderRadius: 16, width: 460, overflow: 'hidden' }}>
         <div style={{ padding: '16px 24px', background: '#2e7d32' }}>
           <h2 style={{ color: 'white', fontSize: 15, fontWeight: 600, margin: 0 }}>Código de registro</h2>
