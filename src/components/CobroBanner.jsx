@@ -29,6 +29,24 @@ export default function CobroBanner({ estado: estadoProp }) {
 
   if (!estado) return null
   const { suscripcion_estado, cobro_pendiente, ct, trial_fin, gracia_hasta } = estado
+
+  // Pieza B — CORTESÍA: prioridad; se muestra AUNQUE la suscripción esté 'active' (la cortesía va
+  // ENCIMA de la suscripción). Solo si cortesia_hasta viene informado → nunca a un cliente de pago normal.
+  const diasCort = diasHasta(estado.cortesia_hasta)
+  if (estado.cortesia_hasta && diasCort != null) {
+    const planLabel = { lite: 'Lite', pro: 'Pro', 'pro-plus': 'Pro+' }[estado.plan] || estado.plan
+    return (
+      <div style={{
+        display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap',
+        padding: '10px 16px', fontSize: 13, fontWeight: 600,
+        background: '#f5f3ff', color: '#7c3aed', borderBottom: '1px solid var(--border)',
+      }}>
+        <span>🎁 Está en <strong>{planLabel}</strong> de cortesía · {diasCort <= 0 ? 'termina hoy' : `le quedan ${diasCort} ${diasCort === 1 ? 'día' : 'días'}`}</span>
+        <a href="/app/settings" style={{ color: '#7c3aed', textDecoration: 'underline', fontWeight: 700 }}>Ver mi plan en Settings</a>
+      </div>
+    )
+  }
+
   // Suscripción activa y al día → no se muestra nada.
   if (suscripcion_estado === 'active' && !cobro_pendiente) return null
 
