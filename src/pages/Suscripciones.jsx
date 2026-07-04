@@ -92,6 +92,11 @@ export function DetalleClienteBody({ id, onEmpresa }) {
   const [pmBase, setPmBase] = useState('')   // importe base (sin ITBMS) del pago manual
   const [modoExt, setModoExt] = useState('dias')   // extender: 'dias' | 'fecha'
   const [fechaExt, setFechaExt] = useState('')     // fecha concreta (modo 'fecha')
+  // --- Cortesía (Pieza A) ---
+  const [cortPlan, setCortPlan] = useState('pro-plus')
+  const [cortDur, setCortDur] = useState('15')     // '15'|'30'|'90'|'fin'|'medida'
+  const [cortDias, setCortDias] = useState(30)     // días cuando 'a medida'
+  const [cortMsg, setCortMsg] = useState('')
 
   // Recarga el detalle (tras una acción → se ven el nuevo estado y el evento de auditoría).
   // setState solo en callbacks async → no es setState síncrono en el efecto.
@@ -108,6 +113,24 @@ export function DetalleClienteBody({ id, onEmpresa }) {
   const abrirExtender = () => { setMsg(''); setNota(''); setDias(15); setModoExt('dias'); setFechaExt(''); setModal('extender') }
   const abrirRevertir = (ev) => { setMsg(''); setNota(''); setModal({ tipo: 'revertir', ev }) }
   const cerrarModal = () => { if (!busy) setModal(null) }
+  const otorgarCortesia = () => {
+    const body = { plan: cortPlan }
+    if (cortDur === 'fin') body.hasta_fin_periodo = true
+    else body.dias = cortDur === 'medida' ? Number(cortDias) : Number(cortDur)
+    setBusy(true); setCortMsg('')
+    axios.post(`/api/admin/suscripciones/${id}/cortesia`, body)
+      .then(() => cargar())
+      .catch(e => setCortMsg(e.response?.data?.detail || 'Error al otorgar cortesía.'))
+      .finally(() => setBusy(false))
+  }
+  const terminarCortesia = () => {
+    if (!confirm('¿Terminar la cortesía ahora y volver al plan anterior?')) return
+    setBusy(true); setCortMsg('')
+    axios.post(`/api/admin/suscripciones/${id}/cortesia/terminar`, {})
+      .then(() => cargar())
+      .catch(e => setCortMsg(e.response?.data?.detail || 'Error al terminar la cortesía.'))
+      .finally(() => setBusy(false))
+  }
   const previewFecha = () => {
     const hoy = new Date()
     const v = data?.empresa?.vence_en ? new Date(data.empresa.vence_en) : null
@@ -188,6 +211,42 @@ export function DetalleClienteBody({ id, onEmpresa }) {
                 <button onClick={abrirExtender} style={accionBtn}>Extender</button>
                 <button onClick={abrirCancelar} style={{ ...accionBtn, background: 'white', color: 'var(--red)', border: '1px solid var(--red)' }}>Cancelar</button>
                 <button onClick={abrirPagoManual} style={{ ...accionBtn, background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)' }}>Registrar pago manual</button>
+              </div>
+            )}
+
+            {!data.empresa.protegida && (
+              <div style={{ background: '#f8f9fa', border: '1px solid #e5e7eb', borderRadius: 10, padding: 14, marginBottom: 20 }}>
+                <h3 style={{ fontSize: 13, fontWeight: 700, color: '#374151', margin: '0 0 10px' }}>Cortesía (upgrade sin costo)</h3>
+                {data.empresa.cortesia_hasta ? (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                    <div style={{ fontSize: 13, color: '#374151' }}>
+                      En <strong style={{ color: 'var(--blue)' }}>{data.empresa.plan}</strong> de cortesía · termina <strong>{fmtFecha(data.empresa.cortesia_hasta)}</strong>
+                      {data.empresa.cortesia_plan_anterior && <span style={{ color: '#6b7280' }}> · vuelve a {data.empresa.cortesia_plan_anterior}</span>}
+                    </div>
+                    <button onClick={terminarCortesia} disabled={busy} style={{ ...accionBtn, background: 'white', color: 'var(--red)', border: '1px solid var(--red)' }}>Terminar ahora</button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <select value={cortPlan} onChange={e => setCortPlan(e.target.value)} style={{ padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}>
+                      <option value="lite">Lite</option>
+                      <option value="pro">Pro</option>
+                      <option value="pro-plus">Pro+</option>
+                    </select>
+                    <select value={cortDur} onChange={e => setCortDur(e.target.value)} style={{ padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }}>
+                      <option value="15">15 días</option>
+                      <option value="30">1 mes</option>
+                      <option value="90">3 meses</option>
+                      <option value="fin" disabled={!data.empresa.vence_en}>Hasta fin de período{!data.empresa.vence_en ? ' (sin fecha)' : ''}</option>
+                      <option value="medida">A medida…</option>
+                    </select>
+                    {cortDur === 'medida' && (
+                      <input type="number" min="1" value={cortDias} onChange={e => setCortDias(e.target.value)} placeholder="días"
+                        style={{ padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, width: 90 }} />
+                    )}
+                    <button onClick={otorgarCortesia} disabled={busy} style={accionBtn}>{busy ? 'Otorgando…' : 'Otorgar cortesía'}</button>
+                  </div>
+                )}
+                {cortMsg && <div style={{ color: 'var(--red)', fontSize: 12, marginTop: 8 }}>{cortMsg}</div>}
               </div>
             )}
 
