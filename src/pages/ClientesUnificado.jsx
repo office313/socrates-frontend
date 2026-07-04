@@ -167,7 +167,7 @@ export default function ClientesUnificado() {
                 <td style={td}>
                   {s.plan || '—'}
                   {s.cortesia_hasta && (
-                    <div style={{ fontSize: 10, color: '#7c3aed', fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap' }}>
+                    <div style={{ fontSize: 10, color: 'var(--blue)', fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap' }}>
                       🎁 cortesía · hasta {fmtFecha(s.cortesia_hasta)}
                     </div>
                   )}

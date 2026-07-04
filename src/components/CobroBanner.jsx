@@ -39,10 +39,10 @@ export default function CobroBanner({ estado: estadoProp }) {
       <div style={{
         display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 14, flexWrap: 'wrap',
         padding: '10px 16px', fontSize: 13, fontWeight: 600,
-        background: '#f5f3ff', color: '#7c3aed', borderBottom: '1px solid var(--border)',
+        background: 'var(--blue-light)', color: 'var(--blue)', borderBottom: '1px solid var(--border)',
       }}>
         <span>🎁 Está en <strong>{planLabel}</strong> de cortesía · {diasCort <= 0 ? 'termina hoy' : `le quedan ${diasCort} ${diasCort === 1 ? 'día' : 'días'}`}</span>
-        <a href="/app/settings" style={{ color: '#7c3aed', textDecoration: 'underline', fontWeight: 700 }}>Ver mi plan en Settings</a>
+        <a href="/app/settings" style={{ color: 'var(--blue)', textDecoration: 'underline', fontWeight: 700 }}>Ver mi plan en Settings</a>
       </div>
     )
   }
