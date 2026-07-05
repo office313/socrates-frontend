@@ -18,6 +18,8 @@ function MiSuscripcion() {
   const [prevLoading, setPrevLoading] = useState(false)
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [msgTipo, setMsgTipo] = useState('info')   // 'info'|'ok'|'error' → color del mensaje (info=navy)
+  const [yappyTel, setYappyTel] = useState('')     // nº de Yappy que el cliente introduce al subir
   const cargar = () => axios.get('/api/cobro/estado').then(r => setEst(r.data)).catch(() => setEst(null))
   useEffect(() => {
     let vivo = true
@@ -48,31 +50,36 @@ function MiSuscripcion() {
   const dl = { fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }
   const dv = { fontSize: 14, color: '#374151', fontWeight: 600 }
   const planActual = (est.plan || '').toLowerCase()
+  // Móvil Yappy = método de pago, igual que el alta: 8 dígitos de Panamá (admite +507/separadores).
+  const yappyTelDigitos = yappyTel.replace(/\D/g, '').replace(/^507/, '')
+  const yappyTelOk = yappyTelDigitos.length === 8
+  // ¿La subida por Yappy con cobro requiere pedir el número? (tarjeta no; cobro $0 tampoco).
+  const needYappy = preview && preview.metodo !== 'tarjeta' && preview.caso === 'sube' && (preview.cobro_ahora || 0) > 0
 
   const elegir = (p) => {
-    setPlanSel(p); setPreview(null); setMsg('')
+    setPlanSel(p); setPreview(null); setMsg(''); setYappyTel('')
     if (!p || p === planActual) return
     setPrevLoading(true)
     axios.get(`/api/cobro/cambiar-plan/preview?plan=${p}`)
       .then(r => setPreview(r.data))
-      .catch(() => setMsg('No se pudo calcular el cambio.'))
+      .catch(() => { setMsgTipo('error'); setMsg('No se pudo calcular el cambio.') })
       .finally(() => setPrevLoading(false))
   }
   const confirmar = () => {
     setBusy(true); setMsg('')
-    axios.post('/api/cobro/cambiar-plan', { plan: planSel })
+    axios.post('/api/cobro/cambiar-plan', { plan: planSel, yappy_telefono: yappyTelDigitos || undefined })
       .then((res) => {
         if (res.data && res.data.pendiente) {
           // Yappy sube: el cobro se envió al teléfono; el plan cambia cuando el cliente lo aprueba
-          // (lo aplica el IPN). No refrescamos como cambiado todavía.
-          setPreview(null)
+          // (lo aplica el IPN). No refrescamos como cambiado todavía. Mensaje INFORMATIVO (navy).
+          setPreview(null); setYappyTel(''); setMsgTipo('info')
           setMsg('Le enviamos el cobro a su teléfono Yappy. Apruébelo para completar el cambio de plan.')
         } else {
-          setPlanSel(''); setPreview(null); setMsg('✓ Plan actualizado.'); cargar()
+          setPlanSel(''); setPreview(null); setYappyTel(''); setMsgTipo('ok'); setMsg('✓ Plan actualizado.'); cargar()
           window.dispatchEvent(new Event('auth:refresh'))   // refresca sidebar + gating al instante
         }
       })
-      .catch(err => setMsg(err.response?.data?.detail || 'No se pudo cambiar el plan.'))
+      .catch(err => { setMsgTipo('error'); setMsg(err.response?.data?.detail || 'No se pudo cambiar el plan.') })
       .finally(() => setBusy(false))
   }
 
@@ -124,16 +131,25 @@ function MiSuscripcion() {
                   <>Conservará <strong>{plabel(preview.plan_actual)}</strong> hasta el <strong>{fmt(preview.fecha_siguiente)}</strong>; desde entonces pagará <strong>{fmtUSD(preview.cuota_siguiente)}/mes</strong> ({plabel(preview.plan_nuevo)}). No se le cobra nada ahora.</>
                 )}
                 {!(preview.caso === 'sube' && preview.cobro_ahora == null) && (
-                  <div style={{ marginTop: 10 }}>
-                    <button onClick={confirmar} disabled={busy}
-                      style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--blue)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                  <div style={{ marginTop: 12 }}>
+                    {needYappy && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 4 }}>Su número de Yappy (para el cobro)</div>
+                        <input value={yappyTel} onChange={ev => setYappyTel(ev.target.value)} inputMode="tel" placeholder="6894 6359"
+                          style={{ padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, width: 160 }} />
+                      </div>
+                    )}
+                    <button onClick={confirmar} disabled={busy || (needYappy && !yappyTelOk)}
+                      style={{ padding: '8px 18px', borderRadius: 8, border: 'none', fontWeight: 700, fontSize: 13,
+                        background: (busy || (needYappy && !yappyTelOk)) ? '#9ca3af' : 'var(--blue)', color: 'white',
+                        cursor: (busy || (needYappy && !yappyTelOk)) ? 'default' : 'pointer' }}>
                       {busy ? 'Aplicando…' : 'Confirmar cambio'}
                     </button>
                   </div>
                 )}
               </div>
             )}
-            {msg && <div style={{ fontSize: 12, marginTop: 10, color: msg.startsWith('✓') ? '#2e7d32' : 'var(--red)' }}>{msg}</div>}
+            {msg && <div style={{ fontSize: 12, marginTop: 10, color: msgTipo === 'ok' ? '#2e7d32' : msgTipo === 'error' ? 'var(--red)' : 'var(--blue)' }}>{msg}</div>}
           </div>
         </>
       )}
