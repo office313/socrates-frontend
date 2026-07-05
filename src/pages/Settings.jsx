@@ -8,8 +8,17 @@ const ROLES = ['usuario', 'supervisor', 'superadmin']
 // C) Vista del cliente de SU suscripción (solo lo suyo, solo lectura). Reusa /cobro/estado.
 // Maneja con elegancia el caso de campos en NULL (BCN / cuentas sin suscripción gestionada):
 // muestra un mensaje suave en vez de un widget roto. Método de pago method-agnostic.
+const PLABEL = { lite: 'Lite', pro: 'Pro', 'pro-plus': 'Pro+' }
+const plabel = (p) => PLABEL[p] || p
+
 function MiSuscripcion() {
   const [est, setEst] = useState(undefined)  // undefined=cargando, null=error, obj=ok
+  const [planSel, setPlanSel] = useState('')   // plan elegido en el selector (aún sin confirmar)
+  const [preview, setPreview] = useState(null)
+  const [prevLoading, setPrevLoading] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const cargar = () => axios.get('/api/cobro/estado').then(r => setEst(r.data)).catch(() => setEst(null))
   useEffect(() => {
     let vivo = true
     axios.get('/api/cobro/estado')
@@ -29,6 +38,7 @@ function MiSuscripcion() {
     cancelado: { txt: 'Cancelado', bg: '#f3f4f6', color: '#6b7280' },
   }
   const fmt = (iso) => iso ? new Date(iso).toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  const fmtUSD = (n) => n == null ? '—' : `US$ ${Number(n).toFixed(2)}`
   const venceISO = est.vence_en || est.trial_fin
   // Suscripción REAL = tiene estado o vencimiento. Si todo está en NULL (BCN/CATPLAN/legacy
   // sin suscripción gestionada por el sistema) → mensaje. Si es real → plan/estado/vence.
@@ -37,6 +47,24 @@ function MiSuscripcion() {
   const metodo = est.metodo
   const dl = { fontSize: 11, color: '#9ca3af', fontWeight: 600, marginBottom: 2 }
   const dv = { fontSize: 14, color: '#374151', fontWeight: 600 }
+  const planActual = (est.plan || '').toLowerCase()
+
+  const elegir = (p) => {
+    setPlanSel(p); setPreview(null); setMsg('')
+    if (!p || p === planActual) return
+    setPrevLoading(true)
+    axios.get(`/api/cobro/cambiar-plan/preview?plan=${p}`)
+      .then(r => setPreview(r.data))
+      .catch(() => setMsg('No se pudo calcular el cambio.'))
+      .finally(() => setPrevLoading(false))
+  }
+  const confirmar = () => {
+    setBusy(true); setMsg('')
+    axios.post('/api/cobro/cambiar-plan', { plan: planSel })
+      .then(() => { setPlanSel(''); setPreview(null); setMsg('✓ Plan actualizado.'); cargar() })
+      .catch(err => setMsg(err.response?.data?.detail || 'No se pudo cambiar el plan.'))
+      .finally(() => setBusy(false))
+  }
 
   return (
     <div style={ss}>
@@ -46,16 +74,58 @@ function MiSuscripcion() {
           Su suscripción está gestionada por su ejecutivo de cuenta. Para cualquier cambio, contáctenos.
         </p>
       ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
-          <div><div style={dl}>Plan</div><div style={dv}>{est.plan || '—'}</div></div>
-          <div><div style={dl}>Estado</div><div>{e
-            ? <span style={{ background: e.bg, color: e.color, padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
-            : <span style={dv}>—</span>}</div></div>
-          <div><div style={dl}>{est.suscripcion_estado === 'trialing' ? 'Fin de prueba' : 'Vence'}</div><div style={dv}>{fmt(venceISO)}</div></div>
-          <div><div style={dl}>Método de pago</div><div style={dv}>{metodo
-            ? <span><span style={{ color: 'var(--blue)' }}>{metodo.etiqueta}</span>{Object.entries(metodo.detalle || {}).map(([k, v]) => <span key={k} style={{ color: '#6b7280', fontWeight: 400 }}> · {k}: {v}</span>)}</span>
-            : '—'}</div></div>
-        </div>
+        <>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
+            <div><div style={dl}>Plan</div><div style={dv}>{plabel(planActual) || '—'}</div></div>
+            <div><div style={dl}>Estado</div><div>{e
+              ? <span style={{ background: e.bg, color: e.color, padding: '2px 10px', borderRadius: 10, fontSize: 12, fontWeight: 700 }}>{e.txt}</span>
+              : <span style={dv}>—</span>}</div></div>
+            <div><div style={dl}>{est.suscripcion_estado === 'trialing' ? 'Fin de prueba' : 'Vence'}</div><div style={dv}>{fmt(venceISO)}</div></div>
+            <div><div style={dl}>Método de pago</div><div style={dv}>{metodo
+              ? <span><span style={{ color: 'var(--blue)' }}>{metodo.etiqueta}</span>{Object.entries(metodo.detalle || {}).map(([k, v]) => <span key={k} style={{ color: '#6b7280', fontWeight: 400 }}> · {k}: {v}</span>)}</span>
+              : '—'}</div></div>
+          </div>
+
+          {/* Cambiar de plan (Pieza C): el cliente lo hace solo; el sistema ajusta el cobro. */}
+          <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid #f3f4f6' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: '#374151', marginBottom: 10 }}>Cambiar de plan</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {['lite', 'pro', 'pro-plus'].map(id => (
+                <button key={id} onClick={() => elegir(id)} disabled={id === planActual}
+                  style={{ padding: '7px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600,
+                    cursor: id === planActual ? 'default' : 'pointer', border: '1px solid',
+                    borderColor: planSel === id ? 'var(--blue)' : '#e5e7eb',
+                    background: id === planActual ? '#f3f4f6' : planSel === id ? 'var(--blue-light)' : 'white',
+                    color: id === planActual ? '#9ca3af' : 'var(--blue)' }}>
+                  {plabel(id)}{id === planActual ? ' · actual' : ''}
+                </button>
+              ))}
+            </div>
+            {prevLoading && <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 10 }}>Calculando…</div>}
+            {preview && !prevLoading && (
+              <div style={{ marginTop: 12, background: 'var(--blue-light)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: '#374151', lineHeight: 1.6 }}>
+                {preview.en_cortesia ? (
+                  <>Al terminar su cortesía ({fmt(preview.fecha_siguiente)}) arrancará en <strong>{plabel(preview.plan_nuevo)}</strong> por <strong>{fmtUSD(preview.cuota_siguiente)}/mes</strong>. No se le cobra nada ahora.</>
+                ) : preview.caso === 'sube' && preview.cobro_ahora == null ? (
+                  <>No es posible el cambio automático: su suscripción no tiene un ciclo de facturación definido. Contáctenos.</>
+                ) : preview.caso === 'sube' ? (
+                  <>Ahora se le cobrará <strong>{fmtUSD(preview.cobro_ahora)}</strong> (prorrateo hasta el fin de su ciclo){preview.fecha_siguiente && <> · desde el <strong>{fmt(preview.fecha_siguiente)}</strong> pagará <strong>{fmtUSD(preview.cuota_siguiente)}/mes</strong></>}.</>
+                ) : (
+                  <>Conservará <strong>{plabel(preview.plan_actual)}</strong> hasta el <strong>{fmt(preview.fecha_siguiente)}</strong>; desde entonces pagará <strong>{fmtUSD(preview.cuota_siguiente)}/mes</strong> ({plabel(preview.plan_nuevo)}). No se le cobra nada ahora.</>
+                )}
+                {!(preview.caso === 'sube' && preview.cobro_ahora == null) && (
+                  <div style={{ marginTop: 10 }}>
+                    <button onClick={confirmar} disabled={busy}
+                      style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: 'var(--blue)', color: 'white', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                      {busy ? 'Aplicando…' : 'Confirmar cambio'}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            {msg && <div style={{ fontSize: 12, marginTop: 10, color: msg.startsWith('✓') ? '#2e7d32' : 'var(--red)' }}>{msg}</div>}
+          </div>
+        </>
       )}
     </div>
   )
