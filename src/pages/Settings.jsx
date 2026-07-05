@@ -61,7 +61,10 @@ function MiSuscripcion() {
   const confirmar = () => {
     setBusy(true); setMsg('')
     axios.post('/api/cobro/cambiar-plan', { plan: planSel })
-      .then(() => { setPlanSel(''); setPreview(null); setMsg('✓ Plan actualizado.'); cargar() })
+      .then(() => {
+        setPlanSel(''); setPreview(null); setMsg('✓ Plan actualizado.'); cargar()
+        window.dispatchEvent(new Event('auth:refresh'))   // refresca sidebar + gating al instante
+      })
       .catch(err => setMsg(err.response?.data?.detail || 'No se pudo cambiar el plan.'))
       .finally(() => setBusy(false))
   }

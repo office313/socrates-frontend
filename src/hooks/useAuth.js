@@ -24,9 +24,17 @@ export function useAuth() {
 
   useEffect(() => {
     checkAuth()
-    // Verificar sesión cada 30 minutos
-    const interval = setInterval(checkAuth, 30 * 60 * 1000)
-    return () => clearInterval(interval)
+    // Refresco en vivo de la sesión (modulos.track, plan, etc.), por dos vías:
+    //  (a) SONDEO cada 30s → un cambio hecho por OTRA sesión (p.ej. el Superadmin concede una
+    //      cortesía) aparece en la pantalla del cliente sin que refresque, en ≤30s.
+    //  (b) EVENTO 'auth:refresh' → actualización INSTANTÁNEA tras una acción en la PROPIA sesión
+    //      (el cliente cambia de plan en Settings): se dispara el evento y se re-lee /api/me ya.
+    const interval = setInterval(checkAuth, 30 * 1000)
+    window.addEventListener('auth:refresh', checkAuth)
+    return () => {
+      clearInterval(interval)
+      window.removeEventListener('auth:refresh', checkAuth)
+    }
   }, [])
 
   return { usuario, loading }
