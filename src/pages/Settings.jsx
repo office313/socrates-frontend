@@ -61,9 +61,16 @@ function MiSuscripcion() {
   const confirmar = () => {
     setBusy(true); setMsg('')
     axios.post('/api/cobro/cambiar-plan', { plan: planSel })
-      .then(() => {
-        setPlanSel(''); setPreview(null); setMsg('✓ Plan actualizado.'); cargar()
-        window.dispatchEvent(new Event('auth:refresh'))   // refresca sidebar + gating al instante
+      .then((res) => {
+        if (res.data && res.data.pendiente) {
+          // Yappy sube: el cobro se envió al teléfono; el plan cambia cuando el cliente lo aprueba
+          // (lo aplica el IPN). No refrescamos como cambiado todavía.
+          setPreview(null)
+          setMsg('Le enviamos el cobro a su teléfono Yappy. Apruébelo para completar el cambio de plan.')
+        } else {
+          setPlanSel(''); setPreview(null); setMsg('✓ Plan actualizado.'); cargar()
+          window.dispatchEvent(new Event('auth:refresh'))   // refresca sidebar + gating al instante
+        }
       })
       .catch(err => setMsg(err.response?.data?.detail || 'No se pudo cambiar el plan.'))
       .finally(() => setBusy(false))
@@ -112,7 +119,7 @@ function MiSuscripcion() {
                 ) : preview.caso === 'sube' && preview.cobro_ahora == null ? (
                   <>No es posible el cambio automático: su suscripción no tiene un ciclo de facturación definido. Contáctenos.</>
                 ) : preview.caso === 'sube' ? (
-                  <>Ahora se le cobrará <strong>{fmtUSD(preview.cobro_ahora)}</strong> (prorrateo hasta el fin de su ciclo){preview.fecha_siguiente && <> · desde el <strong>{fmt(preview.fecha_siguiente)}</strong> pagará <strong>{fmtUSD(preview.cuota_siguiente)}/mes</strong></>}.</>
+                  <>Ahora se le cobrará <strong>{fmtUSD(preview.cobro_ahora)}</strong> {preview.metodo === 'tarjeta' ? '(prorrateo hasta el fin de su ciclo)' : '(prorrateo hasta el fin de su ciclo — lo aprobará en su teléfono)'}{preview.fecha_siguiente && <> · desde el <strong>{fmt(preview.fecha_siguiente)}</strong> pagará <strong>{fmtUSD(preview.cuota_siguiente)}/mes</strong></>}.</>
                 ) : (
                   <>Conservará <strong>{plabel(preview.plan_actual)}</strong> hasta el <strong>{fmt(preview.fecha_siguiente)}</strong>; desde entonces pagará <strong>{fmtUSD(preview.cuota_siguiente)}/mes</strong> ({plabel(preview.plan_nuevo)}). No se le cobra nada ahora.</>
                 )}
