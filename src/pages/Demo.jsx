@@ -102,6 +102,17 @@ export default function Demo() {
                 Inscripción para <strong style={{ color: 'var(--blue)' }}>{empresa?.nombre}</strong>. Reserve su lugar y le esperamos en la sesión.
               </p>
               <InfoDemo evento={evento} />
+              {/* Beneficio por ASISTIR (gancho de la campaña): navy sobrio, "sin costo", enmarcado
+                  como consecuencia de completar la demo (no de inscribirse). */}
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, background: '#eef4fb', borderLeft: '3px solid #1a4a8a', borderRadius: 10, padding: '13px 16px', margin: '0 0 22px' }}>
+                <span style={{ fontSize: 19, lineHeight: 1.3 }} aria-hidden="true">🎁</span>
+                <div>
+                  <div style={{ fontSize: 14, fontWeight: 700, color: '#0f2d57', lineHeight: 1.5 }}>
+                    Asista a la demostración completa y obtenga <span style={{ color: '#1a4a8a' }}>15 días de acceso a SocratesPro sin costo.</span>
+                  </div>
+                  <div style={{ fontSize: 12.5, color: '#6b7280', marginTop: 4 }}>El acceso se activa al finalizar la sesión.</div>
+                </div>
+              </div>
               <div style={{ marginBottom: 16 }}>
                 <label style={lbl}>Su nombre</label>
                 <input style={inp} value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre y apellido" autoFocus />
