@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, Fragment } from 'react'
 import axios from 'axios'
 import { RefreshCw, Download, Megaphone, X, Users, Building2, Trash2, ListChecks, Eraser, Calendar, Pencil } from 'lucide-react'
 
@@ -693,10 +693,41 @@ function DrawerCampana({ id, onClose, onBorrar }) {
 }
 
 
+// Lista inline de inscritos de un evento (se despliega bajo el contador). Estética sobria del CRM.
+function TablaInscritos({ inscritos, cargando }) {
+  const cel = { padding: '7px 12px', fontSize: 12.5, color: '#374151', borderBottom: '1px solid #f3f4f6', textAlign: 'left', verticalAlign: 'top' }
+  const cab = { ...cel, fontSize: 11, fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: .3 }
+  const fmtF = (iso) => iso ? new Date(iso).toLocaleDateString('es-PA', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'
+  const correos = (a) => (!a || (Array.isArray(a) && !a.length)) ? '—' : (Array.isArray(a) ? a.join(', ') : String(a))
+  if (cargando) return <div style={{ padding: '10px 2px', fontSize: 12.5, color: '#9ca3af' }}>Cargando…</div>
+  if (!inscritos.length) return <div style={{ padding: '10px 2px', fontSize: 12.5, color: '#9ca3af' }}>Sin inscritos aún.</div>
+  return (
+    <div style={{ margin: '8px 0', border: '1px solid #eef1f6', borderRadius: 8, overflow: 'hidden', background: 'white' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <thead><tr>{['Nombre', 'Empresa', 'Funnel', 'Inscrito', 'Correos extra'].map(h => <th key={h} style={cab}>{h}</th>)}</tr></thead>
+        <tbody>
+          {inscritos.map(x => (
+            <tr key={x.id}>
+              <td style={{ ...cel, fontWeight: 600, color: 'var(--blue-dark)' }}>{x.nombre || '—'}</td>
+              <td style={cel}>{x.empresa || '—'}</td>
+              <td style={cel}>{x.estado_funnel || '—'}</td>
+              <td style={cel}>{fmtF(x.creado_en)}</td>
+              <td style={{ ...cel, color: '#6b7280' }}>{correos(x.emails_adicionales)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+}
+
 function VistaEventos({ mostrar }) {
   const [lista, setLista] = useState([])
   const [editando, setEditando] = useState(null)   // null | 'nuevo' | id
   const [form, setForm] = useState({ titulo: '', fecha: '', hora: '10:00 a.m.', meet_url: 'https://meet.google.com/mvb-hnnt-osn' })
+  const [expandido, setExpandido] = useState(null)   // evento_id con su lista de inscritos abierta (una a la vez)
+  const [inscritos, setInscritos] = useState([])
+  const [cargandoInsc, setCargandoInsc] = useState(false)
   const cargar = useCallback(() => {
     axios.get('/api/marketing/eventos').then(r => setLista(r.data.resultados)).catch(() => mostrar('Error cargando eventos', false))
   }, [])
@@ -712,6 +743,14 @@ function VistaEventos({ mostrar }) {
     const req = editando === 'nuevo' ? axios.post('/api/marketing/eventos', form) : axios.patch('/api/marketing/eventos/' + editando, form)
     req.then(() => { mostrar(editando === 'nuevo' ? 'Evento creado y marcado como vigente' : 'Evento actualizado'); setEditando(null); cargar() })
       .catch(() => mostrar('No se pudo guardar el evento', false))
+  }
+  const verInscritos = (ev) => {
+    if (expandido === ev.id) { setExpandido(null); return }   // otro clic cierra
+    setExpandido(ev.id); setInscritos([]); setCargandoInsc(true)
+    axios.get('/api/marketing/demo-inscritos', { params: { evento_id: ev.id } })
+      .then(r => setInscritos(r.data.resultados || []))
+      .catch(() => mostrar('No se pudieron cargar los inscritos', false))
+      .finally(() => setCargandoInsc(false))
   }
 
   return (
@@ -731,7 +770,13 @@ function VistaEventos({ mostrar }) {
                 <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--blue-dark)' }}>{vigente.titulo || 'Demostración'}</div>
                 <div style={{ fontSize: 14, color: '#374151', marginTop: 4 }}>{fmtFecha(vigente.fecha)} · {vigente.hora} <span style={{ color: '#9ca3af' }}>(hora de Panamá)</span></div>
                 <div style={{ fontSize: 12, marginTop: 4, wordBreak: 'break-all' }}><a href={vigente.meet_url} target="_blank" rel="noopener noreferrer" style={{ color: 'var(--blue)', textDecoration: 'underline' }}>{vigente.meet_url}</a></div>
-                <div style={{ fontSize: 12, color: '#0f766e', fontWeight: 600, marginTop: 6 }}>{vigente.inscritos} inscrito(s)</div>
+                {vigente.inscritos > 0 ? (
+                  <button onClick={() => verInscritos(vigente)}
+                    style={{ background: 'none', border: 'none', padding: 0, marginTop: 6, cursor: 'pointer', fontSize: 12, color: '#0f766e', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                    <span style={{ fontSize: 10 }}>{expandido === vigente.id ? '▲' : '▼'}</span> {vigente.inscritos} inscrito(s)
+                  </button>
+                ) : <div style={{ fontSize: 12, color: '#9ca3af', fontWeight: 600, marginTop: 6 }}>Sin inscritos aún</div>}
+                {expandido === vigente.id && <TablaInscritos inscritos={inscritos} cargando={cargandoInsc} />}
               </>
             ) : <div style={{ fontSize: 14, color: '#9ca3af' }}>No hay ningún evento vigente. Cree uno para que el formulario de inscripción funcione.</div>}
           </div>
@@ -746,12 +791,24 @@ function VistaEventos({ mostrar }) {
           <thead><tr>{['Título', 'Fecha', 'Meet', 'Inscritos'].map(h => <th key={h} style={{ ...th, cursor: 'default' }}>{h}</th>)}</tr></thead>
           <tbody>
             {historico.map(ev => (
-              <tr key={ev.id}>
-                <td style={{ ...td, fontWeight: 600, color: 'var(--blue-dark)' }}>{ev.titulo || '—'}</td>
-                <td style={td}>{fmtFecha(ev.fecha)}</td>
-                <td style={{ ...td, color: '#9ca3af', fontSize: 11, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.meet_url}</td>
-                <td style={{ ...td, textAlign: 'center' }}>{ev.inscritos}</td>
-              </tr>
+              <Fragment key={ev.id}>
+                <tr>
+                  <td style={{ ...td, fontWeight: 600, color: 'var(--blue-dark)' }}>{ev.titulo || '—'}</td>
+                  <td style={td}>{fmtFecha(ev.fecha)}</td>
+                  <td style={{ ...td, color: '#9ca3af', fontSize: 11, maxWidth: 220, overflow: 'hidden', textOverflow: 'ellipsis' }}>{ev.meet_url}</td>
+                  <td style={{ ...td, textAlign: 'center' }}>
+                    {ev.inscritos > 0 ? (
+                      <button onClick={() => verInscritos(ev)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--blue)', fontWeight: 600, fontSize: 13, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                        <span style={{ fontSize: 9 }}>{expandido === ev.id ? '▲' : '▼'}</span> {ev.inscritos}
+                      </button>
+                    ) : <span style={{ color: '#9ca3af' }}>{ev.inscritos}</span>}
+                  </td>
+                </tr>
+                {expandido === ev.id && (
+                  <tr><td colSpan={4} style={{ padding: '0 14px 4px', background: '#fafbfd' }}><TablaInscritos inscritos={inscritos} cargando={cargandoInsc} /></td></tr>
+                )}
+              </Fragment>
             ))}
             {historico.length === 0 && <tr><td colSpan={4} style={{ ...td, textAlign: 'center', color: '#9ca3af', padding: 28 }}>Sin eventos pasados todavía.</td></tr>}
           </tbody>
