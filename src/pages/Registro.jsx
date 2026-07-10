@@ -5,6 +5,7 @@ import yappyLogo from '../assets/yappy-logo.svg'
 import { PAISES } from '../utils/paises'
 import CronometroYappy from '../components/CronometroYappy'
 import { getUtmParaRegistro } from '../utils/utm'
+import useEsMovil from '../hooks/useEsMovil'
 
 // Icono de cabecera sobrio (sustituye los emojis de sistema). Centrado, navy de marca.
 function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
@@ -111,6 +112,11 @@ export default function Registro() {
   // Solo entorno de pruebas (localhost). En producción (socratespro.lat) es false
   // y estos atajos no se muestran ni existen en el backend.
   const esStaging = typeof window !== 'undefined' && window.location.hostname === 'localhost'
+
+  // Móvil (breakpoint de tamaño de pantalla): en el paso 'plan', el CTA de activar
+  // se ancla al pie para que se vea al llegar, sin depender del scroll. En escritorio
+  // (esMovil=false) el botón queda tal cual estaba (en su sitio, al final del bloque).
+  const esMovil = useEsMovil()
 
   const continuarStaging = async () => {
     setError('')
@@ -721,7 +727,7 @@ export default function Registro() {
 
         {/* PASO 2 — PLAN + PACKS */}
         {paso === 'plan' && (
-          <div>
+          <div style={esMovil ? { paddingBottom: 78 } : undefined /* móvil: reserva hueco para la barra fija del CTA */}>
             <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Elija su plan</h1>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 8 }}>
               Pro y Pro+ incluyen 5 usuarios (ampliables con paquetes de +5); Lite es para 1 usuario.
@@ -816,13 +822,25 @@ export default function Registro() {
               )}
             </div>
 
-            <button type="button"
-              onClick={trialElegible
-                ? () => enviarPaso2('trial')                                       /* trial GRATIS: activa y entra a /app */
-                : () => { setError(''); setMetodoSel(null); setPaso('metodo') }}   /* completo: pasa al paso de pago */
-              disabled={loading} style={btn(!loading)}>
-              {loading ? 'Un momento…' : (trialElegible ? 'Comenzar prueba de 5 días' : 'Continuar al pago')}
-            </button>
+            {/* En MÓVIL el CTA es una barra FIJA al pie de la pantalla: siempre visible al
+                llegar, sin depender del scroll (la vía sticky no enganchaba porque la tarjeta
+                apenas supera el alto del viewport). El bloque de arriba reserva `paddingBottom`
+                para que nada quede oculto tras la barra. En ESCRITORIO no se aplica: el botón
+                queda exactamente como estaba, al final del bloque. */}
+            <div style={esMovil ? {
+              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 50,
+              padding: '10px 16px calc(10px + env(safe-area-inset-bottom, 0px))',
+              background: 'white', borderTop: '1px solid var(--border)',
+              boxShadow: '0 -6px 16px rgba(0,0,0,0.10)',
+            } : undefined}>
+              <button type="button"
+                onClick={trialElegible
+                  ? () => enviarPaso2('trial')                                       /* trial GRATIS: activa y entra a /app */
+                  : () => { setError(''); setMetodoSel(null); setPaso('metodo') }}   /* completo: pasa al paso de pago */
+                disabled={loading} style={btn(!loading)}>
+                {loading ? 'Un momento…' : (trialElegible ? 'Comenzar prueba de 5 días' : 'Continuar al pago')}
+              </button>
+            </div>
           </div>
         )}
 
