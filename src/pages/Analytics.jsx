@@ -496,16 +496,19 @@ export default function Analytics({ usuario }) {
 
   // Fetch on-demand de licitaciones concretas para un grupo del Overview.
   // Reusa los filtros generales (lastSearchParams) + filtros exactos del grupo.
-  const fetchLicitacionesGrupo = ({ institucion: inst, unidad_compradora: unid, adjudicatario: adj, limit }) => {
+  const fetchLicitacionesGrupo = ({ institucion: inst, unidad_compradora: unid, adjudicatario: adj, grupo, limit }) => {
     const params = new URLSearchParams(lastSearchParams)
     // Limpiar filtros del usuario que podrían chocar con el match exacto
     params.delete('institucion')
     params.delete('adjudicatario')
+    params.delete('grupo')
     params.delete('ordenar')
     params.delete('direccion')
     if (inst) params.set('institucion', inst)
     if (unid) params.set('unidad_compradora', unid)
-    if (adj) params.set('adjudicatario', adj)
+    // `grupo` (ruc:… / nom:…) trae todas las variantes de nombre de la empresa.
+    if (grupo) params.set('grupo', grupo)
+    else if (adj) params.set('adjudicatario', adj)
     params.set('limit', String(limit || 20))
     return axios.get('/api/analytics/overview/licitaciones?' + params.toString()).then(r => r.data)
   }
@@ -531,21 +534,23 @@ export default function Analytics({ usuario }) {
       })
   }
 
-  const toggleVendedor = (adjudicatario, verTodas = false) => {
-    const actual = vendExpandidos[adjudicatario]
+  // La clave del acordeón es el grupo del ranking (RUC si sirve, si no nombre),
+  // no el string del nombre: una empresa con varias variantes es UNA fila.
+  const toggleVendedor = (grupo, verTodas = false) => {
+    const actual = vendExpandidos[grupo]
     if (actual && !verTodas) {
       setVendExpandidos(prev => {
-        const n = { ...prev }; delete n[adjudicatario]; return n
+        const n = { ...prev }; delete n[grupo]; return n
       })
       return
     }
-    setVendExpandidos(prev => ({ ...prev, [adjudicatario]: { cargando: true, licitaciones: actual?.licitaciones || [], total: actual?.total || 0, verTodas } }))
-    fetchLicitacionesGrupo({ adjudicatario, limit: verTodas ? 100 : 20 })
+    setVendExpandidos(prev => ({ ...prev, [grupo]: { cargando: true, licitaciones: actual?.licitaciones || [], total: actual?.total || 0, verTodas } }))
+    fetchLicitacionesGrupo({ grupo, limit: verTodas ? 100 : 20 })
       .then(data => {
-        setVendExpandidos(prev => ({ ...prev, [adjudicatario]: { cargando: false, licitaciones: data.licitaciones || [], total: data.total || 0, verTodas } }))
+        setVendExpandidos(prev => ({ ...prev, [grupo]: { cargando: false, licitaciones: data.licitaciones || [], total: data.total || 0, verTodas } }))
       })
       .catch(() => {
-        setVendExpandidos(prev => ({ ...prev, [adjudicatario]: { cargando: false, licitaciones: [], total: 0, verTodas, error: true } }))
+        setVendExpandidos(prev => ({ ...prev, [grupo]: { cargando: false, licitaciones: [], total: 0, verTodas, error: true } }))
       })
   }
 
@@ -1025,18 +1030,32 @@ export default function Analytics({ usuario }) {
                   <span style={{ fontSize: 12, color: '#888', fontWeight: 500 }}>🏢 TOP VENDEDORES (ADJUDICATARIOS)</span>
                 </div>
                 {overview.vendedores.slice(0, verTodosVend ? overview.vendedores.length : 20).map((v, i) => {
-                  const vendExp = vendExpandidos[v.adjudicatario]
+                  // Clave del grupo (ruc:… / nom:…). Fallback al nombre por si el
+                  // backend aún no envía `grupo`.
+                  const clave = v.grupo || v.adjudicatario
+                  const vendExp = vendExpandidos[clave]
                   const isExp = !!vendExp
                   return (
-                    <div key={v.adjudicatario + i} style={{ borderTop: i > 0 ? '1px solid #f5f5f5' : 'none' }}>
-                      <div onClick={() => toggleVendedor(v.adjudicatario)}
+                    <div key={clave} style={{ borderTop: i > 0 ? '1px solid #f5f5f5' : 'none' }}>
+                      <div onClick={() => toggleVendedor(clave)}
                         style={{ padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', background: isExp ? '#fafafa' : 'white' }}
                         onMouseEnter={e => e.currentTarget.style.background = isExp ? '#f0f0f0' : '#f8f9fa'}
                         onMouseLeave={e => e.currentTarget.style.background = isExp ? '#fafafa' : 'white'}>
                         <span style={{ color: '#999', fontSize: 11, width: 24, textAlign: 'right' }}>{i + 1}.</span>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>{v.adjudicatario}</div>
-                          <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>Promedio {fmtCompacto(v.monto_promedio)} por contrato</div>
+                          <div style={{ fontSize: 13, fontWeight: 500, color: '#333' }}>
+                            {v.etiqueta || v.adjudicatario}
+                            {v.variantes > 1 && (
+                              <span title="La misma empresa aparece en el portal con varios nombres; se agrupan por RUC."
+                                style={{ marginLeft: 8, fontSize: 10, fontWeight: 600, color: '#888', background: '#f0f0f0', borderRadius: 4, padding: '2px 6px' }}>
+                                +{v.variantes - 1} {v.variantes === 2 ? 'variante' : 'variantes'}
+                              </span>
+                            )}
+                          </div>
+                          <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>
+                            {v.ruc ? <span style={{ marginRight: 8 }}>RUC {v.ruc}</span> : null}
+                            Promedio {fmtCompacto(v.monto_promedio)} por contrato
+                          </div>
                         </div>
                         <div style={{ textAlign: 'right', minWidth: 200, fontSize: 12, color: '#444' }}>
                           <strong style={{ color: '#2e7d32' }}>{fmtCompacto(v.monto_total)}</strong>
@@ -1063,7 +1082,7 @@ export default function Analytics({ usuario }) {
                           ))}
                           {!vendExp.cargando && vendExp.total > vendExp.licitaciones.length && !vendExp.verTodas && (
                             <div style={{ padding: '8px 14px 10px 48px' }}>
-                              <button onClick={(e) => { e.stopPropagation(); toggleVendedor(v.adjudicatario, true) }}
+                              <button onClick={(e) => { e.stopPropagation(); toggleVendedor(clave, true) }}
                                 style={{ padding: '5px 12px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 6, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
                                 Ver todas ({vendExp.total})
                               </button>
