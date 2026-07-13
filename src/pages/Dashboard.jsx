@@ -9,6 +9,7 @@ import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import { useTrack } from '../hooks/useTrack'
 import useEsMovil from '../hooks/useEsMovil'
+import { ALTO_BARRA_MOVIL } from '../components/Sidebar'
 import PliegoIframe from '../components/PliegoIframe'
 import SelectorEmpresa from '../components/SelectorEmpresa'
 import { emulacionActiva } from '../utils/axiosConfig'
@@ -575,7 +576,9 @@ export default function Dashboard({ usuario }) {
         />
       )}
 
-      <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)', paddingBottom: 16, marginBottom: 8 }}>
+      {/* En móvil la barra de navegación es fija y ocupa la franja superior: si esta
+          cabecera se pegara a top:0 se metería por debajo de ella al hacer scroll. */}
+      <div style={{ position: 'sticky', top: esMovil ? ALTO_BARRA_MOVIL : 0, zIndex: 10, background: 'var(--gray)', paddingBottom: 16, marginBottom: 8 }}>
         <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
           <div>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
@@ -673,7 +676,11 @@ export default function Dashboard({ usuario }) {
             <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>sin abrir</div>
           </div>
 
-          {/* Card neutral azul: Watchlist */}
+          {/* Card neutral azul: Watchlist.
+              En móvil se busca una rejilla de 2x2 (cuatro pastillas, sin huérfana). Con
+              Track son cinco, así que esta se cae; sin Track ya son cuatro y se queda.
+              Watchlist es la que menos se pierde: tiene su propia entrada en el menú. */}
+          {!(esMovil && tieneTrack) && (
           <div onClick={() => setFiltro(filtro === 'watchlist' ? 'todas' : 'watchlist')} style={{
             textAlign: 'center',
             background: filtro === 'watchlist' ? '#f5f9ff' : 'white',
@@ -686,12 +693,15 @@ export default function Dashboard({ usuario }) {
             <div style={{ fontSize: kpiNumero, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.watchlist}</div>
             <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>en observación</div>
           </div>
+          )}
         </div>
       </div>
 
       {(progreso?.estado === 'descargando' || progreso?.estado === 'sincronizando') && <RadarSync progreso={progreso} />}
 
-      {sdiCount > 0 && (
+      {/* En móvil se oculta: empujaba la primera licitación fuera de la pantalla, y la
+          lista es el motivo de la página. El acceso a los estudios sigue en Explorer. */}
+      {sdiCount > 0 && !esMovil && (
         <div onClick={() => navigate('/analytics?tab=sdi')}
           style={{ background: '#eef4fb', border: '1px solid #d6e4f5', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: 'var(--blue)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
           <span>📋</span>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import Sidebar from './Sidebar'
+import Sidebar, { ALTO_BARRA_MOVIL } from './Sidebar'
+import useEsMovil from '../hooks/useEsMovil'
 import SoporteWidget from './SoporteWidget'
 import OnboardingModal from './OnboardingModal'
 import CobroBanner from './CobroBanner'
@@ -8,6 +9,7 @@ import CobroBanner from './CobroBanner'
 const CATPLAN_ID = 2
 
 export default function Layout({ usuario, loading, children }) {
+  const esMovil = useEsMovil()
   const location = useLocation()
   const esCatplan = usuario?.empresa_id === CATPLAN_ID
 
@@ -67,7 +69,10 @@ export default function Layout({ usuario, loading, children }) {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <Sidebar usuario={usuario} />
       <main style={{
-        marginLeft: 'var(--sidebar-width)',
+        // Móvil: la barra va arriba, así que el contenido recupera los 76px laterales
+        // y solo cede la altura de la barra.
+        marginLeft: esMovil ? 0 : 'var(--sidebar-width)',
+        marginTop: esMovil ? ALTO_BARRA_MOVIL : 0,
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
