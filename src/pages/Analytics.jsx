@@ -508,20 +508,40 @@ export default function Analytics({ usuario }) {
   }
 
   // Fetch on-demand de licitaciones concretas para un grupo del Overview.
-  // Reusa los filtros generales (lastSearchParams) + filtros exactos del grupo.
+  //
+  // Hay DOS capas de filtro y confundirlas era el bug: los del BUSCADOR
+  // (free-text, ILIKE) y los del GRUPO desplegado (match exacto). Antes se
+  // tiraban los del buscador, así que al desplegar una institución el detalle
+  // ignoraba el proveedor buscado y mostraba TODOS los contratos de esa
+  // institución (buscabas "BCN DISTRI" y salía el tóner de otra empresa). El
+  // gemelo pasaba al desplegar un vendedor: se perdía la institución filtrada.
+  //
+  // Ahora los del buscador se conservan y viajan con sufijo _q, que el backend
+  // aplica con la misma semántica que en la cabecera. Así el desplegable es
+  // siempre un subconjunto de lo que dice el contador, y ambos acordeones
+  // quedan arreglados sin tocar sus toggles.
   const fetchLicitacionesGrupo = ({ institucion: inst, unidad_compradora: unid, adjudicatario: adj, grupo, limit }) => {
     const params = new URLSearchParams(lastSearchParams)
-    // Limpiar filtros del usuario que podrían chocar con el match exacto
+    const qInst = params.get('institucion')
+    const qAdj = params.get('adjudicatario')
+
     params.delete('institucion')
     params.delete('adjudicatario')
     params.delete('grupo')
     params.delete('ordenar')
     params.delete('direccion')
+
+    // Filtros del buscador (se conservan)
+    if (qInst) params.set('institucion_q', qInst)
+    if (qAdj) params.set('adjudicatario_q', qAdj)
+
+    // Filtros exactos del grupo desplegado
     if (inst) params.set('institucion', inst)
     if (unid) params.set('unidad_compradora', unid)
     // `grupo` (ruc:… / nom:…) trae todas las variantes de nombre de la empresa.
     if (grupo) params.set('grupo', grupo)
     else if (adj) params.set('adjudicatario', adj)
+
     params.set('limit', String(limit || 20))
     return axios.get('/api/analytics/overview/licitaciones?' + params.toString()).then(r => r.data)
   }
