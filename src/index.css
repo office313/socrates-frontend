@@ -28,3 +28,14 @@ body {
 a { text-decoration: none; color: inherit; }
 button { cursor: pointer; border: none; background: none; font-family: 'Montserrat', sans-serif; }
 input, select, textarea { font-family: 'Montserrat', sans-serif; }
+
+/* iOS Safari hace ZOOM automático al enfocar un campo cuya letra mide menos de 16px,
+   y ese zoom NO se deshace solo: sobrevive incluso al recargar. El usuario escribe su
+   contraseña en el login (inputs a 14px), el iPhone amplía, y a partir de ahí TODA la
+   app se ve ampliada y cortada por la derecha: KPIs, montos y títulos fuera de pantalla.
+   Parecía un desbordamiento del layout y no lo era.
+   16px es el umbral exacto de Apple. Se aplica solo en móvil: escritorio no se toca.
+   El !important es necesario porque los estilos van en línea (style={{fontSize:14}}). */
+@media (max-width: 640px) {
+  input, select, textarea { font-size: 16px !important; }
+}

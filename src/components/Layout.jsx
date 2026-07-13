@@ -78,7 +78,10 @@ export default function Layout({ usuario, loading, children }) {
         flexDirection: 'column',
         // El margen superior SUMA al minHeight: con 100vh la página medía 100vh + 56px
         // y sobraba justo la barra, creando un segundo scroll bajo el de la lista.
-        minHeight: esMovil ? `calc(100vh - ${ALTO_BARRA_MOVIL}px)` : '100vh',
+        // Y en móvil va en dvh, no vh: en iOS `100vh` NO descuenta la barra del
+        // navegador, así que la página quedaba más alta que la pantalla y volvía a
+        // scrollear. `dvh` sí sigue la altura visible de verdad.
+        minHeight: esMovil ? `calc(100dvh - ${ALTO_BARRA_MOVIL}px)` : '100vh',
         background: 'var(--gray)',
       }}>
         {/* El banner reusa el estado ya cargado por el Layout (sin segundo fetch). */}

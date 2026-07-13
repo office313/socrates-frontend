@@ -802,7 +802,8 @@ export default function Dashboard({ usuario }) {
             <div ref={listaMovilRef}>
             <Virtuoso
               data={licitacionesFiltradas}
-              style={{ height: altoListaMovil ? `${altoListaMovil}px` : 'max(400px, calc(100vh - 300px))' }}
+              /* dvh en el respaldo: en iOS, 100vh no descuenta la barra del navegador */
+              style={{ height: altoListaMovil ? `${altoListaMovil}px` : 'max(320px, calc(100dvh - 300px))' }}
               defaultItemHeight={150}
               increaseViewportBy={600}
               itemContent={(index, l) => (
