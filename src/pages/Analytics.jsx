@@ -58,6 +58,7 @@ const MODALIDADES = [
   { value: 'licitaciones',        label: 'Licitaciones públicas' },
   { value: 'contratacion_menor',  label: 'Contratación menor' },
   { value: 'cotizacion_en_linea', label: 'Cotización en línea' },
+  { value: 'acp',                 label: 'Canal de Panamá (ACP)' },
 ]
 
 const FALLBACK_DESDE = '2015-01-01'  // suelo cuando solo se rellena "Hasta"
