@@ -1,13 +1,14 @@
 import { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
-import { TableVirtuoso } from 'react-virtuoso'
+import { TableVirtuoso, Virtuoso } from 'react-virtuoso'
 import { Radar } from 'lucide-react'
 import RadarSync from '../components/RadarSync'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 import ModalEstudioMercado from '../components/ModalEstudioMercado'
 import { useResumenIA, BotonResumenIA, PanelResumenIA } from '../components/ResumenIA'
 import { useTrack } from '../hooks/useTrack'
+import useEsMovil from '../hooks/useEsMovil'
 import PliegoIframe from '../components/PliegoIframe'
 import SelectorEmpresa from '../components/SelectorEmpresa'
 import { emulacionActiva } from '../utils/axiosConfig'
@@ -91,6 +92,87 @@ const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente }) {
       <td style={{ padding: '10px 16px', color: urgente ? '#d32f2f' : 'var(--text)', fontWeight: urgente ? 700 : vista ? 400 : 600, whiteSpace: 'nowrap' }}>{fmtFecha(l.fecha_cierre)}</td>
       <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>{fmt(l.presupuesto)}</td>
     </>
+  )
+})
+
+// Misma licitación, en móvil. La tabla no cabe en un teléfono: sus columnas tienen
+// anchos FIJOS (RADAR_COLS suma 652px) y con table-layout:fixed, en un contenedor de
+// ~290px, 'Descripción' y 'Keywords' se aplastaban a 0px y sus cabeceras se pintaban
+// una encima de la otra. El monto quedaba fuera de pantalla, sin scroll horizontal
+// posible: el dato que más importa era el único invisible.
+//
+// La tarjeta reordena por importancia (qué → quién → cuándo → cuánto) y NO inventa
+// estado: reutiliza los mismos `vista` y `urgente` que la fila, para que móvil y
+// escritorio no puedan discrepar.
+const TarjetaRadar = memo(function TarjetaRadar({ l, vista, urgente, onClick }) {
+  const publicaYcierraHoy = l.fecha_publicacion &&
+    (l.fecha_publicacion || '').substring(0, 10) === (l.fecha_cierre || '').substring(0, 10)
+  const badge = { display: 'inline-block', padding: '2px 6px', color: 'white', borderRadius: 4, fontSize: 12, fontWeight: 700, lineHeight: 1.2 }
+  return (
+    <div onClick={onClick} style={{
+      background: 'white',
+      // la no leída se marca con filete navy: en móvil la negrita sola no se ve
+      borderLeft: `3px solid ${vista ? 'transparent' : '#0f2d57'}`,
+      border: '1px solid var(--border)',
+      borderLeftWidth: 3,
+      borderLeftColor: vista ? 'transparent' : '#0f2d57',
+      borderRadius: 10, padding: '12px 14px', marginBottom: 8, cursor: 'pointer',
+    }}>
+      {(l.numero_convocatoria > 1 || publicaYcierraHoy || l.en_track || l.en_watchlist) && (
+        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
+          {l.numero_convocatoria > 1 && <span title={`Relanzamiento — Convocatoria #${l.numero_convocatoria}`} style={{ ...badge, background: '#0f2d57' }}>R</span>}
+          {publicaYcierraHoy && <span title="Publicada y cierra hoy" style={{ ...badge, background: 'var(--red, #d32f2f)' }}>⚡</span>}
+          {l.en_track && <span title="En tu Track" style={{ ...badge, background: '#0f2d57' }}>T</span>}
+          {l.en_watchlist && <span title="En tu Watchlist" style={{ ...badge, background: '#0f2d57' }}>W</span>}
+        </div>
+      )}
+
+      {/* EL QUÉ: el objeto manda. 3 líneas y elipsis. */}
+      <div style={{
+        fontSize: 14, fontWeight: vista ? 500 : 700, color: 'var(--text)', lineHeight: 1.35,
+        display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden',
+      }}>
+        {l.descripcion || '-'}
+      </div>
+
+      {/* EL QUIÉN */}
+      <div style={{
+        fontSize: 12, color: 'var(--text-muted)', marginTop: 6,
+        overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+      }}>
+        {l.institucion || '-'}
+      </div>
+
+      {/* EL CUÁNDO y EL CUÁNTO, en la misma línea: cierre a la izquierda, monto a la derecha */}
+      {/* El monto NUNCA se recorta: es el dato que este público mira primero, y todo
+          esto existe porque en la tabla quedaba fuera de pantalla. Si no cabe la línea,
+          cede la fecha (elipsis), no el precio (flexShrink: 0). */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, marginTop: 10 }}>
+        <span style={{
+          fontSize: 12, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          color: urgente ? '#d32f2f' : 'var(--text-muted)', fontWeight: urgente ? 700 : 500,
+        }}>
+          {/* Si cierra hoy, la fecha sobra y la hora es lo que apremia: "Hoy 8:01 AM".
+              Decir "Cierra hoy 13-07 8:01 AM" no cabía y se comía la hora. */}
+          {urgente
+            ? `Hoy ${fmtFecha(l.fecha_cierre).split(' ').slice(1).join(' ')}`
+            : `Cierra ${fmtFecha(l.fecha_cierre)}`}
+        </span>
+        <span style={{ fontSize: 17, fontWeight: 700, color: 'var(--blue)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+          {fmt(l.presupuesto)}
+        </span>
+      </div>
+
+      {(l.keywords || []).length > 0 && (
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 8 }}>
+          {(l.keywords || []).slice(0, 2).map(k => (
+            <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>{k}</span>
+          ))}
+        </div>
+      )}
+
+      <div style={{ fontSize: 11, color: '#9aa3ad', marginTop: 8 }}>{l.numero_acto}</div>
+    </div>
   )
 })
 
@@ -245,6 +327,14 @@ function ModalDetalle({ lic, onClose, onPipeline, onWatchlist, onEstudio, enPipe
 export default function Dashboard({ usuario }) {
   const navigate = useNavigate()
   const tieneTrack = useTrack()
+  const esMovil = useEsMovil()          // ≤640px: el Radar se sirve en tarjetas
+  // En móvil los KPIs se compactan. Con las medidas de escritorio, las cinco tarjetas
+  // llenaban la pantalla entera y la primera licitación quedaba bajo el pliegue: la
+  // lista es el motivo de la página, no puede empezar fuera de cuadro.
+  const kpiPad = esMovil ? '10px 8px' : '20px 24px'
+  const kpiTitulo = esMovil ? 12 : 14
+  const kpiGap = esMovil ? 4 : 12
+  const kpiNumero = esMovil ? 26 : 36
   const hora = new Date().getHours()
   const saludo =
     hora >= 5 && hora < 12  ? 'Buenos días' :
@@ -486,7 +576,7 @@ export default function Dashboard({ usuario }) {
       )}
 
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: 'var(--gray)', paddingBottom: 16, marginBottom: 8 }}>
-        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 8 }}>
           <div>
             <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0 }}>
               {new Date().toLocaleDateString('es-PA', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
@@ -514,19 +604,21 @@ export default function Dashboard({ usuario }) {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: tieneTrack ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)', gap: 12 }}>
+        {/* Móvil: 2 columnas. Los cinco KPIs en fila no caben en 390px y empujaban
+            el ancho de la página. */}
+        <div style={{ display: 'grid', gridTemplateColumns: esMovil ? 'repeat(2, 1fr)' : (tieneTrack ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)'), gap: esMovil ? 8 : 12 }}>
           {/* Card neutral azul: Vigentes */}
           <div onClick={() => setFiltro('todas')} style={{
             textAlign: 'center',
             background: filtro === 'todas' ? '#f5f9ff' : 'white',
             border: `1px solid ${filtro === 'todas' ? '#0f2d57' : '#e0e0e0'}`,
             boxShadow: filtro === 'todas' ? '0 0 0 1px #0f2d57' : 'none',
-            borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+            borderRadius: 12, padding: kpiPad, cursor: 'pointer',
             transition: 'all 0.15s',
           }}>
-            <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>Licitaciones vigentes</div>
-            <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.vigentes}</div>
-            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>con sus keywords</div>
+            <div style={{ fontSize: kpiTitulo, color: '#455a64', marginBottom: kpiGap, fontWeight: 500 }}>Licitaciones vigentes</div>
+            <div style={{ fontSize: kpiNumero, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.vigentes}</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>con sus keywords</div>
           </div>
 
           {/* Card naranja (urgencia real): Cierran hoy si >0; cae a neutral si =0 */}
@@ -541,12 +633,12 @@ export default function Dashboard({ usuario }) {
                 background: urgente ? accentBg : (sel ? accentBg : 'white'),
                 border: `1px solid ${urgente || sel ? accent : '#e0e0e0'}`,
                 boxShadow: sel ? `0 0 0 1px ${accent}` : 'none',
-                borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+                borderRadius: 12, padding: kpiPad, cursor: 'pointer',
                 transition: 'all 0.15s',
               }}>
-                <div style={{ fontSize: 14, color: urgente ? accent : '#455a64', marginBottom: 12, fontWeight: 500 }}>Cierran hoy</div>
-                <div style={{ fontSize: 36, fontWeight: 600, color: urgente ? accent : '#0f2d57', lineHeight: 1 }}>{stats.cierranHoy}</div>
-                <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>requieren atención</div>
+                <div style={{ fontSize: kpiTitulo, color: urgente ? accent : '#455a64', marginBottom: kpiGap, fontWeight: 500 }}>Cierran hoy</div>
+                <div style={{ fontSize: kpiNumero, fontWeight: 600, color: urgente ? accent : '#0f2d57', lineHeight: 1 }}>{stats.cierranHoy}</div>
+                <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>requieren atención</div>
               </div>
             )
           })()}
@@ -558,12 +650,12 @@ export default function Dashboard({ usuario }) {
               background: filtro === 'pipeline' ? '#f5f9ff' : 'white',
               border: `1px solid ${filtro === 'pipeline' ? '#0f2d57' : '#e0e0e0'}`,
               boxShadow: filtro === 'pipeline' ? '0 0 0 1px #0f2d57' : 'none',
-              borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+              borderRadius: 12, padding: kpiPad, cursor: 'pointer',
               transition: 'all 0.15s',
             }}>
-              <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>En Track</div>
-              <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.pipeline}</div>
-              <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>licitaciones activas</div>
+              <div style={{ fontSize: kpiTitulo, color: '#455a64', marginBottom: kpiGap, fontWeight: 500 }}>En Track</div>
+              <div style={{ fontSize: kpiNumero, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.pipeline}</div>
+              <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>licitaciones activas</div>
             </div>
           )}
 
@@ -573,12 +665,12 @@ export default function Dashboard({ usuario }) {
             background: filtro === 'noleidas' ? '#f5f9ff' : 'white',
             border: `1px solid ${filtro === 'noleidas' ? '#0f2d57' : '#e0e0e0'}`,
             boxShadow: filtro === 'noleidas' ? '0 0 0 1px #0f2d57' : 'none',
-            borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+            borderRadius: 12, padding: kpiPad, cursor: 'pointer',
             transition: 'all 0.15s',
           }}>
-            <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>No leídas</div>
-            <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{noLeidasCount}</div>
-            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>sin abrir</div>
+            <div style={{ fontSize: kpiTitulo, color: '#455a64', marginBottom: kpiGap, fontWeight: 500 }}>No leídas</div>
+            <div style={{ fontSize: kpiNumero, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{noLeidasCount}</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>sin abrir</div>
           </div>
 
           {/* Card neutral azul: Watchlist */}
@@ -587,12 +679,12 @@ export default function Dashboard({ usuario }) {
             background: filtro === 'watchlist' ? '#f5f9ff' : 'white',
             border: `1px solid ${filtro === 'watchlist' ? '#0f2d57' : '#e0e0e0'}`,
             boxShadow: filtro === 'watchlist' ? '0 0 0 1px #0f2d57' : 'none',
-            borderRadius: 12, padding: '20px 24px', cursor: 'pointer',
+            borderRadius: 12, padding: kpiPad, cursor: 'pointer',
             transition: 'all 0.15s',
           }}>
-            <div style={{ fontSize: 14, color: '#455a64', marginBottom: 12, fontWeight: 500 }}>Watchlist</div>
-            <div style={{ fontSize: 36, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.watchlist}</div>
-            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6 }}>en observación</div>
+            <div style={{ fontSize: kpiTitulo, color: '#455a64', marginBottom: kpiGap, fontWeight: 500 }}>Watchlist</div>
+            <div style={{ fontSize: kpiNumero, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{stats.watchlist}</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>en observación</div>
           </div>
         </div>
       </div>
@@ -658,6 +750,24 @@ export default function Dashboard({ usuario }) {
             )}
           </div>
         ) : (
+          esMovil ? (
+            /* Móvil: tarjetas. Mismo dato, mismo modal al tocar, misma virtualización
+               (son ~770 licitaciones: una lista suelta ahogaría el teléfono). */
+            <Virtuoso
+              data={licitacionesFiltradas}
+              style={{ height: 'max(400px, calc(100vh - 300px))' }}
+              defaultItemHeight={150}
+              increaseViewportBy={600}
+              itemContent={(index, l) => (
+                <TarjetaRadar
+                  l={l}
+                  vista={vistas.has(l.numero_acto)}
+                  urgente={esHoy(l.fecha_cierre)}
+                  onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}
+                />
+              )}
+            />
+          ) : (
           <TableVirtuoso
             data={licitacionesFiltradas}
             style={{ height: 'max(400px, calc(100vh - 380px))', borderRadius: '0 0 12px 12px' }}
@@ -670,6 +780,7 @@ export default function Dashboard({ usuario }) {
               <FilaRadarCeldas l={l} vista={vistas.has(l.numero_acto)} urgente={esHoy(l.fecha_cierre)} />
             )}
           />
+          )
         )}
       </div>
     </div>
