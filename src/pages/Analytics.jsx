@@ -50,6 +50,16 @@ const CAMPOS_ORDEN = [
   { value: 'adjudicatario', label: 'Adjudicatario', defaultDir: 'asc' },
 ]
 
+// Cada opción es una FAMILIA, no una etiqueta suelta: el backend agrupa por
+// substring las variantes del histórico (ver MODALIDADES en analytics.py).
+const MODALIDADES = [
+  { value: '',                    label: 'Todas las modalidades' },
+  { value: 'compras_menores',     label: 'Compras menores' },
+  { value: 'licitaciones',        label: 'Licitaciones públicas' },
+  { value: 'contratacion_menor',  label: 'Contratación menor' },
+  { value: 'cotizacion_en_linea', label: 'Cotización en línea' },
+]
+
 const FALLBACK_DESDE = '2015-01-01'  // suelo cuando solo se rellena "Hasta"
 
 // Modal de detalle de una adjudicación: datos básicos + cuadro de
@@ -132,6 +142,7 @@ export default function Analytics({ usuario }) {
   const [keywords, setKeywords] = useState('')
   const [institucion, setInstitucion] = useState('')
   const [adjudicatario, setAdjudicatario] = useState('')
+  const [modalidad, setModalidad] = useState('')
   const [rango, setRango] = useState('anio')
   const [ordenarCampo, setOrdenarCampo] = useState('fecha')
   const [ordenarDir, setOrdenarDir] = useState('desc')
@@ -387,6 +398,7 @@ export default function Analytics({ usuario }) {
     if (keywords) params.append('keywords', keywords)
     if (institucion) params.append('institucion', institucion)
     if (adjudicatario) params.append('adjudicatario', adjudicatario)
+    if (modalidad) params.append('modalidad', modalidad)
     if (fechasActivas) {
       params.append('rango', 'personalizado')
       params.append('fecha_desde', fechaDesde || FALLBACK_DESDE)
@@ -400,7 +412,7 @@ export default function Analytics({ usuario }) {
   }
 
   const buscar = () => {
-    if (!keywords && !institucion && !adjudicatario) return
+    if (!keywords && !institucion && !adjudicatario && !modalidad) return
     if (rangoInvalido) return
     setLoading(true)
     setPaginaActual(1)
@@ -730,7 +742,7 @@ export default function Analytics({ usuario }) {
             })}
           </div>
           <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', padding: 20, marginBottom: 20 }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
               <div>
                 <label style={ls}>Bien o servicio</label>
                 <input value={keywords} onChange={e => setKeywords(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscar()} placeholder="computadora, malla, aire acondicionado..." style={is} />
@@ -745,6 +757,12 @@ export default function Analytics({ usuario }) {
               <div>
                 <label style={ls}>Adjudicatario / Proveedor</label>
                 <input value={adjudicatario} onChange={e => setAdjudicatario(e.target.value)} onKeyDown={e => e.key === 'Enter' && buscar()} placeholder="Nombre del proveedor..." style={is} />
+              </div>
+              <div>
+                <label style={ls}>Modalidad</label>
+                <select value={modalidad} onChange={e => setModalidad(e.target.value)} style={is}>
+                  {MODALIDADES.map(m => <option key={m.value} value={m.value}>{m.label}</option>)}
+                </select>
               </div>
             </div>
             <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr 1.2fr auto auto', gap: 12, alignItems: 'flex-end' }}>
