@@ -71,6 +71,9 @@ export default function Login() {
         <div style={{ textAlign: 'center', marginBottom: 32 }}>
           <img src={iconoSocrates} alt="Socrates Pro" width="220" style={{ display: 'block', margin: '0 auto', height: 'auto' }} />
           <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 4 }}>El flujo continuo de oportunidades a ingresos</p>
+          {/* Título que distingue esta pantalla del alta ("Cree su cuenta"): sin él, login y
+              registro se confundían (mismo logo, lema y botón rojo). */}
+          <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '14px 0 0' }}>Iniciar sesión</h1>
         </div>
 
         {error && (
@@ -103,6 +106,10 @@ export default function Login() {
                 style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
                 ¿Olvidó su contraseña?
               </button>
+            </div>
+            {/* Puerta al registro: quien llega aquí sin cuenta (caso Lilibeth) tiene salida clara. */}
+            <div style={{ textAlign: 'center', marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)', fontSize: 13, color: 'var(--text-muted)' }}>
+              ¿No tiene cuenta? <a href="/app/registro" style={{ color: 'var(--blue)', fontWeight: 600 }}>Cree una aquí</a>
             </div>
           </form>
         ) : (

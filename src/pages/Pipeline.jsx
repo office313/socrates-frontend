@@ -327,10 +327,10 @@ export default function Pipeline({ usuario }) {
   const [query, setQuery] = useState('')
   const [appliedQuery, setAppliedQuery] = useState('')
   const [inputFocus, setInputFocus] = useState(false)
-  // Toggle de vista: formulario (default, vista de trabajo con cabecera destacada,
-  // 3 pestañas y navegación prev/next) o listado (tabla con todas las licitaciones,
-  // click abre el modal pequeño antiguo).
-  const [vista, setVista] = useState('formulario')   // 'formulario' | 'listado'
+  // Toggle de vista: listado (default, tabla con todas las licitaciones; un clic
+  // en una fila abre esa licitación en el formulario) o formulario (vista de
+  // trabajo a pantalla completa, cabecera destacada, 3 pestañas y prev/next).
+  const [vista, setVista] = useState('listado')      // 'formulario' | 'listado'
   const [formularioIdx, setFormularioIdx] = useState(0)
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   // Cambios detectados (notificaciones Track) no vistos por el usuario.

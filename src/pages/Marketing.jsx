@@ -68,6 +68,7 @@ const btnPrimary = { padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWei
 const btnGhost = { ...btnPrimary, background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)' }
 const th = { padding: '8px 10px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap', cursor: 'pointer', userSelect: 'none' }
 const td = { padding: '8px 10px', fontSize: 12.5, color: '#374151', borderBottom: '1px solid #f3f4f6', verticalAlign: 'middle' }
+const validezBtn = { background: 'white', color: '#6b7280', border: '1px solid #e5e7eb', borderRadius: 6, padding: '3px 9px', fontSize: 11, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }
 const drawerWrap = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.35)', zIndex: 1000, display: 'flex', justifyContent: 'flex-end' }
 const drawerPanel = { background: 'white', width: 580, maxWidth: '94vw', height: '100%', overflow: 'auto', boxShadow: '-8px 0 30px rgba(0,0,0,0.15)' }
 const drawerHead = { padding: '16px 22px', background: 'var(--blue)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 1 }
@@ -413,6 +414,16 @@ function DrawerEmpresa({ ruc, onClose, onFunnel, mostrar }) {
       .catch(() => mostrar('No se pudo actualizar', false))
   }
 
+  // Excluir = estado_validez 'baja'. No borra: el contacto sale de exportaciones y
+  // campañas pero conserva su historial, y "Actualizar base" no lo resucita.
+  const cambiarValidez = (id, valor, estado) => {
+    if (estado === 'baja' && !window.confirm(
+      `¿Excluir a ${valor}?\n\nNo volverá a salir en exportaciones ni campañas. Se conserva su historial y puede reactivarlo después.`)) return
+    axios.patch('/api/marketing/contactos/' + id, { estado_validez: estado })
+      .then(() => { mostrar(estado === 'baja' ? 'Contacto excluido' : 'Contacto reactivado'); cargar() })
+      .catch(() => mostrar('No se pudo actualizar el contacto', false))
+  }
+
   const e = d && d.empresa
   return (
     <div style={drawerWrap} onClick={onClose}>
@@ -445,17 +456,22 @@ function DrawerEmpresa({ ruc, onClose, onFunnel, mostrar }) {
 
             <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--blue-dark)', margin: '0 0 8px' }}>Contactos ({d.contactos.length})</h3>
             <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 22 }}>
-              <thead><tr>{['Canal', 'Valor', 'Validez', ''].map(h => <th key={h} style={{ ...th, cursor: 'default' }}>{h}</th>)}</tr></thead>
+              <thead><tr>{['Canal', 'Valor', 'Validez', '', ''].map((h, i) => <th key={i} style={{ ...th, cursor: 'default' }}>{h}</th>)}</tr></thead>
               <tbody>
                 {d.contactos.map(c => (
                   <tr key={c.id}>
                     <td style={td}>{c.tipo_canal}</td>
-                    <td style={{ ...td, fontWeight: 600 }}>{c.valor}</td>
+                    <td style={{ ...td, fontWeight: 600, textDecoration: c.estado_validez === 'baja' ? 'line-through' : 'none', color: c.estado_validez === 'baja' ? '#9ca3af' : 'inherit' }}>{c.valor}</td>
                     <td style={td}><Chip label={c.estado_validez} mapa={VALIDEZ_COLOR} /></td>
                     <td style={{ ...td, color: '#9ca3af', fontSize: 10 }}>{c.principal ? 'principal' : ''}</td>
+                    <td style={{ ...td, textAlign: 'right' }}>
+                      {c.estado_validez === 'baja'
+                        ? <button style={validezBtn} onClick={() => cambiarValidez(c.id, c.valor, 'sin_validar')}>Reactivar</button>
+                        : <button style={{ ...validezBtn, color: 'var(--red)', borderColor: '#f0d2d0' }} title="No volver a contactar: lo saca de exportaciones y campañas" onClick={() => cambiarValidez(c.id, c.valor, 'baja')}>Excluir</button>}
+                    </td>
                   </tr>
                 ))}
-                {d.contactos.length === 0 && <tr><td colSpan={4} style={{ ...td, color: '#9ca3af' }}>Sin contactos.</td></tr>}
+                {d.contactos.length === 0 && <tr><td colSpan={5} style={{ ...td, color: '#9ca3af' }}>Sin contactos.</td></tr>}
               </tbody>
             </table>
 
