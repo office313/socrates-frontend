@@ -455,7 +455,11 @@ export default function Dashboard({ usuario }) {
       // Se redondea hacia abajo y se deja 1px de colchón (bordes sub-pixel): un solo
       // píxel de más deja la página scrollable y en iOS eso se traduce en rebote.
       const alto = Math.floor(window.innerHeight - arriba - PADDING_DASHBOARD) - 1
-      setAltoListaMovil(Math.max(320, alto))
+      // El suelo es bajo A PROPÓSITO. Con un suelo alto (320px), en una pantalla corta
+      // -un iPhone pequeño, o Safari con sus barras desplegadas- la lista se pasaba del
+      // hueco y devolvía a la página el segundo scroll que veníamos a quitar. Más vale
+      // una lista corta que una pantalla que rebota.
+      setAltoListaMovil(Math.max(160, alto))
     }
     medir()
     window.addEventListener('resize', medir)
