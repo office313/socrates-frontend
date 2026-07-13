@@ -76,7 +76,9 @@ export default function Layout({ usuario, loading, children }) {
         flex: 1,
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '100vh',
+        // El margen superior SUMA al minHeight: con 100vh la página medía 100vh + 56px
+        // y sobraba justo la barra, creando un segundo scroll bajo el de la lista.
+        minHeight: esMovil ? `calc(100vh - ${ALTO_BARRA_MOVIL}px)` : '100vh',
         background: 'var(--gray)',
       }}>
         {/* El banner reusa el estado ya cargado por el Layout (sin segundo fetch). */}

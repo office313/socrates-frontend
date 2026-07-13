@@ -41,6 +41,11 @@ function resaltarKeywords(texto, keywords) {
   return resultado
 }
 
+// Padding del contenedor del Dashboard. El cálculo del alto de la lista en móvil lo
+// descuenta (va DEBAJO de la lista), así que vive en una sola constante: si se toca
+// aquí y no allí, reaparece el segundo scroll.
+const PADDING_DASHBOARD = 24
+
 // === Radar virtualizado (TableVirtuoso) ==================================
 // Una sola definición de columnas, compartida por el <colgroup> (fija los anchos con
 // table-layout:fixed → las columnas NO saltan al virtualizar) y por la cabecera sticky.
@@ -352,6 +357,12 @@ export default function Dashboard({ usuario }) {
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
   const [numerosWatchlist, setNumerosWatchlist] = useState(new Set())
   const [modalDetalle, setModalDetalle] = useState(null)
+  // Móvil: la lista mide EXACTAMENTE lo que queda de pantalla.
+  // Con la altura fija de escritorio (calc(100vh - 300px)) la página sobresalía 83px y
+  // aparecía un SEGUNDO scroll bajo el de la lista: en un teléfono eso hace que a veces
+  // arrastres la página en vez de las licitaciones. Midiendo, queda un único scroll.
+  const listaMovilRef = useRef(null)
+  const [altoListaMovil, setAltoListaMovil] = useState(null)
   const [modalEstudio, setModalEstudio] = useState(null)
   const [progreso, setProgreso] = useState(null)
   const [sdiCount, setSdiCount] = useState(0)
@@ -430,6 +441,26 @@ export default function Dashboard({ usuario }) {
       .then(r => setSdiCount(r.data.total || 0))
       .catch(() => {})
   }, [])
+
+  // Móvil: la lista ocupa el hueco que queda hasta el borde inferior. Se recalcula al
+  // girar el teléfono y cuando cambia lo de arriba (el filtro cambia los KPIs).
+  useEffect(() => {
+    if (!esMovil) { setAltoListaMovil(null); return }
+    const medir = () => {
+      const el = listaMovilRef.current
+      if (!el) return
+      const arriba = el.getBoundingClientRect().top
+      // se descuenta el padding inferior del contenedor, que va DEBAJO de la lista:
+      // si no, ese margen sobresale y reaparece el segundo scroll.
+      // Se redondea hacia abajo y se deja 1px de colchón (bordes sub-pixel): un solo
+      // píxel de más deja la página scrollable y en iOS eso se traduce en rebote.
+      const alto = Math.floor(window.innerHeight - arriba - PADDING_DASHBOARD) - 1
+      setAltoListaMovil(Math.max(320, alto))
+    }
+    medir()
+    window.addEventListener('resize', medir)
+    return () => window.removeEventListener('resize', medir)
+  }, [esMovil, filtro, tieneTrack, licitaciones.length])
 
   useEffect(() => {
     Promise.allSettled([
@@ -551,7 +582,7 @@ export default function Dashboard({ usuario }) {
   }
 
   return (
-    <div style={{ padding: 24 }}>
+    <div style={{ padding: PADDING_DASHBOARD }}>
       {modalEstudio && (
         <ModalEstudioMercado
           keywords={modalEstudio.keywords}
@@ -590,11 +621,15 @@ export default function Dashboard({ usuario }) {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
             <SelectorEmpresa />
-            {ultimaSync && (
+            {/* En móvil se ocultan la píldora de sync y "Marcar como leídas": ocupaban una
+                franja entera y ninguna de las dos es a lo que se viene. El botón sigue en
+                escritorio, y "No leídas" -que es la pastilla que importa- se mantiene. */}
+            {ultimaSync && !esMovil && (
               <span style={{ fontSize: 12, color: 'var(--text-muted)', background: 'white', padding: '4px 12px', borderRadius: 20, border: '1px solid var(--border)' }}>
                 Ultima sync: {ultimaSync}
               </span>
             )}
+            {!esMovil && (
             <button onClick={marcarTodasLeidas} disabled={noLeidasCount === 0} style={{
               padding: '6px 14px', background: 'white',
               color: noLeidasCount === 0 ? '#aaa' : 'var(--text)',
@@ -604,6 +639,7 @@ export default function Dashboard({ usuario }) {
             }}>
               ✓ Marcar como leídas
             </button>
+            )}
           </div>
         </div>
 
@@ -763,9 +799,10 @@ export default function Dashboard({ usuario }) {
           esMovil ? (
             /* Móvil: tarjetas. Mismo dato, mismo modal al tocar, misma virtualización
                (son ~770 licitaciones: una lista suelta ahogaría el teléfono). */
+            <div ref={listaMovilRef}>
             <Virtuoso
               data={licitacionesFiltradas}
-              style={{ height: 'max(400px, calc(100vh - 300px))' }}
+              style={{ height: altoListaMovil ? `${altoListaMovil}px` : 'max(400px, calc(100vh - 300px))' }}
               defaultItemHeight={150}
               increaseViewportBy={600}
               itemContent={(index, l) => (
@@ -777,6 +814,7 @@ export default function Dashboard({ usuario }) {
                 />
               )}
             />
+            </div>
           ) : (
           <TableVirtuoso
             data={licitacionesFiltradas}
