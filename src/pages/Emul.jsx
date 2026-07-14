@@ -66,7 +66,7 @@ export default function Emul() {
     axios.post('/api/admin/emular/iniciar', { empresa_id: Number(empresaId), usuario_id: Number(usuarioId) })
       .then(r => {
         setEmpresaNombre(r.data?.empresa?.nombre || '')
-        setEmulacion(Number(empresaId), Number(usuarioId))
+        setEmulacion(Number(empresaId), Number(usuarioId), empresaNombre)
         // Perfil del objetivo (con cabecera de emulación) → para modulos.track, nombre, etc.
         return axios.get('/api/me')
       })

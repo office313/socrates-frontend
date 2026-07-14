@@ -3,6 +3,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import Sidebar, { ALTO_BARRA_MOVIL } from './Sidebar'
 import useEsMovil from '../hooks/useEsMovil'
 import SoporteWidget from './SoporteWidget'
+import ConfirmacionEmul from './ConfirmacionEmul'
 import OnboardingModal from './OnboardingModal'
 import CobroBanner from './CobroBanner'
 
@@ -90,6 +91,9 @@ export default function Layout({ usuario, loading, children }) {
       </main>
       {/* "Sócrates le ayuda" — soporte flotante en todas las pantallas del
           cliente. Se oculta para CATPLAN (admin interno, no cliente). */}
+      {/* Confirmación de la emulación con escritura: la pide el interceptor de axios,
+          así que debe estar montada siempre, no solo en Settings. */}
+      <ConfirmacionEmul />
       {!esCatplan && <SoporteWidget />}
     </div>
   )
