@@ -13,9 +13,16 @@ function IconoHeader({ icon: Icon, color = 'var(--blue)', size = 36 }) {
 }
 
 // Estilos compartidos (coherentes con Login.jsx / Settings.jsx)
+// minHeight 44px: es el objetivo táctil mínimo que recomienda Apple. Los desplegables
+// del formulario medían 24px en Safari (el <select> no hereda el padding igual que un
+// <input>), y con el pulgar en marcha se falla. Es el último campo del embudo del alta:
+// no puede fallarse por un par de píxeles.
+// El fontSize lo sube a 16px la regla global de index.css (@media ≤640px), que existe
+// para que iOS no haga zoom automático al enfocar; aquí no se toca.
 const is = {
-  width: '100%', padding: '7px 12px', border: '1px solid var(--border)',
+  width: '100%', padding: '10px 12px', border: '1px solid var(--border)',
   borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box',
+  minHeight: 44,
 }
 const ls = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }
 const btn = (enabled = true) => ({
