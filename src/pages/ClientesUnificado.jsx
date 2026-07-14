@@ -70,7 +70,7 @@ export default function ClientesUnificado() {
 
   const planes = [...new Set(lista.map(s => s.plan).filter(Boolean))].sort()
   const filtrada = lista.filter(s => pasaEstado(s, filtro) && (!plan || s.plan === plan) &&
-    (!q.trim() || `${s.nombre} ${s.ruc || ''}`.toLowerCase().includes(q.trim().toLowerCase())))
+    (!q.trim() || `${s.nombre} ${s.ruc || ''} ${s.email || ''}`.toLowerCase().includes(q.trim().toLowerCase())))
   const cuenta = (f) => lista.filter(s => pasaEstado(s, f)).length
 
   // ---- acciones de EMPRESA (reutilizan los endpoints de Clientes) ----
@@ -162,7 +162,13 @@ export default function ClientesUnificado() {
                 <td style={td}>
                   <span style={{ fontWeight: 600, color: 'var(--blue)' }}>{s.nombre}</span>
                   {s.protegida && <span style={{ marginLeft: 8, fontSize: 10, color: '#9ca3af', fontWeight: 600 }}>protegida</span>}
-                  <div style={{ fontSize: 11, color: '#9ca3af' }}>{s.ruc ? `RUC ${s.ruc}` : 'Sin RUC'}</div>
+                  {/* El nombre ya no es único: puede haber dos "JUAN PEREZ". Y el RUC
+                      puede estar vacío. El email es lo único que nunca falta, así que se
+                      muestra siempre: sin esto, los homónimos son indistinguibles (el lío
+                      de las dos Danias). */}
+                  <div style={{ fontSize: 11, color: '#9ca3af' }}>
+                    {s.ruc ? `RUC ${s.ruc}` : 'Sin RUC'}{s.email ? ` · ${s.email}` : ''}
+                  </div>
                 </td>
                 <td style={td}>
                   {s.plan || '—'}
@@ -188,7 +194,14 @@ export default function ClientesUnificado() {
             <div style={{ padding: '16px 22px', background: 'var(--blue)', position: 'sticky', top: 0, zIndex: 2 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>{sel.nombre}</h2>
+                  <div>
+                    <h2 style={{ color: 'white', fontSize: 16, fontWeight: 700, margin: 0 }}>{sel.nombre}</h2>
+                    {/* Con homónimos, el nombre solo no basta para saber a quién se está
+                        tocando desde este panel. */}
+                    <div style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, marginTop: 2 }}>
+                      {sel.ruc ? `RUC ${sel.ruc}` : 'Sin RUC'}{sel.email ? ` · ${sel.email}` : ''}
+                    </div>
+                  </div>
                   <Chip label={sel.estado_label} />
                 </div>
                 <button onClick={() => { setSel(null); cargarLista() }} style={{ background: 'rgba(255,255,255,0.2)', color: 'white', border: 'none', borderRadius: 8, padding: '4px 12px', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Cerrar</button>
