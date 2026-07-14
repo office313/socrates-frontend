@@ -147,12 +147,22 @@ function CardEstado({ estado, count, monto, seleccionada, onClick, compact = fal
   )
 }
 
-function ModalManual({ onClose, onAdded, usuario }) {
+// actosEnTrack: Set con los numero_acto que la empresa ya tiene en Track. Sirve
+// para avisar EN EL MOMENTO de la búsqueda, en vez de dejar al usuario llegar
+// hasta el último clic y rechazarlo con un error rojo. Es solo un aviso
+// temprano: el backend sigue guardando la puerta (y la BD tiene un índice
+// UNIQUE sobre (empresa_id, numero_acto)), así que si el Set no lo tuviera
+// —p.ej. una fila de otro usuario que este no puede ver— el alta fallaría
+// igualmente y sin duplicar. Nunca da un falso positivo: si está en el Set,
+// está en Track.
+function ModalManual({ onClose, onAdded, usuario, actosEnTrack }) {
   const [numero, setNumero] = useState('')
   const [buscando, setBuscando] = useState(false)
   const [error, setError] = useState('')
   const [datos, setDatos] = useState(null)
   const [añadiendo, setAñadiendo] = useState(false)
+
+  const yaEnTrack = !!(datos && actosEnTrack?.has(datos.numero_acto))
 
   const buscar = async () => {
     const num = numero.trim()
@@ -233,7 +243,13 @@ function ModalManual({ onClose, onAdded, usuario }) {
 
         {datos && (
           <div style={{ background: '#f8f9fa', borderRadius: 8, padding: 16, marginBottom: 16 }}>
-            <div style={{ fontSize: 12, color: '#2e7d32', fontWeight: 600, marginBottom: 8 }}>✓ Licitación encontrada</div>
+            {yaEnTrack ? (
+              <div style={{ fontSize: 12, color: '#b26a00', fontWeight: 600, marginBottom: 8 }}>
+                ⚠️ Ya está en Track — no hace falta volver a añadirla
+              </div>
+            ) : (
+              <div style={{ fontSize: 12, color: '#2e7d32', fontWeight: 600, marginBottom: 8 }}>✓ Licitación encontrada</div>
+            )}
             <div style={{ fontSize: 13, lineHeight: 1.6 }}>
               <div><strong>No. Acto:</strong> {datos.numero_acto}</div>
               <div><strong>Institución:</strong> {datos.institucion || '-'}</div>
@@ -251,10 +267,17 @@ function ModalManual({ onClose, onAdded, usuario }) {
             style={{ padding: '8px 16px', background: 'white', color: '#666', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>
             Cancelar
           </button>
-          {datos && (
+          {datos && !yaEnTrack && (
             <button onClick={añadir} disabled={añadiendo}
               style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
               {añadiendo ? 'Añadiendo…' : 'Añadir a Track'}
+            </button>
+          )}
+          {datos && yaEnTrack && (
+            <button disabled
+              title="Esta licitación ya figura en su Track"
+              style={{ padding: '8px 16px', background: '#f0f2f5', color: '#8a8a8a', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'not-allowed' }}>
+              Ya está en Track
             </button>
           )}
         </div>
@@ -561,13 +584,17 @@ export default function Pipeline({ usuario }) {
   // a ancho completo arriba; en Formulario se inyectan dentro de la columna
   // izquierda estrecha de TrackFormulario (compact=true → cards en grid de 3,
   // sin márgenes inferiores porque la columna ya espacia con gap).
-  // Controles "Activas/Todas" + "+ Añadir a Track". En Listado viven en el
+  // Controles "Activas/Todas" + "+ Alta por número". En Listado viven en el
   // header izquierdo; en Formulario se inyectan en la fila de pestañas de la
   // columna derecha (topRightControls) y se omiten del header compact.
-  // conAñadir: muestra el botón "+ Añadir a Track" (que abre ModalManual). En
+  // conAñadir: muestra el botón "+ Alta por número" (que abre ModalManual). En
   // modo Listado se pasa false porque el alta es redundante con el buscador
   // "Añadir por número" de la fila superior; en modo Formulario se pasa true,
   // donde el botón+modal es la ÚNICA vía de alta (el buscador es solo Listado).
+  //
+  // El botón se llamaba "+ Añadir a Track", y en Formulario eso se leía como si
+  // actuara sobre la ficha que tienes delante — que ya está en Track. No: abre
+  // el alta por número de OTRA licitación. El nombre ahora dice lo que hace.
   const renderAlcanceYAñadir = (conAñadir = true) => (
     <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
       <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: 3, borderRadius: 999, background: '#f0f2f5' }}>
@@ -587,8 +614,9 @@ export default function Pipeline({ usuario }) {
       </div>
       {conAñadir && (
         <button onClick={() => setModalManual(true)}
+          title="Dar de alta en Track otra licitación, buscándola por su número de acto"
           style={{ padding: '6px 14px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-          + Añadir a Track
+          + Alta por número
         </button>
       )}
     </div>
@@ -811,7 +839,15 @@ export default function Pipeline({ usuario }) {
         />
       )}
       {modalManual && (
-        <ModalManual onClose={() => setModalManual(false)} onAdded={() => { setModalManual(false); cargar() }} usuario={usuario} />
+        <ModalManual
+          onClose={() => setModalManual(false)}
+          onAdded={() => { setModalManual(false); cargar() }}
+          usuario={usuario}
+          // `items` es el Track COMPLETO de la empresa (lo que devuelve
+          // GET /api/pipeline), no la vista filtrada por Activas/Todas: así el
+          // aviso también salta con licitaciones ya cerradas o cobradas.
+          actosEnTrack={new Set(items.map(i => i.numero_acto).filter(Boolean))}
+        />
       )}
       {toast && (
         <div style={{ position: 'fixed', top: 24, left: '50%', transform: 'translateX(-50%)', background: '#2e7d32', color: 'white', padding: '12px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, boxShadow: '0 4px 12px rgba(0,0,0,0.15)', zIndex: 2000 }}>
