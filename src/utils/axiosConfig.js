@@ -1,5 +1,5 @@
 import axios from 'axios'
-import { pedirConfirmacion, EMUL_ESCRIBIBLES, EMUL_REFORZADAS, rutaBase } from './emulConfirm'
+import { pedirConfirmacion, etiquetaEscribible, EMUL_REFORZADAS, rutaBase } from './emulConfirm'
 
 // --- Emulación de soporte (pestaña "Emul", solo superadmin) ------------------------
 // Estado EN MEMORIA (no persiste). Mientras está activo, el interceptor de request:
@@ -35,7 +35,7 @@ axios.interceptors.request.use(async (config) => {
 
     if (metodo !== 'get' && !esControlEmul) {
       const ruta = rutaBase(url)
-      const etiqueta = EMUL_ESCRIBIBLES[ruta]
+      const etiqueta = etiquetaEscribible(ruta)
       if (!etiqueta) {
         return Promise.reject(new axios.Cancel('emulacion-readonly'))
       }

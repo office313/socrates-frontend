@@ -15,20 +15,48 @@ export function pedirConfirmacion(info) {
   return new Promise((resolve) => _confirmador(info, resolve))
 }
 
-// Qué se puede escribir emulando. ESPEJO EXACTO de EMUL_ESCRIBIBLES en api/main.py:
-// el backend es quien manda (403 si no está), esto solo evita el viaje y da mejor aviso.
-export const EMUL_ESCRIBIBLES = {
-  '/api/settings/sectores':   'Sectores de interés',
-  '/api/settings/criterios':  'Criterios de búsqueda',
-  '/api/keywords/modo':       'Modo de palabras clave',
-  '/api/empresa/config':      'Configuración de la empresa',
-  '/api/cuenta':              'Datos de la cuenta',
-  '/api/usuarios':            'Usuarios',
-  '/api/admin/usuarios':      'Usuarios (admin)',
-  '/api/admin/empresas':      'Datos de la empresa',
-  '/api/cobro/cambiar-plan':  'PLAN Y COBRO',
-  '/api/totp/activar':        'Verificación en dos pasos (2FA)',
-  '/api/totp/desactivar':     'Verificación en dos pasos (2FA)',
+// ESPEJO de la regla del backend (api/main.py). El backend es quien manda (403 si no
+// pasa); esto solo evita el viaje y da mejor aviso.
+//
+// REGLA POR PREFIJO, no lista a mano: la lista anterior se quedó atrás DOS VECES en un
+// solo día -el interruptor de la Watchlist y el campo del RUC nacieron rotos en el emul,
+// en silencio- y un tercero llevaba roto desde siempre (el DELETE de criterios, que solo
+// figuraba sin el /{id}). Una lista que hay que recordar actualizar es una lista que se
+// olvida.
+const PREFIJOS_ESCRIBIBLES = ['/api/settings/']
+
+// Etiquetas para nombrar el cambio en la ventana de confirmación. Lo que no esté aquí y
+// caiga bajo un prefijo escribible sale como 'Ajustes', que sigue siendo cierto.
+const ETIQUETAS = {
+  '/api/settings/sectores':       'Sectores de interés',
+  '/api/settings/criterios':      'Criterios de búsqueda',
+  '/api/settings/ruc':            'RUC de la empresa',
+  '/api/settings/watchlist-modo': 'MODO DE LA WATCHLIST',
+  '/api/keywords/modo':           'Modo de palabras clave',
+  '/api/empresa/config':          'Configuración de la empresa',
+  '/api/cuenta':                  'Datos de la cuenta',
+  '/api/usuarios':                'Usuarios',
+  '/api/admin/usuarios':          'Usuarios (admin)',
+  '/api/admin/empresas':          'Datos de la empresa',
+  '/api/cobro/cambiar-plan':      'PLAN Y COBRO',
+  '/api/totp/activar':            'Verificación en dos pasos (2FA)',
+  '/api/totp/desactivar':         'Verificación en dos pasos (2FA)',
+}
+
+// Lo que NO es un ajuste sigue enumerado a mano: abrirlo debe ser una decisión
+// consciente, no el efecto colateral de tocar un prefijo.
+const RUTAS_EXPLICITAS = [
+  '/api/keywords/modo', '/api/empresa/config', '/api/cuenta', '/api/usuarios',
+  '/api/admin/usuarios', '/api/admin/empresas',
+  '/api/cobro/cambiar-plan', '/api/totp/activar', '/api/totp/desactivar',
+]
+
+/** ¿Se puede escribir esta ruta emulando? Devuelve su etiqueta, o null si NO se puede. */
+export function etiquetaEscribible(ruta) {
+  const permitida = PREFIJOS_ESCRIBIBLES.some(p => ruta.startsWith(p)) ||
+                    RUTAS_EXPLICITAS.includes(ruta)
+  if (!permitida) return null
+  return ETIQUETAS[ruta] || 'Ajustes'
 }
 
 // Las dos que NO admiten un "ups": cobran dinero real o pueden dejar al cliente fuera de
