@@ -376,7 +376,18 @@ export default function Registro() {
       if (r.ok) {
         setPaso('verifica')
       } else {
-        const detalle = data.detail || 'No pudimos crear la cuenta. Revise los datos.'
+        // `detail` puede venir como TEXTO (nuestros HTTPException) o como LISTA DE OBJETOS
+        // (el 422 de validación de FastAPI). Pintar el objeto reventaba React y dejaba la
+        // pantalla EN BLANCO: el usuario perdía el formulario entero y no veía ni un error.
+        // Nunca se le pasa a React algo que no sea texto.
+        const aTexto = (d) => {
+          if (!d) return 'No pudimos crear la cuenta. Revise los datos.'
+          if (typeof d === 'string') return d
+          if (Array.isArray(d)) return d.map(x => x?.msg || '').filter(Boolean).join('. ') ||
+                                       'Revise los datos del formulario.'
+          return 'No pudimos crear la cuenta. Revise los datos.'
+        }
+        const detalle = aTexto(data.detail)
         setError(detalle)
         // Cuenta ya existente (email activo o RUC de cliente activo) → ofrecer salida.
         setCuentaExiste(/inicia sesi[oó]n/i.test(detalle))
