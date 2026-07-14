@@ -739,6 +739,18 @@ export default function Dashboard({ usuario }) {
 
       {(progreso?.estado === 'descargando' || progreso?.estado === 'sincronizando') && <RadarSync progreso={progreso} />}
 
+      {/* RUC DIFERIDO: el alta ya no lo pide, así que puede faltar. Se avisa aquí -en la
+          pantalla que el cliente mira todos los días- hasta que lo complete. Se muestra
+          también en móvil, al contrario que el banner de estudios: esto no es un extra,
+          es un dato que le hace falta a su cuenta. */}
+      {usuario?.ruc_pendiente && (
+        <div onClick={() => navigate('/settings')}
+          style={{ background: '#fff8e1', border: '1px solid #ffe0a3', borderRadius: 10, padding: '10px 16px', marginBottom: 16, fontSize: 13, color: '#7a5a00', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, lineHeight: 1.5 }}>
+          <span>📋</span>
+          <span><strong>Falta el RUC de su empresa.</strong> Añádalo en Ajustes para completar su cuenta.</span>
+        </div>
+      )}
+
       {/* En móvil se oculta: empujaba la primera licitación fuera de la pantalla, y la
           lista es el motivo de la página. El acceso a los estudios sigue en Explorer. */}
       {sdiCount > 0 && !esMovil && (

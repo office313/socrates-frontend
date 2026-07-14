@@ -888,6 +888,22 @@ export default function Settings({ usuario }) {
   // cuyos accesos puedo revocar.
   const empresaActivaId = (usuario?.empresas || []).find(e => e.activa)?.id ?? usuario?.empresa_id
 
+  const [rucNuevo, setRucNuevo] = useState('')
+  const [dvNuevo, setDvNuevo] = useState('')
+  const [guardandoRuc, setGuardandoRuc] = useState(false)
+  const guardarRuc = () => {
+    if (!rucNuevo.trim()) { mostrarMsg('Escriba el RUC.', false); return }
+    setGuardandoRuc(true)
+    axios.post('/api/settings/ruc', { ruc: rucNuevo, dv: dvNuevo })
+      .then(r => {
+        if (r.data?.error) { mostrarMsg(r.data.error, false); return }
+        mostrarMsg('RUC guardado')
+        window.location.reload()   // /api/me debe recalcular ruc_pendiente
+      })
+      .catch(() => mostrarMsg('No se pudo guardar el RUC', false))
+      .finally(() => setGuardandoRuc(false))
+  }
+
   const revocarAcceso = (u, emp) => {
     if (!confirm(`¿Quitar el acceso de ${u.nombre} a ${emp.nombre}?`)) return
     axios.delete(`/api/usuarios/${u.id}/vincular-empresa/${emp.id}`).then(r => {
@@ -913,6 +929,32 @@ export default function Settings({ usuario }) {
       {msg && (
         <div style={{ background: msgColor === 'green' ? '#e8f5e9' : '#ffebee', color: msgColor === 'green' ? '#2e7d32' : '#c62828', padding: '10px 16px', borderRadius: 8, marginBottom: 16, fontSize: 13 }}>
           {msg}
+        </div>
+      )}
+
+      {/* RUC DIFERIDO: el alta ya no lo pide, así que puede faltar. El aviso del Radar
+          manda aquí, y sin este bloque ese aviso sería una trampa: le dirías al cliente
+          "añádalo en Ajustes" y en Ajustes no habría dónde. */}
+      {usuario?.ruc_pendiente && (
+        <div style={{ ...ss, background: '#fff8e1', border: '1px solid #ffe0a3' }}>
+          <h2 style={{ ...ts, color: '#7a5a00', borderBottomColor: '#ffe0a3' }}>Falta el RUC de su empresa</h2>
+          <p style={{ fontSize: 13, color: '#7a5a00', marginTop: 0, marginBottom: 14, lineHeight: 1.6 }}>
+            No se lo pedimos al registrarse para no entretenerle. Añádalo ahora para completar su cuenta.
+          </p>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap' }}>
+            <div style={{ flex: 2, minWidth: 160 }}>
+              <label style={ls}>RUC</label>
+              <input value={rucNuevo} onChange={e => setRucNuevo(e.target.value)} placeholder="155646-1-2017" style={is} />
+            </div>
+            <div style={{ flex: 1, minWidth: 80 }}>
+              <label style={ls}>DV</label>
+              <input value={dvNuevo} onChange={e => setDvNuevo(e.target.value)} placeholder="00" maxLength={2} style={is} />
+            </div>
+            <button onClick={guardarRuc} disabled={guardandoRuc}
+              style={{ padding: '9px 18px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer', opacity: guardandoRuc ? 0.6 : 1 }}>
+              {guardandoRuc ? 'Guardando…' : 'Guardar RUC'}
+            </button>
+          </div>
         </div>
       )}
 

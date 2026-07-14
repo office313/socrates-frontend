@@ -360,9 +360,12 @@ export default function Registro() {
     // C (el RUC avisa, no bloquea): solo frenamos si la verificación sigue en curso o si
     // el RUC es de una CUENTA ACTIVA existente (ahí mostramos login/recuperar). Un formato
     // dudoso o un fallo técnico NO bloquean: se puede continuar (paso1 revalida en servidor).
+    // RUC DIFERIDO: no tenerlo a mano YA NO frena el alta. Antes, este gate era el bug
+    // que cerraba el embudo: el usuario pulsaba "Continuar" sin haber pulsado "Verificar
+    // RUC" y el aviso salía fuera de pantalla. Ahora el RUC se pide al ACTIVAR la cuenta.
+    // Lo único que sigue frenando es que ese RUC sea de una cuenta que YA existe.
     if (rucCheck === 'checking') { setError('Espere a que termine la verificación del RUC.'); return }
-    if (!rucCheck) { setError('Verifique el RUC antes de continuar (botón "Verificar RUC").'); return }
-    if (rucCheck.cuenta_existente) { setError(rucCheck.mensaje || 'Esta empresa ya tiene una cuenta. Inicie sesión o recupere su contraseña.'); return }
+    if (rucCheck && rucCheck.cuenta_existente) { setError(rucCheck.mensaje || 'Esta empresa ya tiene una cuenta. Inicie sesión o recupere su contraseña.'); return }
     setLoading(true)
     try {
       const r = await fetch('/api/registro/paso1', {
@@ -419,11 +422,15 @@ export default function Registro() {
   const enviarPaso2 = async (modo) => {
     // El Yappy solo hace falta para el pago COMPLETO; el trial ya no cobra el $1.
     if (modo === 'completo' && !yappyTelOk) { setError('Indique su número de Yappy (móvil de Panamá, 8 dígitos).'); return }
+    // RUC DIFERIDO: el alta ya no lo pidió. AQUÍ sí es obligatorio — es el momento de
+    // "activar la cuenta", y es donde el guard anti-abuso lo consulta.
+    if (!form.ruc.trim()) { setError('Escriba el RUC de su empresa para activar la cuenta.'); return }
     setError(''); setLoading(true); setCambiarTel(false); setPagoEstado('esperando')
     try {
       const r = await fetch('/api/registro/paso2', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rt, plan, packs, ciclo, metodo_pago: 'yappy', yappy_telefono: yappyTel, modo }),
+        body: JSON.stringify({ rt, plan, packs, ciclo, metodo_pago: 'yappy', yappy_telefono: yappyTel, modo,
+                               ruc: form.ruc, dv: form.dv }),
       })
       const data = await r.json().catch(() => ({}))
       if (r.ok && data.redirect) {
@@ -600,12 +607,18 @@ export default function Registro() {
 
             <Campo label="Nombre de la empresa"><input style={is} value={form.empresa_nombre} onChange={setF('empresa_nombre')} required /></Campo>
 
+            {/* El RUC ya no frena el alta: se pide al activar la cuenta. Una persona
+                física que vende al Estado lo tiene, pero rara vez lo lleva encima cuando
+                abre un correo en el móvil. */}
+            <p style={{ fontSize: 12, color: 'var(--text-muted)', margin: '0 0 6px', lineHeight: 1.5 }}>
+              ¿No tiene el RUC a mano? Puede añadirlo al activar su cuenta.
+            </p>
             <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end' }}>
               <div style={{ flex: 2 }}>
-                <Campo label="RUC"><input style={is} value={form.ruc} onChange={setRuc('ruc')} placeholder="155646-1-2017" required /></Campo>
+                <Campo label="RUC (opcional)"><input style={is} value={form.ruc} onChange={setRuc('ruc')} placeholder="155646-1-2017" /></Campo>
               </div>
               <div style={{ flex: 1 }}>
-                <Campo label="DV"><input style={is} value={form.dv} onChange={setRuc('dv')} placeholder="00" maxLength={2} required /></Campo>
+                <Campo label="DV"><input style={is} value={form.dv} onChange={setRuc('dv')} placeholder="00" maxLength={2} /></Campo>
               </div>
             </div>
             <button type="button" onClick={verificarRuc} style={{
@@ -630,23 +643,23 @@ export default function Registro() {
             {/* Cuenta ya existente detectada al verificar el RUC → acciones de salida */}
             {cuentaExiste && rucCheck && rucCheck !== 'checking' && !rucCheck.valido && <AccionesCuenta />}
 
-            <Campo label="Dirección"><input style={is} value={form.direccion} onChange={setF('direccion')} required /></Campo>
+            <Campo label="Dirección (opcional)"><input style={is} value={form.direccion} onChange={setF('direccion')} /></Campo>
             <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ flex: 1 }}><Campo label="Ciudad"><input style={is} value={form.ciudad} onChange={setF('ciudad')} required /></Campo></div>
+              <div style={{ flex: 1 }}><Campo label="Ciudad (opcional)"><input style={is} value={form.ciudad} onChange={setF('ciudad')} /></Campo></div>
               <div style={{ flex: 1 }}><Campo label="Provincia">
                 {form.pais === 'Panamá' ? (
-                  <select style={{ ...is, appearance: 'auto' }} value={form.provincia} onChange={setF('provincia')} required>
+                  <select style={{ ...is, appearance: 'auto' }} value={form.provincia} onChange={setF('provincia')}>
                     <option value="">Seleccione provincia…</option>
                     {PROVINCIAS_PANAMA.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
                 ) : (
-                  <input style={is} value={form.provincia} onChange={setF('provincia')} required />
+                  <input style={is} value={form.provincia} onChange={setF('provincia')} />
                 )}
               </Campo></div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}><Campo label="País">
-                <select style={{ ...is, appearance: 'auto' }} value={form.pais} onChange={setF('pais')} required>
+                <select style={{ ...is, appearance: 'auto' }} value={form.pais} onChange={setF('pais')}>
                   {PAISES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </Campo></div>
@@ -661,7 +674,7 @@ export default function Registro() {
                 </select>
                 <input style={{ ...is, flex: 1 }} value={telLocal}
                   onChange={e => { setTelLocal(e.target.value); componerTel(telPais, e.target.value) }}
-                  inputMode="tel" placeholder="6894 6359" required />
+                  inputMode="tel" placeholder="6894 6359" />
               </div>
             </Campo>
 
@@ -749,6 +762,26 @@ export default function Registro() {
             <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 8 }}>
               Pro y Pro+ incluyen 5 usuarios (ampliables con paquetes de +5); Lite es para 1 usuario.
             </p>
+
+            {/* RUC DIFERIDO: si no lo puso en el alta, se le pide AQUÍ. Este es el momento
+                de "activar la cuenta" que le prometimos, y es donde el guard anti-abuso lo
+                consulta: la señal se conserva justo donde se usa. El backend lo exige
+                también (422), así que no se puede saltar desde fuera. */}
+            {!form.ruc.trim() && (
+              <div style={{ background: '#fff8e1', border: '1px solid #ffe0a3', borderRadius: 10, padding: 14, marginBottom: 14 }}>
+                <p style={{ margin: '0 0 10px', fontSize: 13, color: '#7a5a00', lineHeight: 1.5 }}>
+                  <strong>Falta su RUC.</strong> Lo necesitamos para activar la cuenta.
+                </p>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+                  <div style={{ flex: 2 }}>
+                    <Campo label="RUC"><input style={is} value={form.ruc} onChange={setRuc('ruc')} placeholder="155646-1-2017" /></Campo>
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <Campo label="DV"><input style={is} value={form.dv} onChange={setRuc('dv')} placeholder="00" maxLength={2} /></Campo>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Conmutador Mensual / Anual ("2 meses gratis") */}
             <div style={{ display: 'inline-flex', padding: 3, borderRadius: 999, background: 'var(--gray)', marginBottom: 10 }}>
