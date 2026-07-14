@@ -1078,6 +1078,12 @@ export default function Settings({ usuario }) {
           {usuarios.length === 0 ? (
             <p style={{ color: '#aaa', fontSize: 13 }}>No hay usuarios.</p>
           ) : (
+            /* La tabla se derramaba FUERA de la tarjeta (el lápiz de Acciones pisaba el
+               borde) en cuanto la empresa era multiempresa: el chip "vía …" y los chips de
+               empresas ensanchaban el contenido mínimo por encima de la caja. Con este
+               contenedor, si algo no cabe se desliza DENTRO de la tarjeta en vez de
+               salirse. Es la red de seguridad; abajo va el arreglo de fondo. */
+            <div style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: '#f8f9fa' }}>
@@ -1096,7 +1102,7 @@ export default function Settings({ usuario }) {
                           de esta empresa, que no podía verlo ni sacarlo. */}
                       {u.vinculado && (
                         <span title={`Su empresa base es ${u.empresa_origen}`}
-                          style={{ marginLeft: 8, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          style={{ display: 'inline-block', marginLeft: 8, marginTop: 2, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>
                           vía {u.empresa_origen}
                         </span>
                       )}
@@ -1143,6 +1149,7 @@ export default function Settings({ usuario }) {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
           <VincularUsuarioEmpresa usuario={usuario} usuarios={usuarios} mostrarMsg={mostrarMsg} />
         </div>
