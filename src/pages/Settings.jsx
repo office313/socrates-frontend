@@ -763,6 +763,11 @@ export default function Settings({ usuario }) {
   const [modoEmail, setModoEmail] = useState(usuario?.modo_email_alertas === 'por_item' ? 'por_item' : 'digest')
   const [modo, setModo] = useState('amplio')
   const [modoKeywords, setModoKeywords] = useState('compartido')
+  // Interruptor PROPIO de la Watchlist: independiente del de keywords y del de Track.
+  // Y no es un simple filtro como aquellos: al cambiarlo se MUEVEN datos (las listas se
+  // funden o se copian), así que el cambio se confirma antes de dispararlo.
+  const [modoWatchlist, setModoWatchlist] = useState('individual')
+  const [cambiandoWl, setCambiandoWl] = useState(false)
   const [totp, setTotp] = useState(false)
   const [totpQR, setTotpQR] = useState(null)
   const [totpCodigo, setTotpCodigo] = useState('')
@@ -783,6 +788,7 @@ export default function Settings({ usuario }) {
   useEffect(() => {
     axios.get('/api/keywords/modo').then(r => setModo(r.data.modo || 'amplio'))
     axios.get('/api/empresa/config').then(r => setModoKeywords(r.data.modo_keywords || 'compartido'))
+    axios.get('/api/settings/watchlist-modo').then(r => setModoWatchlist(r.data.modo || 'individual')).catch(() => {})
     axios.get('/api/totp/estado').then(r => setTotp(r.data.activo || false))
     if (usuario?.rol === 'supervisor') {
       cargarUsuarios()
@@ -902,6 +908,25 @@ export default function Settings({ usuario }) {
       })
       .catch(() => mostrarMsg('No se pudo guardar el RUC', false))
       .finally(() => setGuardandoRuc(false))
+  }
+
+  const cambiarModoWatchlist = (nuevo) => {
+    if (nuevo === modoWatchlist) return
+    // Se confirma porque esto NO es un simple ajuste: reorganiza las Watchlist de todos.
+    const aviso = nuevo === 'compartido'
+      ? 'Las Watchlist de todos los usuarios se FUNDIRÁN en una sola lista común de la empresa.\n\nNo se pierde nada: todo lo que cada uno tenía guardado pasa a la lista común.'
+      : 'La lista común se separará: CADA usuario se quedará con una copia de la lista ENTERA, y desde ahí podrá añadir o quitar por su cuenta.\n\nNo se pierde nada.'
+    if (!confirm(aviso)) return
+    setCambiandoWl(true)
+    axios.post('/api/settings/watchlist-modo', { modo: nuevo })
+      .then(r => {
+        setModoWatchlist(r.data.modo)
+        mostrarMsg(nuevo === 'compartido'
+          ? `Watchlist compartida: ${r.data.actos} licitaciones en la lista común`
+          : `Watchlist individual: cada usuario se quedó con las ${r.data.actos} licitaciones`)
+      })
+      .catch(() => mostrarMsg('No se pudo cambiar el modo de la Watchlist', false))
+      .finally(() => setCambiandoWl(false))
   }
 
   const revocarAcceso = (u, emp) => {
@@ -1270,6 +1295,31 @@ export default function Settings({ usuario }) {
               : 'Modo Estricto — busca exactamente lo escrito, solo ignora tildes y mayúsculas.'}
           </p>
         </div>
+        {/* WATCHLIST — interruptor propio, independiente de keywords y de Track.
+            Ojo: este NO es un filtro de lectura como el de keywords. Al cambiarlo se
+            MUEVEN datos de verdad, así que se confirma antes. */}
+        <div style={ss}>
+          <h2 style={ts}>Watchlist</h2>
+          <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
+            Defina si cada usuario tiene su propia Watchlist o si toda la empresa comparte una lista común.
+          </p>
+          <div style={{ display: 'flex', background: '#f0f0f0', borderRadius: 8, padding: 4, gap: 4, width: 'fit-content', marginBottom: 12 }}>
+            {[['individual', 'Individual por usuario'], ['compartido', 'Compartida']].map(([val, txt]) => (
+              <button key={val} disabled={cambiandoWl} onClick={() => cambiarModoWatchlist(val)} style={{
+                padding: '8px 20px', borderRadius: 6, fontSize: 13, fontWeight: 600,
+                cursor: cambiandoWl ? 'wait' : 'pointer', border: 'none',
+                background: modoWatchlist === val ? 'var(--blue)' : 'transparent',
+                color: modoWatchlist === val ? 'white' : '#666',
+              }}>{txt}</button>
+            ))}
+          </div>
+          <p style={{ fontSize: 12, color: '#888', lineHeight: 1.6 }}>
+            {modoWatchlist === 'compartido'
+              ? 'Compartida — una sola lista para toda la empresa. Todos ven, añaden y quitan por igual.'
+              : 'Individual — cada usuario gestiona su propia Watchlist.'}
+          </p>
+        </div>
+
         <div style={ss}>
           <h2 style={ts}>{tieneTrack ? 'Modo de Keywords y Track' : 'Modo de Keywords'}</h2>
           <p style={{ fontSize: 13, color: '#666', marginBottom: 16, lineHeight: 1.6 }}>
