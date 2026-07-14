@@ -32,6 +32,10 @@ export default function Restablecer() {
   const [password2, setPassword2] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  // Mensaje de cierre que manda el backend: no siempre es "entrando a su cuenta".
+  // A un suspendido por impago se le dice que complete el pago; a un pendiente de
+  // activar, que remate su prueba.
+  const [mensaje, setMensaje] = useState('')
   const fuerza = fuerzaPassword(password)
 
   useEffect(() => {
@@ -57,9 +61,15 @@ export default function Restablecer() {
       const d = await r.json().catch(() => ({}))
       if (r.ok && d.ok) {
         setEstado('listo')
-        // El backend ya abrió sesión y puso la cookie: entramos directo a la app
-        // (navegación completa para que la SPA cargue con la sesión nueva).
-        setTimeout(() => { window.location.href = '/app' }, 1800)
+        setMensaje(d.mensaje || '')
+        // El DESTINO lo decide el backend, no nosotros: tras restablecer, un
+        // suspendido por impago no entra a la app —va a pagar (/app/pagar?ct=…)—
+        // y un pendiente de activar va al paso 2 de su alta. Solo el usuario
+        // activo aterriza en /app. Antes esto estaba clavado a '/app', que para
+        // un impago habría sido colarlo dentro sin pagar.
+        // (navegación completa para que la SPA cargue con la sesión nueva.)
+        const destino = d.destino || '/app'
+        setTimeout(() => { window.location.href = destino }, 1800)
       } else {
         setError(d.detail || 'No se pudo restablecer. Solicite un enlace nuevo.')
       }
@@ -107,7 +117,7 @@ export default function Restablecer() {
         <CheckCircle2 size={40} strokeWidth={1.5} color="var(--blue)" style={{ display: "block", margin: "0 auto 8px" }} />
         <h2 style={{ fontSize: 18, color: 'var(--text)', margin: '0 0 6px' }}>Contraseña actualizada</h2>
         <p style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.6 }}>
-          Listo. Entrando a su cuenta...
+          {mensaje || 'Listo. Entrando a su cuenta...'}
         </p>
       </div>
     )
