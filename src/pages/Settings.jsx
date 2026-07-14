@@ -655,13 +655,46 @@ const chipStyle = { background: '#eef2f7', color: '#445', padding: '3px 9px', bo
 // Multiempresa: el supervisor da a un usuario de su empresa acceso a otra de sus
 // empresas. Solo se muestra si el supervisor tiene acceso a más de una empresa.
 function VincularUsuarioEmpresa({ usuario, usuarios, mostrarMsg }) {
-  const otras = (usuario?.empresas || []).filter(e => !e.activa)
   const [usuarioId, setUsuarioId] = useState('')
   const [empresaId, setEmpresaId] = useState('')
   const [loading, setLoading] = useState(false)
-  if (otras.length === 0) return null
+
+  // Empresas a las que ESTE gestor puede dar acceso: las suyas, menos la activa (la
+  // activa la tiene por fuerza cualquier usuario de esta pantalla, que lista los de la
+  // empresa activa).
+  const delGrupo = (usuario?.empresas || []).filter(e => !e.activa)
+
+  // EL BUG: el destino se poblaba con `delGrupo` a secas, sin mirar al usuario elegido.
+  // Resultado: se le ofrecía una empresa que YA tenía, y el botón la concedía "otra vez"
+  // sin decir nada. El destino depende de a QUIÉN se lo das, no solo de quién lo da.
+  const elegido = usuarios.find(u => String(u.id) === String(usuarioId))
+  // Lo que ya tiene = sus accesos explícitos + su empresa BASE. La base es suya por
+  // nacimiento y puede no figurar como acceso (le pasa a los usuarios que nunca fueron
+  // vinculados a mano): si no se cuenta, se la volveríamos a ofrecer.
+  const yaTiene = new Set([
+    ...(elegido?.empresas || []).map(e => e.id),
+    ...(elegido ? [elegido.empresa_id] : []),
+  ])
+  const destinos = elegido ? delGrupo.filter(e => !yaTiene.has(e.id)) : delGrupo
+  const sinDestinos = !!elegido && destinos.length === 0
+
+  const elegirUsuario = (id) => {
+    setUsuarioId(id)
+    setEmpresaId('')     // el destino que hubiera puede no ser válido para el nuevo usuario
+  }
+
+  if (delGrupo.length === 0) return null
   const dar = () => {
-    if (!usuarioId || !empresaId) { mostrarMsg('Elija usuario y empresa destino', false); return }
+    if (!usuarioId) { mostrarMsg('Elija el usuario al que dar acceso', false); return }
+    if (sinDestinos) {
+      mostrarMsg(`${elegido.nombre} ya tiene acceso a todas sus empresas`, false)
+      return
+    }
+    if (!empresaId) { mostrarMsg('Elija la empresa destino', false); return }
+    if (yaTiene.has(Number(empresaId))) {   // cinturón: no debería poder seleccionarse
+      mostrarMsg(`${elegido.nombre} ya tiene acceso a esa empresa`, false)
+      return
+    }
     setLoading(true)
     axios.post(`/api/usuarios/${usuarioId}/vincular-empresa`, { empresa_id: Number(empresaId) })
       .then(r => {
@@ -679,20 +712,36 @@ function VincularUsuarioEmpresa({ usuario, usuarios, mostrarMsg }) {
         Dar a un usuario de esta empresa acceso a otra de sus empresas. Podrá alternar entre ellas desde el selector de empresa de la cabecera.
       </p>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-        <select value={usuarioId} onChange={e => setUsuarioId(e.target.value)} style={is}>
+        <select value={usuarioId} onChange={e => elegirUsuario(e.target.value)} style={is}>
           <option value="">Usuario…</option>
           {usuarios.map(u => <option key={u.id} value={u.id}>{u.nombre} ({u.email})</option>)}
         </select>
         <span style={{ fontSize: 13, color: '#888' }}>→</span>
-        <select value={empresaId} onChange={e => setEmpresaId(e.target.value)} style={is}>
-          <option value="">Empresa destino…</option>
-          {otras.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
+        <select value={empresaId} onChange={e => setEmpresaId(e.target.value)}
+          disabled={!elegido || sinDestinos}
+          style={{ ...is, background: (!elegido || sinDestinos) ? '#f5f5f5' : 'white' }}>
+          <option value="">
+            {!elegido ? 'Elija primero el usuario…' : (sinDestinos ? 'Sin empresas pendientes' : 'Empresa destino…')}
+          </option>
+          {destinos.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}
         </select>
-        <button onClick={dar} disabled={loading}
-          style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer', border: 'none', opacity: loading ? 0.6 : 1 }}>
+        <button onClick={dar} disabled={loading || sinDestinos}
+          style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: (loading || sinDestinos) ? 'not-allowed' : 'pointer', border: 'none', opacity: (loading || sinDestinos) ? 0.5 : 1 }}>
           {loading ? 'Dando acceso…' : 'Dar acceso'}
         </button>
       </div>
+
+      {/* Antes esto no existía y el panel se quedaba mudo: parecía que el botón no hacía
+          nada cuando en realidad no había nada que conceder. */}
+      {elegido && (
+        <p style={{ fontSize: 12, color: sinDestinos ? '#e65100' : '#888', marginTop: 8 }}>
+          {sinDestinos
+            ? `${elegido.nombre} ya tiene acceso a todas sus empresas.`
+            : `${elegido.nombre} tiene acceso a: ${[...yaTiene]
+                .map(id => (usuario?.empresas || []).find(x => x.id === id)?.nombre || `#${id}`)
+                .join(', ')}.`}
+        </p>
+      )}
     </div>
   )
 }
