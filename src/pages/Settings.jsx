@@ -884,6 +884,10 @@ export default function Settings({ usuario }) {
     })
   }
 
+  // La empresa que estoy gestionando ahora mismo. Solo sobre ella mando: es la única
+  // cuyos accesos puedo revocar.
+  const empresaActivaId = (usuario?.empresas || []).find(e => e.activa)?.id ?? usuario?.empresa_id
+
   const revocarAcceso = (u, emp) => {
     if (!confirm(`¿Quitar el acceso de ${u.nombre} a ${emp.nombre}?`)) return
     axios.delete(`/api/usuarios/${u.id}/vincular-empresa/${emp.id}`).then(r => {
@@ -1085,7 +1089,18 @@ export default function Settings({ usuario }) {
               <tbody>
                 {usuarios.map((u, i) => (
                   <tr key={u.id} style={{ background: i % 2 === 0 ? 'white' : '#fafafa' }}>
-                    <td style={{ padding: '10px 16px' }}>{u.nombre}{u.es_tu_cuenta && <span style={{ fontSize: 11, color: '#999' }}> (usted)</span>}</td>
+                    <td style={{ padding: '10px 16px' }}>
+                      {u.nombre}{u.es_tu_cuenta && <span style={{ fontSize: 11, color: '#999' }}> (usted)</span>}
+                      {/* Vinculado: trabaja aquí, pero su casa es otra empresa. Antes ni
+                          siquiera aparecía en esta lista: era invisible para el supervisor
+                          de esta empresa, que no podía verlo ni sacarlo. */}
+                      {u.vinculado && (
+                        <span title={`Su empresa base es ${u.empresa_origen}`}
+                          style={{ marginLeft: 8, background: '#fff3e0', color: '#e65100', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                          vía {u.empresa_origen}
+                        </span>
+                      )}
+                    </td>
                     <td style={{ padding: '10px 16px', color: '#666' }}>{u.email}</td>
                     <td style={{ padding: '10px 16px' }}>
                       <span style={{ background: u.rol === 'supervisor' ? '#e8f0fb' : '#f5f5f5', color: u.rol === 'supervisor' ? 'var(--blue)' : '#666', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>{u.rol}</span>
@@ -1098,8 +1113,11 @@ export default function Settings({ usuario }) {
                             <span key={emp.id} title={principal ? 'Empresa principal' : `Acceso a ${emp.nombre}`}
                               style={{ display: 'inline-flex', alignItems: 'center', gap: 4, background: principal ? '#e8f0fb' : '#eef2f7', color: principal ? 'var(--blue)' : '#445', padding: '2px 8px', borderRadius: 10, fontSize: 11, fontWeight: 600 }}>
                               {emp.nombre}
-                              {!principal && (
-                                <span onClick={() => revocarAcceso(u, emp)} title="Quitar acceso"
+                              {/* Solo se ofrece quitar el acceso a MI empresa (la activa).
+                                  Un supervisor no manda sobre los accesos de un usuario a
+                                  terceras empresas: esas no son suyas. */}
+                              {!principal && emp.id === empresaActivaId && (
+                                <span onClick={() => revocarAcceso(u, emp)} title="Quitar acceso a esta empresa"
                                   style={{ cursor: 'pointer', color: '#c62828', fontWeight: 700, fontSize: 13, lineHeight: 1, marginLeft: 1 }}>×</span>
                               )}
                             </span>
@@ -1108,9 +1126,15 @@ export default function Settings({ usuario }) {
                       </div>
                     </td>
                     <td style={{ padding: '10px 16px', textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      {/* A un vinculado no se le edita ni se le borra: NO es tu usuario, es de
+                          otra empresa. Lo único que te corresponde es quitarle el acceso a la
+                          tuya (la × del chip). Ofrecer "eliminar" aquí sería ofrecer borrar el
+                          usuario de otro cliente. */}
+                      {!u.vinculado && (
                       <button onClick={() => setModalUsuario(u)} title="Editar"
                         style={{ padding: '4px 10px', background: 'var(--blue-light, #e8f0fb)', color: 'var(--blue)', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none', marginRight: 6 }}>✏️</button>
-                      {!u.es_tu_cuenta && (
+                      )}
+                      {!u.es_tu_cuenta && !u.vinculado && (
                         <button onClick={() => eliminarUsuario(u.id)} title="Eliminar"
                           style={{ padding: '4px 10px', background: '#ffebee', color: '#c62828', borderRadius: 6, fontSize: 12, fontWeight: 600, cursor: 'pointer', border: 'none' }}>🗑️</button>
                       )}
