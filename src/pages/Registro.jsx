@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Mail, Smartphone, CheckCircle2, AlertTriangle, RotateCcw, Wrench, ShieldCheck, Check, CreditCard } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-logo-completo.svg'
 import yappyLogo from '../assets/yappy-logo.svg'
@@ -107,6 +107,16 @@ export default function Registro() {
   const [bloqueoTarjeta, setBloqueoTarjeta] = useState(null)
   const [rt, setRt] = useState('')
   const [error, setError] = useState('')
+  // EL AVISO SE VE. Antes se pintaba arriba del formulario mientras el botón que lo
+  // dispara está abajo del todo: en un móvil el usuario pulsaba "Continuar", el aviso
+  // aparecía 220px POR ENCIMA de su pantalla, y a sus ojos el botón no hacía nada. El
+  // alta parecía rota. (Explica los abandonos y los re-registros que vimos.)
+  const avisoRef = useRef(null)
+  useEffect(() => {
+    if (error && avisoRef.current) {
+      avisoRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }, [error])
   const [loading, setLoading] = useState(false)
 
   // Solo entorno de pruebas (localhost). En producción (socratespro.lat) es false
@@ -550,7 +560,7 @@ export default function Registro() {
         </div>
 
         {error && (
-          <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: cuentaExiste ? 8 : 16 }}>{error}</div>
+          <div ref={avisoRef} style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginBottom: cuentaExiste ? 8 : 16 }}>{error}</div>
         )}
         {cuentaExiste && error && <AccionesCuenta />}
 
@@ -655,6 +665,13 @@ export default function Registro() {
               </div>
             </Campo>
 
+            {/* El mismo aviso, aquí abajo: es donde el dedo y la mirada están al pulsar.
+                El de arriba se conserva porque lleva las acciones de "ya tiene cuenta". */}
+            {error && (
+              <div style={{ background: 'var(--red-light)', color: 'var(--red)', padding: '10px 14px', borderRadius: 8, fontSize: 13, marginTop: 12 }}>
+                {error}
+              </div>
+            )}
             <button type="submit" disabled={loading} style={{ ...btn(!loading), marginTop: 8 }}>
               {loading ? 'Creando...' : 'Continuar'}
             </button>
