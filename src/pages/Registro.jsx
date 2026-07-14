@@ -24,6 +24,10 @@ const is = {
   borderRadius: 8, fontSize: 14, outline: 'none', boxSizing: 'border-box',
   minHeight: 44,
 }
+// WebKit IGNORA min-height en un <select> nativo (appearance:auto): el control se dibuja
+// con su altura intrínseca (24px) y se queda por debajo del objetivo táctil. Con `height`
+// sí obedece. Se separa del estilo de los inputs para no tocar aquellos, que ya cumplen.
+const ss = { ...is, height: 44 }
 const ls = { display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }
 const btn = (enabled = true) => ({
   width: '100%', padding: '12px', background: enabled ? 'var(--red)' : '#ccc', color: 'white',
@@ -666,7 +670,7 @@ export default function Registro() {
               <div style={{ flex: 1 }}><Campo label="Ciudad (opcional)"><input style={is} value={form.ciudad} onChange={setF('ciudad')} /></Campo></div>
               <div style={{ flex: 1 }}><Campo label="Provincia">
                 {form.pais === 'Panamá' ? (
-                  <select style={{ ...is, appearance: 'auto' }} value={form.provincia} onChange={setF('provincia')}>
+                  <select style={{ ...ss, appearance: 'auto' }} value={form.provincia} onChange={setF('provincia')}>
                     <option value="">Seleccione provincia…</option>
                     {PROVINCIAS_PANAMA.map(p => <option key={p} value={p}>{p}</option>)}
                   </select>
@@ -677,7 +681,7 @@ export default function Registro() {
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
               <div style={{ flex: 1 }}><Campo label="País">
-                <select style={{ ...is, appearance: 'auto' }} value={form.pais} onChange={setF('pais')}>
+                <select style={{ ...ss, appearance: 'auto' }} value={form.pais} onChange={setF('pais')}>
                   {PAISES.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </Campo></div>
@@ -685,7 +689,7 @@ export default function Registro() {
             </div>
             <Campo label="Teléfono de contacto">
               <div style={{ display: 'flex', gap: 8 }}>
-                <select style={{ ...is, appearance: 'auto', flex: '0 0 auto', width: 'auto', maxWidth: '48%' }}
+                <select style={{ ...ss, appearance: 'auto', flex: '0 0 auto', width: 'auto', maxWidth: '48%' }}
                   value={telPais} onChange={e => { setTelPais(e.target.value); componerTel(e.target.value, telLocal) }}
                   aria-label="Prefijo país">
                   {PREFIJOS_TEL.map(p => <option key={p.pais} value={p.pais}>{p.flag} {p.pais} {p.code}</option>)}
