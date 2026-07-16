@@ -275,7 +275,10 @@ function Ficha({ ruc, onClose, onSaved }) {
       .then(() => { setNueva({ tipo: 'llamada', texto: '' }); cargar(); onSaved() })
   }
   if (!c) return null
-  const explorerUrl = `/analytics?adjudicatario=${encodeURIComponent(c.razon_social)}&auto=1`
+  // El SPA vive bajo basename /app: un href absoluto "/analytics" salta FUERA de
+  // la app (URL rota). Debe llevar /app. Se abre en pestaña nueva para no perder
+  // la ficha mientras preparas la llamada.
+  const explorerUrl = `/app/analytics?adjudicatario=${encodeURIComponent(c.razon_social)}&auto=1`
   const estadoSel = c.estado === 'sin_tocar' ? 'sin_contactar' : c.estado
 
   return (
@@ -305,7 +308,7 @@ function Ficha({ ruc, onClose, onSaved }) {
               {(c.top_instituciones || '—').split(' | ').map((s, i) => <div key={i}>{s}</div>)}
               {c.objeto_resumen && <div style={{ color: '#6b7280', marginTop: 4 }}>{c.objeto_resumen}</div>}
             </div>
-            <a href={explorerUrl} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, color: 'var(--blue)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+            <a href={explorerUrl} target="_blank" rel="noopener" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 10, color: 'var(--blue)', fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
               Ver adjudicaciones en Explorer <ExternalLink size={13} />
             </a>
           </Card>

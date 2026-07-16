@@ -357,12 +357,18 @@ export default function Analytics({ usuario }) {
     const kws = params.get('keywords')
     const rng = params.get('rango')
     const auto = params.get('auto')
-    if (kws) {
-      setKeywords(kws)
+    // adjudicatario: usado por el deep-link del CRM de Ventas ("Ver en Explorer").
+    // El backend /api/analytics ya filtra por adjudicatario (ILIKE), así que aquí
+    // solo hay que rellenar el campo y lanzar la búsqueda.
+    const adj = params.get('adjudicatario')
+    if (kws || adj) {
+      if (kws) setKeywords(kws)
+      if (adj) setAdjudicatario(adj)
       if (rng) setRango(rng)
       if (auto === '1') {
         const searchParams = new URLSearchParams()
-        searchParams.append('keywords', kws)
+        if (kws) searchParams.append('keywords', kws)
+        if (adj) searchParams.append('adjudicatario', adj)
         searchParams.append('rango', rng || 'anio')
         searchParams.append('ordenar', 'fecha')
         setLoading(true)

@@ -48,8 +48,11 @@ export default function Layout({ usuario, loading, children }) {
     return <OnboardingModal usuario={usuario} />
   }
 
-  // CATPLAN solo puede ver /clientes, /settings, /panel-control, /suscripciones, /accesos, /emul, /pac, /tickets, /marketing, /comercial, /tokens, /emails-estado (superadmin)
-  const rutasPermitidas = ['/clientes', '/settings', '/panel-control', '/suscripciones', '/accesos', '/emul', '/pac', '/tickets', '/marketing', '/comercial', '/tokens', '/emails-estado']
+  // CATPLAN solo puede ver /clientes, /settings, /panel-control, /suscripciones, /accesos, /emul, /pac, /tickets, /marketing, /comercial, /analytics, /tokens, /emails-estado (superadmin)
+  // /analytics (Explorer/Estudio de Mercado): sin enlace en el menú, pero accesible
+  // por el deep-link del CRM de Ventas ("Ver adjudicaciones en Explorer") para
+  // preparar la llamada. Sin esto, CATPLAN era rebotado a /clientes.
+  const rutasPermitidas = ['/clientes', '/settings', '/panel-control', '/suscripciones', '/accesos', '/emul', '/pac', '/tickets', '/marketing', '/comercial', '/analytics', '/tokens', '/emails-estado']
   if (esCatplan && !rutasPermitidas.some(r => location.pathname.startsWith(r))) {
     return <Navigate to="/clientes" replace />
   }
