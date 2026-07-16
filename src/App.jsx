@@ -16,6 +16,7 @@ import ClientesUnificado from './pages/ClientesUnificado'
 import Legal from './pages/Legal'
 import PanelControl from './pages/PanelControl'
 import Marketing from './pages/Marketing'
+import Comercial from './pages/Comercial'
 import Demo from './pages/Demo'
 import Suscripciones from './pages/Suscripciones'
 import Accesos from './pages/Accesos'
@@ -57,6 +58,7 @@ function App() {
               <Route path="/emails-estado" element={usuario?.rol === 'superadmin' ? <EstadoEmails /> : <Navigate to="/" replace />} />
               <Route path="/tokens" element={usuario?.rol === 'superadmin' ? <TokensRegistro /> : <Navigate to="/" replace />} />
               <Route path="/marketing" element={usuario?.rol === 'superadmin' ? <Marketing /> : <Navigate to="/" replace />} />
+              <Route path="/comercial" element={usuario?.rol === 'superadmin' ? <Comercial /> : <Navigate to="/" replace />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Layout>

@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom'
-import { Radar, GitCommit, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList, Ticket, KeyRound, Eye, Megaphone, Gift, MailCheck } from 'lucide-react'
+import { Radar, GitCommit, LogOut, Settings, BookOpen, Building2, Bookmark, Scale, LayoutDashboard, ClipboardList, Ticket, KeyRound, Eye, Megaphone, Gift, MailCheck, Target } from 'lucide-react'
 import iconoSocrates from '../assets/socratespro-icono-rojo.svg'
 import useEsMovil from '../hooks/useEsMovil'
 
@@ -86,6 +86,12 @@ export default function Sidebar({ usuario }) {
             <NavLink to="/marketing" style={({ isActive }) => linkStyle(isActive, esMovil)}>
               <Megaphone size={esMovil ? 18 : 20} />
               <span style={{ fontSize: esMovil ? 9 : 11 }}>CRM</span>
+            </NavLink>
+          )}
+          {usuario?.rol === 'superadmin' && (
+            <NavLink to="/comercial" style={({ isActive }) => linkStyle(isActive, esMovil)}>
+              <Target size={esMovil ? 18 : 20} />
+              <span style={{ fontSize: esMovil ? 9 : 11 }}>Ventas</span>
             </NavLink>
           )}
           {/* "Suscrip." retirado del menú: fusionado en "Clientes" (Clientes | Transacciones).
