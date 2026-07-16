@@ -804,7 +804,10 @@ export default function Dashboard({ usuario }) {
                 <span style={{ fontSize: 12.5, maxWidth: 440, lineHeight: 1.55 }}>
                   En cuanto se publique una licitación vigente que coincida, aparecerá aquí automáticamente. El Radar se actualiza varias veces al día.
                 </span>
-                <button onClick={() => window.location.assign('/app/keywords')}
+                {/* navigate, no window.location: la recarga dura borraba la emulación
+                    -que vive en memoria- y devolvía al operador a su propia cuenta antes
+                    de llegar. Al usuario real le ahorra además recargar la SPA entera. */}
+                <button onClick={() => navigate('/keywords')}
                   style={{ marginTop: 6, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                   Revisar mis palabras clave
                 </button>
