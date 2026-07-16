@@ -71,12 +71,21 @@ const RADAR_COLS = [
   { h: 'Descripción', w: null,    align: 'left'  },
   // La ✕ de descartar. Sin cabecera (como la de badges) y con ancho FIJO: la tabla es
   // table-layout:fixed y las celdas van a mano, así que un <td> sin su <col> desalinea
-  // todas las columnas a partir de aquí.
+  // todas las columnas a partir de aquí. El ancho lo decide ANCHO_COL_ACCION, que cambia
+  // según la vista (ver abajo).
   { h: '',            w: 40,      align: 'center' },
   { h: 'Keywords',    w: '10.5%', align: 'left'  },
   { h: 'Cierre',      w: 96,    align: 'left'  },
   { h: 'Precio Ref.', w: 110,   align: 'right' },
 ]
+
+// La columna de acción es la única que cambia de ancho según la vista, y tiene que hacerlo:
+// en el Radar normal solo aloja una ✕ (40px sobran), pero en Descartadas aloja el botón
+// "Restaurar", que mide ~70px. Con table-layout:fixed el <td> NO se ensancha solo: el botón
+// se sale de su celda y se monta encima de las vecinas. Ese era el choque con los chips.
+// La anchura extra la cede Descripción, que es la única columna elástica (w: null).
+const IDX_COL_ACCION = 4
+const ANCHO_COL_ACCION = { normal: 40, descartadas: 96 }
 
 // Celdas de una fila del Radar. Memoizada: solo re-renderiza si cambia la licitación,
 // su estado de lectura (negrita) o su urgencia. Devuelve los <td> (TableVirtuoso los
@@ -129,8 +138,14 @@ const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente, desca
           ><X size={14} strokeWidth={2.5} /></button>
         )}
       </td>
+      {/* En Descartadas, dos keywords en vez de tres. No es por espacio -Keywords conserva
+          su 10.5%; el ancho del botón lo cede Descripción-, es decisión de producto: son
+          licitaciones que el cliente ya dijo que no quiere, y ahí lo único que importa es
+          reconocerla y poder devolverla. Menos ruido alrededor del botón.
+          `descartada` sirve de señal de vista sin pasar el filtro: una fila descartada solo
+          se pinta en Descartadas (en el resto de vistas está oculta por definición). */}
       <td style={{ padding: '10px 16px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-        {(l.keywords || []).slice(0, 3).map(k => (
+        {(l.keywords || []).slice(0, descartada ? 2 : 3).map(k => (
           <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
         ))}
       </td>
@@ -246,11 +261,17 @@ const TarjetaRadar = memo(function TarjetaRadar({ l, vista, urgente, descartada,
 
 // <table> con colgroup (anchos fijos) — conserva el borderCollapse/sticky que pone
 // TableVirtuoso (no lo piso: solo añado width/tableLayout/fontSize).
-const RadarTable = forwardRef(function RadarTable(props, ref) {
+// `context` se saca de props a propósito: si cae en el <table> por el spread, React lo
+// intenta pintar como atributo del DOM y avisa por consola. Mismo motivo que en RadarRow.
+const RadarTable = forwardRef(function RadarTable({ context, ...props }, ref) {
+  const anchoAccion = context?.vistaDescartadas ? ANCHO_COL_ACCION.descartadas : ANCHO_COL_ACCION.normal
   return (
     <table {...props} ref={ref} style={{ ...props.style, width: '100%', tableLayout: 'fixed', fontSize: 12 }}>
       <colgroup>
-        {RADAR_COLS.map((c, i) => <col key={i} style={c.w != null ? { width: c.w } : undefined} />)}
+        {RADAR_COLS.map((c, i) => {
+          const w = i === IDX_COL_ACCION ? anchoAccion : c.w
+          return <col key={i} style={w != null ? { width: w } : undefined} />
+        })}
       </colgroup>
       {props.children}
     </table>
@@ -1006,7 +1027,12 @@ export default function Dashboard({ usuario }) {
             data={licitacionesFiltradas}
             style={{ height: 'max(400px, calc(100vh - 380px))', borderRadius: '0 0 12px 12px' }}
             components={RADAR_TABLE_COMPONENTS}
-            context={{ onRow: (idx) => { const l = licitacionesFiltradas[idx]; if (l) { marcarVista(l.numero_acto); setModalDetalle(l) } } }}
+            context={{
+              onRow: (idx) => { const l = licitacionesFiltradas[idx]; if (l) { marcarVista(l.numero_acto); setModalDetalle(l) } },
+              // Lo lee RadarTable para ensanchar la columna de acción (el botón "Restaurar"
+              // no cabe en los 40px de la ✕ y se salía encima de las keywords).
+              vistaDescartadas: filtro === 'descartadas',
+            }}
             defaultItemHeight={41}
             increaseViewportBy={400}
             fixedHeaderContent={renderRadarHeader}
