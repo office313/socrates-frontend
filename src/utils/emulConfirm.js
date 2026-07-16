@@ -28,6 +28,7 @@ const PREFIJOS_ESCRIBIBLES = ['/api/settings/']
 // Etiquetas para nombrar el cambio en la ventana de confirmación. Lo que no esté aquí y
 // caiga bajo un prefijo escribible sale como 'Ajustes', que sigue siendo cierto.
 const ETIQUETAS = {
+  '/api/keywords':                'Palabras clave',
   '/api/settings/sectores':       'Sectores de interés',
   '/api/settings/criterios':      'Criterios de búsqueda',
   '/api/settings/ruc':            'RUC de la empresa',
@@ -46,7 +47,7 @@ const ETIQUETAS = {
 // Lo que NO es un ajuste sigue enumerado a mano: abrirlo debe ser una decisión
 // consciente, no el efecto colateral de tocar un prefijo.
 const RUTAS_EXPLICITAS = [
-  '/api/keywords/modo', '/api/empresa/config', '/api/cuenta', '/api/usuarios',
+  '/api/keywords', '/api/keywords/modo', '/api/empresa/config', '/api/cuenta', '/api/usuarios',
   '/api/admin/usuarios', '/api/admin/empresas',
   '/api/cobro/cambiar-plan', '/api/totp/activar', '/api/totp/desactivar',
 ]

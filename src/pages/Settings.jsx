@@ -1344,9 +1344,14 @@ export default function Settings({ usuario }) {
               ? (tieneTrack
                   ? 'Compartido — todos los usuarios ven las mismas licitaciones y comparten Track.'
                   : 'Compartido — todos los usuarios ven las mismas licitaciones.')
+              /* Decía "El supervisor ve todo", y desde hoy es falso: individual es
+                 individual para TODOS, supervisor incluido. El texto se lee justo al
+                 elegir el modo, así que era el peor sitio posible para una promesa que el
+                 código no cumple. Se dice además lo que nadie esperaba: que el supervisor
+                 tendrá que crearse las suyas, porque hasta que lo haga verá el Radar vacío. */
               : (tieneTrack
-                  ? 'Individual — cada usuario gestiona sus propios keywords y Track. El supervisor ve todo.'
-                  : 'Individual — cada usuario gestiona sus propios keywords. El supervisor ve todo.')}
+                  ? 'Individual — cada usuario gestiona sus propios keywords y su propio Track, y solo ve lo suyo. También el supervisor: tendrá que crear sus propias keywords.'
+                  : 'Individual — cada usuario gestiona sus propios keywords y solo ve los suyos. También el supervisor: tendrá que crear los suyos.')}
           </p>
         </div>
               <div style={{ marginTop: 24, paddingTop: 24, borderTop: '1px solid #e5e7eb' }}>
