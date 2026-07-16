@@ -96,7 +96,7 @@ export default function Comercial() {
 
       {tab === 'trabajo'
         ? <Trabajo hoy={hoy} pipeline={pipeline} onOpen={setAbierta} />
-        : <Todas universo={universo} instituciones={instituciones} onOpen={setAbierta} />}
+        : <Todas universo={universo} instituciones={instituciones} onOpen={setAbierta} onChanged={trasGuardar} />}
 
       {abierta && <Ficha ruc={abierta} onClose={() => setAbierta(null)} onSaved={trasGuardar} />}
     </div>
@@ -117,11 +117,15 @@ function Trabajo({ hoy, pipeline, onOpen }) {
   )
 }
 
-function Todas({ universo, instituciones, onOpen }) {
+function Todas({ universo, instituciones, onOpen, onChanged }) {
   const [q, setQ] = useState('')
   const [monto, setMonto] = useState('all')
   const [inst, setInst] = useState('')
   const [estado, setEstado] = useState('')
+  const [sel, setSel] = useState(() => new Set())   // RUCs seleccionados
+  const [modal, setModal] = useState(null)          // 'estado' | 'accion' | 'archivar' | null
+  const [aplicando, setAplicando] = useState(false)
+
   if (universo === null) return <Vacio texto="Cargando el universo…" />
 
   const min = MONTO_PRESETS.find(p => p.k === monto)?.min || 0
@@ -130,36 +134,136 @@ function Todas({ universo, instituciones, onOpen }) {
     (!inst || c.institucion_principal === inst) &&
     (!estado || c.estado === estado) &&
     (!q || c.razon_social.toLowerCase().includes(q.toLowerCase()) || c.ruc.includes(q)))
+  const mostradas = filtradas.slice(0, 400)
+
+  const limpiarSel = () => setSel(new Set())
+  const toggle = ruc => setSel(prev => { const n = new Set(prev); n.has(ruc) ? n.delete(ruc) : n.add(ruc); return n })
+  const todasMostradasMarcadas = mostradas.length > 0 && mostradas.every(c => sel.has(c.ruc))
+  const toggleMostradas = () => setSel(prev => {
+    const n = new Set(prev)
+    if (todasMostradasMarcadas) mostradas.forEach(c => n.delete(c.ruc))
+    else mostradas.forEach(c => n.add(c.ruc))
+    return n
+  })
+  const seleccionarTodasFiltradas = () => setSel(new Set(filtradas.map(c => c.ruc)))
+
+  // Al cambiar cualquier filtro, limpiar la selección (evita actuar sobre filas que ya no ves).
+  const onFiltro = (setter) => (v) => { setter(v); limpiarSel() }
+
+  const aplicarBloque = (payload) => {
+    setAplicando(true)
+    axios.post('/api/admin/comercial/cuentas/bloque', { rucs: [...sel], ...payload })
+      .then(() => { setModal(null); limpiarSel(); onChanged() })
+      .finally(() => setAplicando(false))
+  }
+  const exportar = () => {
+    const rows = filtradas.filter(c => sel.has(c.ruc))
+    const cab = ['Empresa', 'RUC', 'Monto 12m', 'Adjudicaciones', 'Principal comprador', 'Estado', 'Proxima accion', 'Fecha accion', 'Proveedor actual', 'Renovacion', 'Telefono']
+    const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const linea = c => [c.razon_social, c.ruc, Math.round(c.monto_12m || 0), c.n_adjudicaciones, c.institucion_principal,
+      ESTADO_LABEL[c.estado] || c.estado, c.proxima_accion || '', c.proxima_accion_fecha || '', c.proveedor_actual || '',
+      c.renovacion_proveedor_fecha || '', c.contacto_telefono || ''].map(esc).join(',')
+    const csv = '﻿' + [cab.map(esc).join(','), ...rows.map(linea)].join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a'); a.href = url; a.download = `ventas-seleccion-${rows.length}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
 
   return (
     <>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ position: 'relative', flex: '1 1 220px', maxWidth: 300 }}>
           <Search size={15} style={{ position: 'absolute', left: 10, top: 9, color: '#9ca3af' }} />
-          <input value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar empresa o RUC…"
+          <input value={q} onChange={e => onFiltro(setQ)(e.target.value)} placeholder="Buscar empresa o RUC…"
             style={{ width: '100%', padding: '7px 10px 7px 32px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, boxSizing: 'border-box' }} />
         </div>
-        <select value={monto} onChange={e => setMonto(e.target.value)} style={sel}>
+        <select value={monto} onChange={e => onFiltro(setMonto)(e.target.value)} style={sel_}>
           {MONTO_PRESETS.map(p => <option key={p.k} value={p.k}>{p.label}</option>)}
         </select>
-        <select value={estado} onChange={e => setEstado(e.target.value)} style={sel}>
+        <select value={estado} onChange={e => onFiltro(setEstado)(e.target.value)} style={sel_}>
           <option value="">Cualquier estado</option>
           <option value="sin_tocar">Sin tocar</option>
           {ESTADOS.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
         </select>
-        <select value={inst} onChange={e => setInst(e.target.value)} style={{ ...sel, maxWidth: 240 }}>
+        <select value={inst} onChange={e => onFiltro(setInst)(e.target.value)} style={{ ...sel_, maxWidth: 240 }}>
           <option value="">Cualquier institución</option>
           {instituciones.map(i => <option key={i} value={i}>{i.length > 34 ? i.slice(0, 34) + '…' : i}</option>)}
         </select>
         <span style={{ color: '#9ca3af', fontSize: 12, marginLeft: 'auto', whiteSpace: 'nowrap' }}>{filtradas.length.toLocaleString('en-US')} de {universo.length.toLocaleString('en-US')}</span>
       </div>
-      <Tabla filas={filtradas.slice(0, 400)} onOpen={onOpen} />
-      {filtradas.length > 400 && <p style={{ color: '#9ca3af', fontSize: 12, textAlign: 'center', marginTop: 10 }}>Mostrando las primeras 400 de {filtradas.length.toLocaleString('en-US')}. Afina con los filtros o el buscador.</p>}
+
+      {/* Barra de acciones en bloque: aparece al marcar ≥1 */}
+      {sel.size > 0 && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: 'var(--blue)', color: 'white', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+          <strong style={{ fontSize: 13 }}>{sel.size.toLocaleString('en-US')} seleccionada{sel.size > 1 ? 's' : ''}</strong>
+          <button onClick={() => setModal('estado')} style={barBtn}>Cambiar estado</button>
+          <button onClick={() => setModal('accion')} style={barBtn}>Próxima acción</button>
+          <button onClick={() => setModal('archivar')} style={barBtn}>Archivar</button>
+          <button onClick={exportar} style={barBtn}>Exportar CSV</button>
+          <button onClick={limpiarSel} title="Quitar selección" style={{ ...barBtn, marginLeft: 'auto', background: 'transparent' }}>✕</button>
+        </div>
+      )}
+      {/* Aviso "seleccionar las N que cumplen el filtro" (patrón Gmail) */}
+      {todasMostradasMarcadas && filtradas.length > mostradas.length && sel.size <= mostradas.length && (
+        <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 8, padding: '8px 14px', marginBottom: 12, fontSize: 13, color: '#1e40af' }}>
+          Seleccionadas las {mostradas.length} mostradas.{' '}
+          <button onClick={seleccionarTodasFiltradas} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline', fontSize: 13 }}>
+            Seleccionar las {filtradas.length.toLocaleString('en-US')} que cumplen el filtro
+          </button>
+        </div>
+      )}
+
+      <Tabla filas={mostradas} onOpen={onOpen} selectable sel={sel} onToggle={toggle}
+        allChecked={todasMostradasMarcadas} onToggleAll={toggleMostradas} />
+      {filtradas.length > 400 && <p style={{ color: '#9ca3af', fontSize: 12, textAlign: 'center', marginTop: 10 }}>Mostrando las primeras 400 de {filtradas.length.toLocaleString('en-US')}. Afina con los filtros, o usa “seleccionar las que cumplen el filtro” para actuar sobre todas.</p>}
+
+      {modal && <ModalBloque tipo={modal} n={sel.size} aplicando={aplicando}
+        onClose={() => setModal(null)} onAplicar={aplicarBloque} />}
     </>
   )
 }
 
-function Tabla({ filas, onOpen }) {
+function ModalBloque({ tipo, n, aplicando, onClose, onAplicar }) {
+  const [estadoVal, setEstadoVal] = useState('contactada')
+  const [accionTxt, setAccionTxt] = useState('')
+  const [accionFecha, setAccionFecha] = useState('')
+  const titulo = tipo === 'estado' ? 'Cambiar estado' : tipo === 'accion' ? 'Próxima acción común' : 'Archivar cuentas'
+  const aplicar = () => {
+    if (tipo === 'estado') onAplicar({ accion: 'estado', estado: estadoVal })
+    else if (tipo === 'accion') onAplicar({ accion: 'proxima_accion', proxima_accion: accionTxt, proxima_accion_fecha: accionFecha })
+    else onAplicar({ accion: 'archivar' })
+  }
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 12, padding: 22, width: 'min(420px, 94vw)' }}>
+        <h3 style={{ margin: '0 0 6px', fontSize: 17, color: 'var(--blue)' }}>{titulo}</h3>
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>Se aplicará a las <strong>{n.toLocaleString('en-US')}</strong> cuentas seleccionadas. Las que aún no habías tocado empezarán a trabajarse.</p>
+        {tipo === 'estado' && (
+          <select value={estadoVal} onChange={e => setEstadoVal(e.target.value)} style={{ ...sel_, width: '100%', marginBottom: 4 }}>
+            {ESTADOS.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
+          </select>
+        )}
+        {tipo === 'accion' && (
+          <div style={{ display: 'flex', gap: 8, marginBottom: 4 }}>
+            <input value={accionTxt} onChange={e => setAccionTxt(e.target.value)} placeholder="Qué hacer (p. ej. llamar)"
+              style={{ flex: 1, padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
+            <input type="date" value={accionFecha} onChange={e => setAccionFecha(e.target.value)}
+              style={{ padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13 }} />
+          </div>
+        )}
+        {tipo === 'archivar' && <p style={{ fontSize: 13, color: '#374151', margin: '0 0 8px' }}>Saldrán de la vista de trabajo y del pipeline, pero no se borran: podrás recuperarlas filtrando por “Archivada”.</p>}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={onClose} disabled={aplicando} style={{ padding: '8px 16px', background: 'white', color: '#666', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={aplicar} disabled={aplicando} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+            {aplicando ? 'Aplicando…' : `Aplicar a ${n}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function Tabla({ filas, onOpen, selectable, sel, onToggle, allChecked, onToggleAll }) {
   const [sort, setSort] = useState({ k: 'monto_12m', dir: -1 })
   const ordenadas = [...filas].sort((a, b) => {
     const x = a[sort.k], y = b[sort.k]
@@ -177,23 +281,32 @@ function Tabla({ filas, onOpen }) {
       <div style={{ overflowX: 'auto' }}>
         <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13, minWidth: 820 }}>
           <thead><tr style={{ background: '#f8f9fb', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+            {selectable && <th style={{ padding: '11px 0 11px 14px', width: 30 }}>
+              <input type="checkbox" checked={allChecked} onChange={onToggleAll} title="Seleccionar las mostradas" style={{ cursor: 'pointer' }} />
+            </th>}
             {th('razon_social', 'Empresa')}{th('monto_12m', 'Monto 12m', true)}{th('n_adjudicaciones', 'Adj.', true)}
             {th('institucion_principal', 'Principal comprador')}{th('renovacion_proveedor_fecha', 'Renovación')}{th('estado', 'Estado')}
           </tr></thead>
           <tbody>
-            {ordenadas.map(c => (
-              <tr key={c.ruc} onClick={() => onOpen(c.ruc)} style={{ borderTop: '1px solid #f3f4f6', cursor: 'pointer' }}
-                onMouseEnter={e => e.currentTarget.style.background = '#f8f9fb'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
-                <td style={{ padding: '11px 14px', fontWeight: 600 }}>{c.razon_social}
-                  <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>{c.ruc}</div>
-                </td>
-                <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, color: '#1c6b45', fontVariantNumeric: 'tabular-nums' }}>{fmtMoneyK(c.monto_12m)}</td>
-                <td style={{ padding: '11px 14px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{c.n_adjudicaciones}</td>
-                <td style={{ padding: '11px 14px' }}>{c.institucion_principal || '—'}</td>
-                <td style={{ padding: '11px 14px' }}><RenovBadge fecha={c.renovacion_proveedor_fecha} /></td>
-                <td style={{ padding: '11px 14px' }}><Chip estado={c.estado} /></td>
-              </tr>
-            ))}
+            {ordenadas.map(c => {
+              const marcada = selectable && sel.has(c.ruc)
+              return (
+                <tr key={c.ruc} onClick={() => onOpen(c.ruc)} style={{ borderTop: '1px solid #f3f4f6', cursor: 'pointer', background: marcada ? '#eff6ff' : 'white' }}
+                  onMouseEnter={e => e.currentTarget.style.background = marcada ? '#dbeafe' : '#f8f9fb'} onMouseLeave={e => e.currentTarget.style.background = marcada ? '#eff6ff' : 'white'}>
+                  {selectable && <td style={{ padding: '11px 0 11px 14px' }} onClick={e => { e.stopPropagation(); onToggle(c.ruc) }}>
+                    <input type="checkbox" checked={marcada} readOnly style={{ cursor: 'pointer' }} />
+                  </td>}
+                  <td style={{ padding: '11px 14px', fontWeight: 600 }}>{c.razon_social}
+                    <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>{c.ruc}</div>
+                  </td>
+                  <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, color: '#1c6b45', fontVariantNumeric: 'tabular-nums' }}>{fmtMoneyK(c.monto_12m)}</td>
+                  <td style={{ padding: '11px 14px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{c.n_adjudicaciones}</td>
+                  <td style={{ padding: '11px 14px' }}>{c.institucion_principal || '—'}</td>
+                  <td style={{ padding: '11px 14px' }}><RenovBadge fecha={c.renovacion_proveedor_fecha} /></td>
+                  <td style={{ padding: '11px 14px' }}><Chip estado={c.estado} /></td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
       </div>
@@ -384,7 +497,8 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
   </label>
 }
 
-const sel = { padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, background: 'white' }
+const sel_ = { padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, background: 'white' }
+const barBtn = { padding: '6px 12px', background: 'rgba(255,255,255,.16)', color: 'white', border: '1px solid rgba(255,255,255,.35)', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
 const kLbl = { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.04em' }
 const hoyRow = { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderTop: '1px solid #f3f4f6', cursor: 'pointer' }
 const telBtn = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: '#e8f0fb', color: 'var(--blue)', flexShrink: 0 }
