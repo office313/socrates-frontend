@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useMemo, memo, forwardRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import axios from 'axios'
 import { TableVirtuoso, Virtuoso } from 'react-virtuoso'
-import { Radar } from 'lucide-react'
+import { Radar, X } from 'lucide-react'
 import RadarSync from '../components/RadarSync'
 import PanelLicitacionACP, { esFuenteACP } from '../components/PanelLicitacionACP'
 import ModalEstudioMercado from '../components/ModalEstudioMercado'
@@ -50,11 +50,29 @@ const PADDING_DASHBOARD = 24
 // Una sola definición de columnas, compartida por el <colgroup> (fija los anchos con
 // table-layout:fixed → las columnas NO saltan al virtualizar) y por la cabecera sticky.
 // 'Descripción' sin ancho → absorbe el espacio restante.
+// La ✕ de descartar. Gris y sin marco en reposo: es una acción secundaria y va en TODAS
+// las filas —si gritara en rojo, el Radar entero parecería una lista de errores—. Al
+// pasar el ratón se tiñe de rojo, que es cuando el usuario ya la está mirando.
+const btnDescartar = {
+  background: 'none', border: 'none', padding: '6px', cursor: 'pointer',
+  color: '#b0bec5', display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+  borderRadius: 6, transition: 'color 0.12s, background 0.12s',
+}
+const btnRestaurar = {
+  background: 'white', border: '1px solid var(--blue)', color: 'var(--blue)',
+  borderRadius: 6, padding: '3px 8px', fontSize: 11, fontWeight: 600, cursor: 'pointer',
+  whiteSpace: 'nowrap',
+}
+
 const RADAR_COLS = [
   { h: '',            w: 56,    align: 'left'  },
   { h: 'No. Acto',    w: 200,   align: 'left'  },
   { h: 'Institución', w: 190,     align: 'left'  },
   { h: 'Descripción', w: null,    align: 'left'  },
+  // La ✕ de descartar. Sin cabecera (como la de badges) y con ancho FIJO: la tabla es
+  // table-layout:fixed y las celdas van a mano, así que un <td> sin su <col> desalinea
+  // todas las columnas a partir de aquí.
+  { h: '',            w: 40,      align: 'center' },
   { h: 'Keywords',    w: '10.5%', align: 'left'  },
   { h: 'Cierre',      w: 96,    align: 'left'  },
   { h: 'Precio Ref.', w: 110,   align: 'right' },
@@ -63,7 +81,7 @@ const RADAR_COLS = [
 // Celdas de una fila del Radar. Memoizada: solo re-renderiza si cambia la licitación,
 // su estado de lectura (negrita) o su urgencia. Devuelve los <td> (TableVirtuoso los
 // envuelve en el <tr>). Idéntico molde de badges/columnas que la tabla original.
-const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente }) {
+const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente, descartada, onDescartar, onRestaurar }) {
   const publicaYcierraHoy = l.fecha_publicacion &&
     (l.fecha_publicacion || '').substring(0, 10) === (l.fecha_cierre || '').substring(0, 10)
   const badge = { display: 'inline-block', padding: '2px 6px', color: 'white', borderRadius: 4, fontSize: 13, fontWeight: 700, lineHeight: 1 }
@@ -90,6 +108,27 @@ const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente }) {
       <td style={{ padding: '10px 16px', color: '#666', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
         {l.descripcion || '-'}
       </td>
+      {/* Descartar / restaurar. El stopPropagation es obligatorio en los DOS niveles: el
+          <tr> entero lleva un onClick que abre el modal y marca la fila como vista, así
+          que sin esto descartar abriría el detalle de lo que acabas de quitar. */}
+      <td style={{ padding: 0, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+        {descartada ? (
+          <button
+            title="Devolver esta licitación al Radar"
+            onClick={e => { e.stopPropagation(); onRestaurar(l.numero_acto) }}
+            style={btnRestaurar}
+          >Restaurar</button>
+        ) : (
+          <button
+            title="Descartar del Radar — no volverá a aparecer"
+            aria-label="Descartar del Radar"
+            onClick={e => { e.stopPropagation(); onDescartar(l.numero_acto) }}
+            onMouseEnter={ev => { ev.currentTarget.style.color = '#d32f2f'; ev.currentTarget.style.background = '#ffebee' }}
+            onMouseLeave={ev => { ev.currentTarget.style.color = '#b0bec5'; ev.currentTarget.style.background = 'none' }}
+            style={btnDescartar}
+          ><X size={14} strokeWidth={2.5} /></button>
+        )}
+      </td>
       <td style={{ padding: '10px 16px', overflow: 'hidden', whiteSpace: 'nowrap' }}>
         {(l.keywords || []).slice(0, 3).map(k => (
           <span key={k} style={{ background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11, marginRight: 4, display: 'inline-block' }}>{k}</span>
@@ -110,7 +149,7 @@ const FilaRadarCeldas = memo(function FilaRadarCeldas({ l, vista, urgente }) {
 // La tarjeta reordena por importancia (qué → quién → cuándo → cuánto) y NO inventa
 // estado: reutiliza los mismos `vista` y `urgente` que la fila, para que móvil y
 // escritorio no puedan discrepar.
-const TarjetaRadar = memo(function TarjetaRadar({ l, vista, urgente, onClick }) {
+const TarjetaRadar = memo(function TarjetaRadar({ l, vista, urgente, descartada, onDescartar, onRestaurar, onClick }) {
   const publicaYcierraHoy = l.fecha_publicacion &&
     (l.fecha_publicacion || '').substring(0, 10) === (l.fecha_cierre || '').substring(0, 10)
   const badge = { display: 'inline-block', padding: '2px 6px', color: 'white', borderRadius: 4, fontSize: 12, fontWeight: 700, lineHeight: 1.2 }
@@ -124,14 +163,37 @@ const TarjetaRadar = memo(function TarjetaRadar({ l, vista, urgente, onClick }) 
       borderLeftColor: vista ? 'transparent' : '#0f2d57',
       borderRadius: 10, padding: '12px 14px', marginBottom: 8, cursor: 'pointer',
     }}>
-      {(l.numero_convocatoria > 1 || publicaYcierraHoy || l.en_track || l.en_watchlist) && (
-        <div style={{ display: 'flex', gap: 5, marginBottom: 6 }}>
-          {l.numero_convocatoria > 1 && <span title={`Relanzamiento — Convocatoria #${l.numero_convocatoria}`} style={{ ...badge, background: '#0f2d57' }}>R</span>}
-          {publicaYcierraHoy && <span title="Publicada y cierra hoy" style={{ ...badge, background: 'var(--red, #d32f2f)' }}>⚡</span>}
-          {l.en_track && <span title="En tu Track" style={{ ...badge, background: '#0f2d57' }}>T</span>}
-          {l.en_watchlist && <span title="En tu Watchlist" style={{ ...badge, background: '#0f2d57' }}>W</span>}
-        </div>
-      )}
+      {/* La fila de badges ya no es condicional: ahora también cuelga de ella el botón de
+          descartar, que va SIEMPRE. Los badges quedan a la izquierda y el botón se empuja
+          a la derecha con marginLeft:auto. De paso, la tarjeta gana altura uniforme (antes
+          las que no tenían ningún badge eran más bajas), que le viene bien al
+          defaultItemHeight de Virtuoso. */}
+      <div style={{ display: 'flex', gap: 5, marginBottom: 6, alignItems: 'center', minHeight: 24 }}>
+        {l.numero_convocatoria > 1 && <span title={`Relanzamiento — Convocatoria #${l.numero_convocatoria}`} style={{ ...badge, background: '#0f2d57' }}>R</span>}
+        {publicaYcierraHoy && <span title="Publicada y cierra hoy" style={{ ...badge, background: 'var(--red, #d32f2f)' }}>⚡</span>}
+        {l.en_track && <span title="En tu Track" style={{ ...badge, background: '#0f2d57' }}>T</span>}
+        {l.en_watchlist && <span title="En tu Watchlist" style={{ ...badge, background: '#0f2d57' }}>W</span>}
+        {/* En el móvil la ✕ va con la palabra al lado, no sola: aquí no hay tooltip que
+            la explique y un aspa suelta en la esquina de una tarjeta se lee como "cerrar".
+            El stopPropagation, porque el <div> de la tarjeta entera abre el modal. */}
+        {descartada ? (
+          <button
+            onClick={e => { e.stopPropagation(); onRestaurar(l.numero_acto) }}
+            style={{ ...btnRestaurar, marginLeft: 'auto', padding: '6px 12px', fontSize: 12 }}
+          >Restaurar</button>
+        ) : (
+          <button
+            aria-label="Descartar del Radar"
+            onClick={e => { e.stopPropagation(); onDescartar(l.numero_acto) }}
+            style={{
+              marginLeft: 'auto', display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'none', border: '1px solid var(--border)', color: 'var(--text-muted)',
+              borderRadius: 6, padding: '6px 10px', fontSize: 12, fontWeight: 600,
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}
+          ><X size={13} strokeWidth={2.5} />Descartar</button>
+        )}
+      </div>
 
       {/* EL QUÉ: el objeto manda. 3 líneas y elipsis. */}
       <div style={{
@@ -352,6 +414,12 @@ export default function Dashboard({ usuario }) {
   const [loading, setLoading] = useState(true)
   const [ultimaSync, setUltimaSync] = useState('')
   const [vistas, setVistas] = useState(new Set())
+  // Las descartadas viajan con el Radar y se ocultan AQUÍ, no en el backend: así la ✕ y
+  // el toggle son instantáneos (el caso real es limpiar 50-60 de una tacada) y la tarjeta
+  // KPI puede contarlas sin ir a buscarlas. Mismo Set de numero_acto que `vistas`.
+  // Ojo: quien SÍ filtra en servidor son las alertas (db/seleccion_alertas.py) — una
+  // descartada no debe salir por WhatsApp ni por correo.
+  const [descartadas, setDescartadas] = useState(new Set())
   const [filtro, setFiltro] = useState('todas')
   const [categoriasFiltro] = useState([])
   const [numerosPipeline, setNumerosPipeline] = useState(new Set())
@@ -383,6 +451,44 @@ export default function Dashboard({ usuario }) {
     if (vistas.has(numeroActo)) return
     setVistas(prev => new Set([...prev, numeroActo]))
     axios.post(`/api/vistas/${numeroActo}`).catch(() => {})
+  }
+
+  // Descartar / restaurar. Optimistas CON rollback, como marcarNoLeida y no como
+  // anadirWatchlist (que espera al servidor): el caso real es limpiar 50-60 seguidas y
+  // nada puede frenar entre clic y clic. La fila se va del Radar en el mismo frame; si el
+  // servidor falla, vuelve.
+  //
+  // El guard de emulación es obligatorio: descartar es una acción del CLIENTE, y el emul
+  // no debe ensuciarle los datos. El backend además las corta con 403 (no están en
+  // EMUL_ESCRIBIBLES, a propósito), pero sin este guard la fila desaparecería localmente
+  // y la UI le mentiría al operador sobre lo que ve su cliente.
+  const descartar = async (numeroActo) => {
+    if (emulacionActiva()) return
+    if (descartadas.has(numeroActo)) return
+    setDescartadas(prev => new Set([...prev, numeroActo]))
+    try {
+      await axios.post(`/api/descartes/${numeroActo}`)
+    } catch (e) {
+      setDescartadas(prev => {
+        const s = new Set(prev)
+        s.delete(numeroActo)
+        return s
+      })
+    }
+  }
+
+  const restaurar = async (numeroActo) => {
+    if (emulacionActiva()) return
+    setDescartadas(prev => {
+      const s = new Set(prev)
+      s.delete(numeroActo)
+      return s
+    })
+    try {
+      await axios.delete(`/api/descartes/${numeroActo}`)
+    } catch (e) {
+      setDescartadas(prev => new Set([...prev, numeroActo]))
+    }
   }
 
   // Marca la licitación como NO leída (revierte el marcado automático que
@@ -473,8 +579,9 @@ export default function Dashboard({ usuario }) {
       axios.get('/api/pipeline'),
       axios.get('/api/watchlist'),
       axios.get('/api/vistas'),
+      axios.get('/api/descartes'),
     ]).then(results => {
-      const [licsResult, syncResult, pipeResult, watchResult, vistasResult] = results
+      const [licsResult, syncResult, pipeResult, watchResult, vistasResult, descResult] = results
 
       const todas = licsResult.status === 'fulfilled' ? (licsResult.value.data.resultados || []) : []
       const pipItems = pipeResult.status === 'fulfilled' ? (pipeResult.value.data.resultados || []) : []
@@ -482,6 +589,12 @@ export default function Dashboard({ usuario }) {
 
       if (vistasResult.status === 'fulfilled') {
         setVistas(new Set(vistasResult.value.data.vistas || []))
+      }
+      // Guard de allSettled como los demás: si /api/descartes cae, el Radar sale entero
+      // (sin ocultar nada) en vez de quedarse en blanco. Fallar enseñando de más es lo
+      // correcto aquí; lo contrario escondería licitaciones por un error de red.
+      if (descResult.status === 'fulfilled') {
+        setDescartadas(new Set(descResult.value.data.descartes || []))
       }
       const numPipeSet = new Set(pipItems.map(p => p.numero_acto))
       const numWatchSet = new Set(watchItems.map(w => w.numero_acto))
@@ -559,13 +672,35 @@ export default function Dashboard({ usuario }) {
       : filtro === 'hoy'
       ? licitaciones.filter(l => (l.fecha_cierre || '').substring(0, 10) === hoy)
       : licitaciones
+
+    // Capa de descarte, APARTE de la cadena de arriba y no una rama más: descartar no es
+    // una vista, es una ocultación que atraviesa a todas las demás. 'descartadas' es la
+    // única que las enseña -y las enseña TODAS, no las de la vista anterior-; el resto de
+    // filtros las quitan. El atajo del size===0 es el caso normal: sin descartes no hay
+    // que recorrer las ~770 filas para nada.
+    const visibles = filtro === 'descartadas'
+      ? licitaciones.filter(l => descartadas.has(l.numero_acto))
+      : descartadas.size === 0
+      ? base
+      : base.filter(l => !descartadas.has(l.numero_acto))
+
     // Filtro adicional por categoría IA (multi-select). Vacío = todas.
     return categoriasFiltro.length === 0
-      ? base
-      : base.filter(l => categoriasFiltro.includes(l.categoria_ia))
-  }, [licitaciones, filtro, numerosPipeline, numerosWatchlist, vistas, categoriasFiltro, hoy])
+      ? visibles
+      : visibles.filter(l => categoriasFiltro.includes(l.categoria_ia))
+  }, [licitaciones, filtro, numerosPipeline, numerosWatchlist, vistas, descartadas, categoriasFiltro, hoy])
 
-  const noLeidasCount = licitaciones.filter(l => !vistas.has(l.numero_acto)).length
+  // Los dos contadores viven aquí y NO en `stats` a propósito: `stats` se calcula una vez
+  // en la carga y se parchea a mano con +1/-1, así que se desincroniza. Éstos se
+  // recalculan en cada render y bajan solos al pulsar la ✕, igual que el de no leídas.
+  //
+  // Una descartada NO cuenta como no leída: está fuera del Radar, y si contase, la KPI
+  // diría "No leídas: 60" y al pulsarla no saldría ninguna.
+  const noLeidasCount = licitaciones.filter(l => !vistas.has(l.numero_acto) && !descartadas.has(l.numero_acto)).length
+  // Solo las descartadas que siguen VIVAS en el Radar (vigentes y con match de keywords).
+  // Las que vencieron ya no vienen en `licitaciones`, así que se caen solas del contador
+  // y de la vista: el descarte se autolimpia sin cron que lo purgue.
+  const descartadasCount = licitaciones.filter(l => descartadas.has(l.numero_acto)).length
 
   const marcarTodasLeidas = async () => {
     if (emulacionActiva()) return
@@ -648,8 +783,10 @@ export default function Dashboard({ usuario }) {
         </div>
 
         {/* Móvil: 2 columnas. Los cinco KPIs en fila no caben en 390px y empujaban
-            el ancho de la página. */}
-        <div style={{ display: 'grid', gridTemplateColumns: esMovil ? 'repeat(2, 1fr)' : (tieneTrack ? 'repeat(5, 1fr)' : 'repeat(4, 1fr)'), gap: esMovil ? 8 : 12 }}>
+            el ancho de la página.
+            La de Descartadas solo existe si hay descartes, así que suma columna solo
+            entonces: sin ella, la rejilla queda exactamente como estaba. */}
+        <div style={{ display: 'grid', gridTemplateColumns: esMovil ? 'repeat(2, 1fr)' : `repeat(${(tieneTrack ? 5 : 4) + (descartadasCount > 0 ? 1 : 0)}, 1fr)`, gap: esMovil ? 8 : 12 }}>
           {/* Card neutral azul: Vigentes */}
           <div onClick={() => setFiltro('todas')} style={{
             textAlign: 'center',
@@ -734,6 +871,24 @@ export default function Dashboard({ usuario }) {
             <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>en observación</div>
           </div>
           )}
+
+          {/* Card: Descartadas. Solo APARECE si hay alguna — el Radar de quien no descarta
+              nada no gana una pastilla con un cero, y así el sitio sigue limpio por
+              defecto. Es también la única puerta a la vista de descartadas: es su papelera. */}
+          {descartadasCount > 0 && (
+          <div onClick={() => setFiltro(filtro === 'descartadas' ? 'todas' : 'descartadas')} style={{
+            textAlign: 'center',
+            background: filtro === 'descartadas' ? '#f5f9ff' : 'white',
+            border: `1px solid ${filtro === 'descartadas' ? '#0f2d57' : '#e0e0e0'}`,
+            boxShadow: filtro === 'descartadas' ? '0 0 0 1px #0f2d57' : 'none',
+            borderRadius: 12, padding: kpiPad, cursor: 'pointer',
+            transition: 'all 0.15s',
+          }}>
+            <div style={{ fontSize: kpiTitulo, color: '#455a64', marginBottom: kpiGap, fontWeight: 500 }}>Descartadas</div>
+            <div style={{ fontSize: kpiNumero, fontWeight: 600, color: '#0f2d57', lineHeight: 1 }}>{descartadasCount}</div>
+            <div style={{ fontSize: 13, color: '#78909c', marginTop: 6, display: esMovil ? 'none' : 'block' }}>fuera del Radar</div>
+          </div>
+          )}
         </div>
       </div>
 
@@ -769,7 +924,9 @@ export default function Dashboard({ usuario }) {
             {licitacionesFiltradas.length} licitaciones
             {filtro !== 'todas' && (
               <span style={{ marginLeft: 8, background: 'var(--blue-light)', color: 'var(--blue)', padding: '2px 8px', borderRadius: 10, fontSize: 11 }}>
-                {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Track' : filtro === 'noleidas' ? 'No leídas' : 'Watchlist'}
+                {/* 'Watchlist' es el catch-all de esta cadena, así que toda etiqueta nueva
+                    tiene que ir ANTES o saldrá rotulada como Watchlist sin avisar. */}
+                {filtro === 'hoy' ? 'Cierran hoy' : filtro === 'pipeline' ? 'En Track' : filtro === 'noleidas' ? 'No leídas' : filtro === 'descartadas' ? 'Descartadas' : 'Watchlist'}
               </span>
             )}
           </span>
@@ -784,7 +941,9 @@ export default function Dashboard({ usuario }) {
             {filtro === 'watchlist' ? (
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
                 <span style={{ fontSize: 14, color: 'var(--text)' }}>No tiene licitaciones del Radar en su Watchlist todavía.</span>
-                <span style={{ fontSize: 12 }}>Márquelas con la estrella desde el listado completo para verlas aquí.</span>
+                {/* Decía "márquelas con la estrella": esa estrella no existe ni ha
+                    existido nunca en el Radar. Se añade al Watchlist desde el detalle. */}
+                <span style={{ fontSize: 12 }}>Ábrala desde el listado completo y pulse "Añadir al Watchlist" para verla aquí.</span>
                 <button onClick={() => setFiltro('todas')}
                   style={{ marginTop: 4, padding: '8px 16px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                   Ver listado completo
@@ -796,6 +955,10 @@ export default function Dashboard({ usuario }) {
               <span style={{ fontSize: 14, color: 'var(--text)' }}>No tiene licitaciones sin leer.</span>
             ) : filtro === 'pipeline' ? (
               <span style={{ fontSize: 14, color: 'var(--text)' }}>Ninguna licitación del Radar está en su Track todavía.</span>
+            ) : filtro === 'descartadas' ? (
+              /* Sin rama propia caería en el catch-all de abajo y diría "Aún no hay
+                 licitaciones para sus palabras clave", que aquí sería mentira. */
+              <span style={{ fontSize: 14, color: 'var(--text)' }}>No ha descartado ninguna licitación.</span>
             ) : (
               /* filtro 'todas': caso real de 0 coincidencias con las keywords */
               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8 }}>
@@ -830,6 +993,9 @@ export default function Dashboard({ usuario }) {
                   l={l}
                   vista={vistas.has(l.numero_acto)}
                   urgente={esHoy(l.fecha_cierre)}
+                  descartada={descartadas.has(l.numero_acto)}
+                  onDescartar={descartar}
+                  onRestaurar={restaurar}
                   onClick={() => { marcarVista(l.numero_acto); setModalDetalle(l) }}
                 />
               )}
@@ -845,7 +1011,14 @@ export default function Dashboard({ usuario }) {
             increaseViewportBy={400}
             fixedHeaderContent={renderRadarHeader}
             itemContent={(index, l) => (
-              <FilaRadarCeldas l={l} vista={vistas.has(l.numero_acto)} urgente={esHoy(l.fecha_cierre)} />
+              <FilaRadarCeldas
+                l={l}
+                vista={vistas.has(l.numero_acto)}
+                urgente={esHoy(l.fecha_cierre)}
+                descartada={descartadas.has(l.numero_acto)}
+                onDescartar={descartar}
+                onRestaurar={restaurar}
+              />
             )}
           />
           )
