@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import axios from 'axios'
 import { Phone, Mail, MessageCircle, Presentation, StickyNote, X, ExternalLink, AlarmClock, RefreshCw, Clock, Search } from 'lucide-react'
 
@@ -49,11 +49,13 @@ function RenovBadge({ fecha }) {
 }
 
 export default function Comercial() {
-  const [tab, setTab] = useState('trabajo')       // 'trabajo' | 'todas'
+  const [tab, setTab] = useState('trabajo')       // 'trabajo' | 'todas' | 'listas'
   const [hoy, setHoy] = useState(null)
   const [pipeline, setPipeline] = useState([])
   const [universo, setUniverso] = useState(null)  // array — lazy
   const [instituciones, setInstituciones] = useState([])
+  const [listas, setListas] = useState(null)      // array — lazy
+  const [listaAbierta, setListaAbierta] = useState(null)  // id de la lista abierta
   const [abierta, setAbierta] = useState(null)    // ruc de la ficha abierta
 
   const cargarTrabajo = useCallback(() => {
@@ -68,11 +70,25 @@ export default function Comercial() {
       setInstituciones(r.data.instituciones || [])
     })
   }, [])
+  const cargarListas = useCallback(() => {
+    axios.get('/api/admin/comercial/listas').then(r => setListas(r.data.listas || []))
+  }, [])
   useEffect(() => { cargarTrabajo() }, [cargarTrabajo])
   useEffect(() => { if (tab === 'todas' && universo === null) cargarUniverso() }, [tab, universo, cargarUniverso])
+  useEffect(() => { if (tab === 'listas' && listas === null) cargarListas() }, [tab, listas, cargarListas])
 
-  const refrescar = () => { cargarTrabajo(); if (tab === 'todas') cargarUniverso() }
-  const trasGuardar = () => { cargarTrabajo(); if (universo !== null) cargarUniverso() }
+  const refrescar = () => {
+    cargarTrabajo()
+    if (tab === 'todas') cargarUniverso()
+    if (tab === 'listas') cargarListas()
+  }
+  // Tras guardar/cambiar algo: refresca lo que esté cargado (el progreso de listas
+  // deriva del estado, así que un cambio de estado mueve el progreso).
+  const trasGuardar = () => {
+    cargarTrabajo()
+    if (universo !== null) cargarUniverso()
+    if (listas !== null) cargarListas()
+  }
 
   return (
     <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 20px 60px' }}>
@@ -85,8 +101,8 @@ export default function Comercial() {
       </p>
 
       <div style={{ display: 'inline-flex', gap: 3, background: '#f0f2f5', borderRadius: 999, padding: 3, marginBottom: 20 }}>
-        {[['trabajo', 'Mi trabajo'], ['todas', `Todas${universo ? ` (${universo.length.toLocaleString('en-US')})` : ''}`]].map(([v, l]) => (
-          <button key={v} onClick={() => setTab(v)} style={{
+        {[['trabajo', 'Mi trabajo'], ['todas', `Todas${universo ? ` (${universo.length.toLocaleString('en-US')})` : ''}`], ['listas', `Listas${listas ? ` (${listas.length})` : ''}`]].map(([v, l]) => (
+          <button key={v} onClick={() => { setTab(v); setListaAbierta(null) }} style={{
             padding: '6px 16px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 13,
             fontWeight: tab === v ? 700 : 500, color: tab === v ? 'var(--blue)' : '#6b7280',
             background: tab === v ? 'white' : 'transparent', boxShadow: tab === v ? '0 1px 2px rgba(0,0,0,.1)' : 'none',
@@ -94,9 +110,11 @@ export default function Comercial() {
         ))}
       </div>
 
-      {tab === 'trabajo'
-        ? <Trabajo hoy={hoy} pipeline={pipeline} onOpen={setAbierta} />
-        : <Todas universo={universo} instituciones={instituciones} onOpen={setAbierta} onChanged={trasGuardar} />}
+      {tab === 'trabajo' && <Trabajo hoy={hoy} pipeline={pipeline} onOpen={setAbierta} />}
+      {tab === 'todas' && <Todas universo={universo} instituciones={instituciones} onOpen={setAbierta} onChanged={trasGuardar} onGuardarLista={cargarListas} />}
+      {tab === 'listas' && (listaAbierta
+        ? <ListaDetalle id={listaAbierta} onVolver={() => { setListaAbierta(null); cargarListas() }} onOpen={setAbierta} onChanged={trasGuardar} />
+        : <ListasTab listas={listas} onAbrir={setListaAbierta} onChanged={cargarListas} />)}
 
       {abierta && <Ficha ruc={abierta} onClose={() => setAbierta(null)} onSaved={trasGuardar} />}
     </div>
@@ -117,13 +135,13 @@ function Trabajo({ hoy, pipeline, onOpen }) {
   )
 }
 
-function Todas({ universo, instituciones, onOpen, onChanged }) {
+function Todas({ universo, instituciones, onOpen, onChanged, onGuardarLista }) {
   const [q, setQ] = useState('')
   const [monto, setMonto] = useState('all')
   const [inst, setInst] = useState('')
   const [estado, setEstado] = useState('')
   const [sel, setSel] = useState(() => new Set())   // RUCs seleccionados
-  const [modal, setModal] = useState(null)          // 'estado' | 'accion' | 'archivar' | null
+  const [modal, setModal] = useState(null)          // 'estado' | 'accion' | 'archivar' | 'lista' | null
   const [aplicando, setAplicando] = useState(false)
 
   if (universo === null) return <Vacio texto="Cargando el universo…" />
@@ -138,6 +156,7 @@ function Todas({ universo, instituciones, onOpen, onChanged }) {
 
   const limpiarSel = () => setSel(new Set())
   const toggle = ruc => setSel(prev => { const n = new Set(prev); n.has(ruc) ? n.delete(ruc) : n.add(ruc); return n })
+  const selRango = rucs => setSel(prev => new Set([...prev, ...rucs]))   // Shift+clic
   const todasMostradasMarcadas = mostradas.length > 0 && mostradas.every(c => sel.has(c.ruc))
   const toggleMostradas = () => setSel(prev => {
     const n = new Set(prev)
@@ -199,6 +218,7 @@ function Todas({ universo, instituciones, onOpen, onChanged }) {
           <button onClick={() => setModal('estado')} style={barBtn}>Cambiar estado</button>
           <button onClick={() => setModal('accion')} style={barBtn}>Próxima acción</button>
           <button onClick={() => setModal('archivar')} style={barBtn}>Archivar</button>
+          <button onClick={() => setModal('lista')} style={barBtn}>🗂 Guardar como lista</button>
           <button onClick={exportar} style={barBtn}>Exportar CSV</button>
           <button onClick={limpiarSel} title="Quitar selección" style={{ ...barBtn, marginLeft: 'auto', background: 'transparent' }}>✕</button>
         </div>
@@ -213,15 +233,233 @@ function Todas({ universo, instituciones, onOpen, onChanged }) {
         </div>
       )}
 
-      <Tabla filas={mostradas} onOpen={onOpen} selectable sel={sel} onToggle={toggle}
+      <Tabla filas={mostradas} onOpen={onOpen} selectable sel={sel} onToggle={toggle} onSelectRange={selRango}
         allChecked={todasMostradasMarcadas} onToggleAll={toggleMostradas} />
       {filtradas.length > 400 && <p style={{ color: '#9ca3af', fontSize: 12, textAlign: 'center', marginTop: 10 }}>Mostrando las primeras 400 de {filtradas.length.toLocaleString('en-US')}. Afina con los filtros, o usa “seleccionar las que cumplen el filtro” para actuar sobre todas.</p>}
 
-      {modal && <ModalBloque tipo={modal} n={sel.size} aplicando={aplicando}
+      {modal && modal !== 'lista' && <ModalBloque tipo={modal} n={sel.size} aplicando={aplicando}
         onClose={() => setModal(null)} onAplicar={aplicarBloque} />}
+      {modal === 'lista' && <ModalGuardarLista rucs={[...sel]}
+        onClose={() => setModal(null)} onGuardado={() => { setModal(null); limpiarSel(); onGuardarLista && onGuardarLista() }} />}
     </>
   )
 }
+
+// Modal "Guardar como lista": nombre nuevo O añadir a una lista existente.
+function ModalGuardarLista({ rucs, onClose, onGuardado }) {
+  const [listas, setListas] = useState(null)
+  const [modo, setModo] = useState('nueva')     // 'nueva' | 'existente'
+  const [nombre, setNombre] = useState('')
+  const [listaId, setListaId] = useState('')
+  const [guardando, setGuardando] = useState(false)
+  useEffect(() => { axios.get('/api/admin/comercial/listas').then(r => {
+    const ls = r.data.listas || []; setListas(ls); if (ls.length) setListaId(String(ls[0].id))
+  }) }, [])
+  const guardar = () => {
+    setGuardando(true)
+    const req = modo === 'nueva'
+      ? axios.post('/api/admin/comercial/listas', { nombre: nombre.trim(), rucs })
+      : axios.post(`/api/admin/comercial/listas/${listaId}/cuentas`, { rucs })
+    req.then(() => onGuardado()).finally(() => setGuardando(false))
+  }
+  const puede = modo === 'nueva' ? nombre.trim().length > 0 : !!listaId
+  return (
+    <div onClick={onClose} style={modalBg}>
+      <div onClick={e => e.stopPropagation()} style={modalCard}>
+        <h3 style={{ margin: '0 0 6px', fontSize: 17, color: 'var(--blue)' }}>Guardar como lista</h3>
+        <p style={{ margin: '0 0 16px', fontSize: 13, color: '#6b7280' }}>Guardarás <strong>{rucs.length}</strong> cuentas como una tanda de trabajo.</p>
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
+          {[['nueva', 'Lista nueva'], ['existente', 'Añadir a una lista']].map(([v, l]) => (
+            <button key={v} onClick={() => setModo(v)} disabled={v === 'existente' && (!listas || !listas.length)}
+              style={{ flex: 1, padding: '7px', borderRadius: 8, border: '1px solid #e5e7eb', fontSize: 13, cursor: 'pointer',
+                background: modo === v ? 'var(--blue)' : 'white', color: modo === v ? 'white' : '#374151', fontWeight: modo === v ? 600 : 400,
+                opacity: (v === 'existente' && (!listas || !listas.length)) ? 0.5 : 1 }}>{l}</button>
+          ))}
+        </div>
+        {modo === 'nueva'
+          ? <input autoFocus value={nombre} onChange={e => setNombre(e.target.value)} onKeyDown={e => e.key === 'Enter' && puede && guardar()}
+              placeholder="Nombre (p. ej. Tanda salud julio)" style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, boxSizing: 'border-box' }} />
+          : <select value={listaId} onChange={e => setListaId(e.target.value)} style={{ ...sel_, width: '100%' }}>
+              {(listas || []).map(l => <option key={l.id} value={l.id}>{l.nombre} ({l.total})</option>)}
+            </select>}
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 16 }}>
+          <button onClick={onClose} disabled={guardando} style={{ padding: '8px 16px', background: 'white', color: '#666', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={guardar} disabled={!puede || guardando} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: puede ? 'pointer' : 'not-allowed', opacity: puede ? 1 : 0.5 }}>
+            {guardando ? 'Guardando…' : 'Guardar'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Pestaña Listas: mis tandas de trabajo ──
+function ListasTab({ listas, onAbrir, onChanged }) {
+  const [creando, setCreando] = useState(false)
+  const [nombre, setNombre] = useState('')
+  if (listas === null) return <Vacio texto="Cargando listas…" />
+  const crear = () => {
+    if (!nombre.trim()) return
+    axios.post('/api/admin/comercial/listas', { nombre: nombre.trim() }).then(() => { setNombre(''); setCreando(false); onChanged() })
+  }
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+        {creando
+          ? <>
+              <input autoFocus value={nombre} onChange={e => setNombre(e.target.value)} onKeyDown={e => e.key === 'Enter' ? crear() : e.key === 'Escape' && setCreando(false)}
+                placeholder="Nombre de la lista…" style={{ padding: '7px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, width: 260 }} />
+              <button onClick={crear} style={{ padding: '7px 14px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>Crear</button>
+              <button onClick={() => setCreando(false)} style={{ background: 'none', border: 'none', color: '#9ca3af', cursor: 'pointer' }}>Cancelar</button>
+            </>
+          : <button onClick={() => setCreando(true)} style={{ padding: '7px 14px', background: 'white', color: 'var(--blue)', border: '1px solid var(--blue)', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>+ Nueva lista</button>}
+      </div>
+      {listas.length === 0
+        ? <Vacio texto="Aún no tienes listas. Crea una aquí, o ve a “Todas”, selecciona empresas y usa “Guardar como lista”." />
+        : <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {listas.map(l => {
+              const pct = l.total ? Math.round(100 * l.trabajadas / l.total) : 0
+              const completa = l.total > 0 && l.trabajadas === l.total
+              return (
+                <div key={l.id} onClick={() => onAbrir(l.id)} style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, padding: '14px 18px', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--blue)'} onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7eb'}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+                    <div style={{ fontSize: 15, fontWeight: 700, color: '#1f2937' }}>🗂 {l.nombre}</div>
+                    <div style={{ fontSize: 13, color: completa ? '#16794a' : '#6b7280', fontWeight: 600, whiteSpace: 'nowrap' }}>
+                      {completa ? '✓ completa' : `${l.trabajadas} / ${l.total} trabajadas`}
+                    </div>
+                  </div>
+                  <div style={{ height: 6, background: '#eef1f5', borderRadius: 999, marginTop: 10, overflow: 'hidden' }}>
+                    <div style={{ width: `${pct}%`, height: '100%', background: completa ? '#16794a' : 'var(--blue)', transition: 'width .2s' }} />
+                  </div>
+                </div>
+              )
+            })}
+          </div>}
+    </>
+  )
+}
+
+// ── Detalle de una lista: sus cuentas, pendientes primero, trabajadas atenuadas ──
+function ListaDetalle({ id, onVolver, onOpen, onChanged }) {
+  const [lista, setLista] = useState(null)
+  const [sel, setSel] = useState(() => new Set())
+  const [modal, setModal] = useState(null)         // 'estado' | 'accion' | 'añadir' | null
+  const [aplicando, setAplicando] = useState(false)
+  const [renombrando, setRenombrando] = useState(false)
+  const [nombreEdit, setNombreEdit] = useState('')
+
+  const cargar = useCallback(() => {
+    axios.get(`/api/admin/comercial/listas/${id}`).then(r => setLista(r.data))
+  }, [id])
+  useEffect(() => { cargar() }, [cargar])
+  const refrescar = () => { cargar(); onChanged() }
+
+  if (!lista) return <Vacio texto="Cargando lista…" />
+  const limpiarSel = () => setSel(new Set())
+  const toggle = ruc => setSel(prev => { const n = new Set(prev); n.has(ruc) ? n.delete(ruc) : n.add(ruc); return n })
+  const selRango = rucs => setSel(prev => new Set([...prev, ...rucs]))
+  const todasMarcadas = lista.cuentas.length > 0 && lista.cuentas.every(c => sel.has(c.ruc))
+  const toggleTodas = () => setSel(todasMarcadas ? new Set() : new Set(lista.cuentas.map(c => c.ruc)))
+
+  const aplicarBloque = (payload) => {
+    setAplicando(true)
+    axios.post('/api/admin/comercial/cuentas/bloque', { rucs: [...sel], ...payload })
+      .then(() => { setModal(null); limpiarSel(); refrescar() }).finally(() => setAplicando(false))
+  }
+  const quitarSel = () => {
+    axios.request({ method: 'DELETE', url: `/api/admin/comercial/listas/${id}/cuentas`, data: { rucs: [...sel] } })
+      .then(() => { limpiarSel(); refrescar() })
+  }
+  const borrarLista = () => { if (window.confirm(`¿Borrar la lista “${lista.nombre}”? Las cuentas no se borran.`)) axios.delete(`/api/admin/comercial/listas/${id}`).then(onVolver) }
+  const renombrar = () => { axios.put(`/api/admin/comercial/listas/${id}`, { nombre: nombreEdit.trim() }).then(() => { setRenombrando(false); cargar(); onChanged() }) }
+  const pct = lista.total ? Math.round(100 * lista.trabajadas / lista.total) : 0
+
+  return (
+    <>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 6, flexWrap: 'wrap' }}>
+        <button onClick={onVolver} style={{ background: 'none', border: 'none', color: 'var(--blue)', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>← Listas</button>
+        {renombrando
+          ? <>
+              <input autoFocus defaultValue={lista.nombre} onChange={e => setNombreEdit(e.target.value)} onKeyDown={e => e.key === 'Enter' && renombrar()}
+                style={{ padding: '6px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 16, fontWeight: 700, width: 280 }} />
+              <button onClick={renombrar} style={barBtnBlue}>Guardar</button>
+            </>
+          : <h2 style={{ fontSize: 18, color: 'var(--blue)', margin: 0 }}>🗂 {lista.nombre}</h2>}
+        <button onClick={() => { setNombreEdit(lista.nombre); setRenombrando(true) }} title="Renombrar" style={iconBtn}>Renombrar</button>
+        <button onClick={borrarLista} title="Borrar lista" style={{ ...iconBtn, color: '#dc2626' }}>Borrar</button>
+        <button onClick={() => setModal('añadir')} style={{ ...barBtnBlue, marginLeft: 'auto' }}>+ Añadir cuentas</button>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <span style={{ fontSize: 13, color: '#6b7280', whiteSpace: 'nowrap' }}>{lista.trabajadas} de {lista.total} trabajadas</span>
+        <div style={{ flex: 1, maxWidth: 320, height: 6, background: '#eef1f5', borderRadius: 999, overflow: 'hidden' }}>
+          <div style={{ width: `${pct}%`, height: '100%', background: 'var(--blue)' }} />
+        </div>
+      </div>
+
+      {sel.size > 0 && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: 'var(--blue)', color: 'white', borderRadius: 10, padding: '10px 14px', marginBottom: 12 }}>
+          <strong style={{ fontSize: 13 }}>{sel.size} seleccionada{sel.size > 1 ? 's' : ''}</strong>
+          <button onClick={() => setModal('estado')} style={barBtn}>Cambiar estado</button>
+          <button onClick={() => setModal('accion')} style={barBtn}>Próxima acción</button>
+          <button onClick={quitarSel} style={barBtn}>Quitar de la lista</button>
+          <button onClick={limpiarSel} style={{ ...barBtn, marginLeft: 'auto', background: 'transparent' }}>✕</button>
+        </div>
+      )}
+
+      {lista.cuentas.length === 0
+        ? <Vacio texto="La lista está vacía. Usa “+ Añadir cuentas”." />
+        : <Tabla filas={lista.cuentas} onOpen={onOpen} dimTrabajadas selectable sel={sel} onToggle={toggle} onSelectRange={selRango} allChecked={todasMarcadas} onToggleAll={toggleTodas} />}
+
+      {modal && (modal === 'estado' || modal === 'accion') && <ModalBloque tipo={modal} n={sel.size} aplicando={aplicando} onClose={() => setModal(null)} onAplicar={aplicarBloque} />}
+      {modal === 'añadir' && <ModalAñadirALista listaId={id} onClose={() => setModal(null)} onAñadido={() => { setModal(null); refrescar() }} />}
+    </>
+  )
+}
+
+// Modal "Añadir cuentas" a una lista: busca en el universo y añade.
+function ModalAñadirALista({ listaId, onClose, onAñadido }) {
+  const [q, setQ] = useState('')
+  const [universo, setUniverso] = useState(null)
+  const [sel, setSel] = useState(() => new Set())
+  const [guardando, setGuardando] = useState(false)
+  useEffect(() => { axios.get('/api/admin/comercial/universo').then(r => setUniverso(r.data.cuentas || [])) }, [])
+  const res = !universo || q.trim().length < 2 ? [] :
+    universo.filter(c => c.razon_social.toLowerCase().includes(q.toLowerCase()) || c.ruc.includes(q)).slice(0, 40)
+  const guardar = () => {
+    setGuardando(true)
+    axios.post(`/api/admin/comercial/listas/${listaId}/cuentas`, { rucs: [...sel] }).then(() => onAñadido()).finally(() => setGuardando(false))
+  }
+  return (
+    <div onClick={onClose} style={modalBg}>
+      <div onClick={e => e.stopPropagation()} style={{ ...modalCard, width: 'min(520px, 96vw)' }}>
+        <h3 style={{ margin: '0 0 12px', fontSize: 17, color: 'var(--blue)' }}>Añadir cuentas a la lista</h3>
+        <input autoFocus value={q} onChange={e => setQ(e.target.value)} placeholder="Buscar empresa o RUC (mín. 2 letras)…"
+          style={{ width: '100%', padding: '9px 12px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 14, boxSizing: 'border-box', marginBottom: 10 }} />
+        <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #f0f0f0', borderRadius: 8 }}>
+          {res.length === 0 && <div style={{ padding: 16, color: '#9ca3af', fontSize: 13, textAlign: 'center' }}>{q.trim().length < 2 ? 'Escribe para buscar.' : 'Sin resultados.'}</div>}
+          {res.map(c => {
+            const marcada = sel.has(c.ruc)
+            return (
+              <div key={c.ruc} onClick={() => toggle_(sel, setSel, c.ruc)} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderTop: '1px solid #f5f5f5', cursor: 'pointer', background: marcada ? '#eff6ff' : 'white' }}>
+                <input type="checkbox" checked={marcada} readOnly />
+                <div style={{ flex: 1 }}><div style={{ fontSize: 13, fontWeight: 600 }}>{c.razon_social}</div>
+                  <div style={{ fontSize: 11, color: '#9ca3af' }}>{c.ruc} · {fmtMoneyK(c.monto_12m)}</div></div>
+              </div>
+            )
+          })}
+        </div>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 14 }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', background: 'white', color: '#666', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+          <button onClick={guardar} disabled={!sel.size || guardando} style={{ padding: '8px 16px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 700, cursor: sel.size ? 'pointer' : 'not-allowed', opacity: sel.size ? 1 : 0.5 }}>
+            {guardando ? 'Añadiendo…' : `Añadir ${sel.size || ''}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+function toggle_(sel, setSel, ruc) { const n = new Set(sel); n.has(ruc) ? n.delete(ruc) : n.add(ruc); setSel(n) }
 
 function ModalBloque({ tipo, n, aplicando, onClose, onAplicar }) {
   const [estadoVal, setEstadoVal] = useState('contactada')
@@ -263,19 +501,34 @@ function ModalBloque({ tipo, n, aplicando, onClose, onAplicar }) {
   )
 }
 
-function Tabla({ filas, onOpen, selectable, sel, onToggle, allChecked, onToggleAll }) {
-  const [sort, setSort] = useState({ k: 'monto_12m', dir: -1 })
-  const ordenadas = [...filas].sort((a, b) => {
+function Tabla({ filas, onOpen, selectable, sel, onToggle, onSelectRange, allChecked, onToggleAll, dimTrabajadas }) {
+  // En modo lista (dimTrabajadas) el orden viene ya dado (pendientes primero); no
+  // reordenamos por defecto. En el resto, orden por monto desc, reordenable.
+  const [sort, setSort] = useState(dimTrabajadas ? null : { k: 'monto_12m', dir: -1 })
+  const lastIdx = useRef(null)
+  const ordenadas = sort ? [...filas].sort((a, b) => {
     const x = a[sort.k], y = b[sort.k]
     if (typeof x === 'string') return (x || '').localeCompare(y || '') * sort.dir
     return ((x || 0) - (y || 0)) * sort.dir
-  })
+  }) : filas
   const th = (k, label, num) => (
-    <th onClick={() => setSort(s => ({ k, dir: s.k === k ? -s.dir : (k === 'razon_social' || k === 'institucion_principal' ? 1 : -1) }))}
-      style={{ textAlign: num ? 'right' : 'left', padding: '11px 14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', color: sort.k === k ? 'var(--blue)' : '#6b7280' }}>
-      {label}{sort.k === k ? (sort.dir < 0 ? ' ↓' : ' ↑') : ''}
+    <th onClick={() => setSort(s => (s && s.k === k) ? { k, dir: -s.dir } : { k, dir: (k === 'razon_social' || k === 'institucion_principal') ? 1 : -1 })}
+      style={{ textAlign: num ? 'right' : 'left', padding: '11px 14px', fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', color: sort && sort.k === k ? 'var(--blue)' : '#6b7280' }}>
+      {label}{sort && sort.k === k ? (sort.dir < 0 ? ' ↓' : ' ↑') : ''}
     </th>
   )
+  // Clic en casilla: normal alterna; con Shift, selecciona el rango desde la última
+  // marcada hasta esta (en el orden actual de la tabla).
+  const onCheck = (idx, ruc, e) => {
+    e.stopPropagation()
+    if (e.shiftKey && lastIdx.current !== null) {
+      const [a, b] = [lastIdx.current, idx].sort((x, y) => x - y)
+      onSelectRange(ordenadas.slice(a, b + 1).map(c => c.ruc))
+    } else {
+      onToggle(ruc)
+    }
+    lastIdx.current = idx
+  }
   return (
     <div style={{ background: 'white', border: '1px solid #e5e7eb', borderRadius: 12, overflow: 'hidden' }}>
       <div style={{ overflowX: 'auto' }}>
@@ -288,16 +541,17 @@ function Tabla({ filas, onOpen, selectable, sel, onToggle, allChecked, onToggleA
             {th('institucion_principal', 'Principal comprador')}{th('renovacion_proveedor_fecha', 'Renovación')}{th('estado', 'Estado')}
           </tr></thead>
           <tbody>
-            {ordenadas.map(c => {
+            {ordenadas.map((c, idx) => {
               const marcada = selectable && sel.has(c.ruc)
+              const atenuada = dimTrabajadas && c.trabajada
               return (
-                <tr key={c.ruc} onClick={() => onOpen(c.ruc)} style={{ borderTop: '1px solid #f3f4f6', cursor: 'pointer', background: marcada ? '#eff6ff' : 'white' }}
+                <tr key={c.ruc} onClick={() => onOpen(c.ruc)} style={{ borderTop: '1px solid #f3f4f6', cursor: 'pointer', background: marcada ? '#eff6ff' : 'white', opacity: atenuada ? 0.5 : 1 }}
                   onMouseEnter={e => e.currentTarget.style.background = marcada ? '#dbeafe' : '#f8f9fb'} onMouseLeave={e => e.currentTarget.style.background = marcada ? '#eff6ff' : 'white'}>
-                  {selectable && <td style={{ padding: '11px 0 11px 14px' }} onClick={e => { e.stopPropagation(); onToggle(c.ruc) }}>
+                  {selectable && <td style={{ padding: '11px 0 11px 14px' }} onClick={e => onCheck(idx, c.ruc, e)}>
                     <input type="checkbox" checked={marcada} readOnly style={{ cursor: 'pointer' }} />
                   </td>}
-                  <td style={{ padding: '11px 14px', fontWeight: 600 }}>{c.razon_social}
-                    <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>{c.ruc}</div>
+                  <td style={{ padding: '11px 14px', fontWeight: 600, textDecoration: atenuada ? 'line-through' : 'none' }}>{c.razon_social}
+                    <div style={{ fontSize: 11, color: '#9ca3af', fontWeight: 400, fontVariantNumeric: 'tabular-nums', textDecoration: 'none' }}>{c.ruc}</div>
                   </td>
                   <td style={{ padding: '11px 14px', textAlign: 'right', fontWeight: 700, color: '#1c6b45', fontVariantNumeric: 'tabular-nums' }}>{fmtMoneyK(c.monto_12m)}</td>
                   <td style={{ padding: '11px 14px', textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>{c.n_adjudicaciones}</td>
@@ -499,6 +753,10 @@ function Field({ label, value, onChange, type = 'text', placeholder }) {
 
 const sel_ = { padding: '7px 10px', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 13, background: 'white' }
 const barBtn = { padding: '6px 12px', background: 'rgba(255,255,255,.16)', color: 'white', border: '1px solid rgba(255,255,255,.35)', borderRadius: 7, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
+const barBtnBlue = { padding: '6px 12px', background: 'var(--blue)', color: 'white', border: 'none', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer' }
+const iconBtn = { padding: '4px 10px', background: 'none', border: '1px solid #e5e7eb', borderRadius: 7, fontSize: 12, color: '#6b7280', cursor: 'pointer' }
+const modalBg = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }
+const modalCard = { background: 'white', borderRadius: 12, padding: 22, width: 'min(420px, 94vw)' }
 const kLbl = { fontSize: 10, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '.04em' }
 const hoyRow = { display: 'flex', alignItems: 'center', gap: 10, padding: '11px 16px', borderTop: '1px solid #f3f4f6', cursor: 'pointer' }
 const telBtn = { display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 30, height: 30, borderRadius: 8, background: '#e8f0fb', color: 'var(--blue)', flexShrink: 0 }
