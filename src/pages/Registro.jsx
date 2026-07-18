@@ -451,7 +451,12 @@ export default function Registro() {
     try {
       const r = await fetch('/api/registro/paso2', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ rt, plan, packs, ciclo, metodo_pago: 'yappy', yappy_telefono: yappyTel, modo,
+        // Flujo directo: TODO registro arranca en prueba Pro+ completa (sin elegir plan).
+        // El backend lo vuelve a forzar (no se fía del cliente). El carril 'completo' (edge
+        // anti-abuso: ya usó su prueba) conserva el plan del estado.
+        body: JSON.stringify({ rt, plan: modo === 'trial' ? 'pro-plus' : plan,
+                               packs: modo === 'trial' ? 0 : packs, ciclo,
+                               metodo_pago: 'yappy', yappy_telefono: yappyTel, modo,
                                ruc: form.ruc, dv: form.dv }),
       })
       const data = await r.json().catch(() => ({}))
@@ -777,13 +782,47 @@ export default function Registro() {
           </div>
         )}
 
-        {/* PASO 2 — PLAN + PACKS */}
+        {/* PASO 2 — ARRANQUE DE LA PRUEBA (flujo directo Pro+; el selector de plan se movió
+            al fin de la prueba). El estado sigue llamándose 'plan' por compatibilidad con el
+            deep-link de Gate C (/app/registro?paso=2) y el sondeo de verificación. */}
         {paso === 'plan' && (
           <div style={esMovil ? { paddingBottom: 78 } : undefined /* móvil: reserva hueco para la barra fija del CTA */}>
-            <h1 style={{ fontSize: 18, fontWeight: 700, color: 'var(--blue)', margin: '0 0 4px' }}>Elija su plan</h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 8 }}>
-              Pro y Pro+ incluyen 5 usuarios (ampliables con paquetes de +5); Lite es para 1 usuario.
-            </p>
+            {/* PANTALLA DE ARRANQUE (flujo directo). Se acabó la decisión prematura de plan:
+                todo el mundo entra a la prueba de 5 días con Pro+ COMPLETO (todos los módulos).
+                Los planes y precios se eligen DESPUÉS, al vencer la prueba, cuando el cliente
+                ya sabe qué quiere. El único caso que sí ve un CTA de pago aquí es el anti-abuso
+                (ya disfrutó su prueba, !trialElegible) — ahí no hay prueba que ofrecer. */}
+            {trialElegible ? (
+              <>
+                <h1 style={{ fontSize: 19, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
+                  Su prueba gratuita está lista
+                </h1>
+                <p style={{ color: 'var(--text)', fontSize: 14, marginTop: 0, marginBottom: 6, lineHeight: 1.55 }}>
+                  5 días con <strong>acceso completo</strong>, sin tarjeta. No se le cobra nada.
+                </p>
+                <p style={{ color: 'var(--text-muted)', fontSize: 13, marginTop: 0, marginBottom: 14, lineHeight: 1.5 }}>
+                  Al terminar la prueba, usted decide si continúa.
+                </p>
+                <div style={{ background: 'var(--blue-light)', border: '1px solid var(--border)', borderRadius: 12, padding: 14, marginBottom: 14 }}>
+                  <div style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 14, marginBottom: 8 }}>Todo incluido</div>
+                  <div style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.7 }}>
+                    Radar · Watchlist · Explorer · Legal · Sócrates IA · Track (CRM)
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 8 }}>
+                    Podrá elegir el plan que mejor le encaje cuando ya sepa qué quiere.
+                  </div>
+                </div>
+              </>
+            ) : (
+              <>
+                <h1 style={{ fontSize: 19, fontWeight: 700, color: 'var(--blue)', margin: '0 0 6px' }}>
+                  Su empresa ya disfrutó su prueba
+                </h1>
+                <p style={{ color: 'var(--text)', fontSize: 14, marginTop: 0, marginBottom: 14, lineHeight: 1.55 }}>
+                  Puede activar su cuenta suscribiéndose ahora. En el siguiente paso elige su forma de pago.
+                </p>
+              </>
+            )}
 
             {/* RUC DIFERIDO: si no lo puso en el alta, se le pide AQUÍ. Este es el momento
                 de "activar la cuenta" que le prometimos, y es donde el guard anti-abuso lo
@@ -805,95 +844,6 @@ export default function Registro() {
               </div>
             )}
 
-            {/* Conmutador Mensual / Anual ("2 meses gratis") */}
-            <div style={{ display: 'inline-flex', padding: 3, borderRadius: 999, background: 'var(--gray)', marginBottom: 10 }}>
-              {[['mensual', 'Mensual'], ['anual', 'Anual']].map(([val, label]) => (
-                <button key={val} type="button" onClick={() => setCiclo(val)} style={{
-                  padding: '6px 16px', borderRadius: 999, border: 'none', cursor: 'pointer', fontSize: 13,
-                  fontWeight: ciclo === val ? 700 : 500,
-                  color: ciclo === val ? 'var(--blue)' : 'var(--text-muted)',
-                  background: ciclo === val ? 'white' : 'transparent',
-                  boxShadow: ciclo === val ? '0 1px 2px rgba(0,0,0,0.1)' : 'none',
-                }}>
-                  {label}{val === 'anual' && <span style={{ color: 'var(--red)', fontWeight: 700, marginLeft: 6 }}>2 meses gratis</span>}
-                </button>
-              ))}
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-              {Object.values(planesMeta.planes).map((p) => {
-                const sel = plan === p.id
-                // Precio mostrado según ciclo (anual = base × meses, "2 meses gratis").
-                const pLista = anual ? (p.total_anual_usd != null ? p.total_anual_usd : p.base_usd * meses) : p.base_usd
-                const pLanz = p.base_lanzamiento_usd != null
-                  ? (anual ? (p.total_lanzamiento_anual_usd != null ? p.total_lanzamiento_anual_usd : p.base_lanzamiento_usd * meses) : p.base_lanzamiento_usd)
-                  : null
-                return (
-                  <button key={p.id} type="button" onClick={() => { setPlan(p.id); setPacks(pk => Math.min(pk, p.max_packs || 0)) }} style={{
-                    textAlign: 'left', border: `2px solid ${sel ? 'var(--blue)' : 'var(--border)'}`,
-                    background: sel ? 'var(--blue-light)' : 'white', borderRadius: 10, padding: '8px 14px', cursor: 'pointer',
-                  }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--blue)', fontSize: 15 }}>{p.nombre}</span>
-                      <span style={{ fontWeight: 700, fontSize: 15 }}>
-                        ${pLanz != null ? pLanz : pLista}<span style={{ fontSize: 12, fontWeight: 400, color: 'var(--text-muted)' }}>{sufijo}</span>
-                      </span>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 4 }}>
-                      Radar, Watchlist, Explorer, Legal, Sócrates IA{p.modulo_track ? ' + Track (CRM)' : ''}
-                      {p.multiempresa === false && ' · 1 usuario'}
-                    </div>
-                    {p.base_lanzamiento_usd != null && (
-                      <div style={{ fontSize: 12, color: 'var(--red)', fontWeight: 600, marginTop: 4 }}>
-                        Promoción: Track incluido gratis los primeros {p.lanzamiento_meses} meses
-                      </div>
-                    )}
-                  </button>
-                )
-              })}
-            </div>
-
-            {permitePacks && (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14 }}>Paquetes de +5 usuarios</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-muted)' }}>+${anual ? cfg.pack_usd * meses : cfg.pack_usd}{sufijo} por paquete</div>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                  <Stepper onClick={() => setPacks(p => Math.max(0, p - 1))} disabled={packs <= 0}>−</Stepper>
-                  <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700, fontSize: 16 }}>{packs}</span>
-                  <Stepper onClick={() => setPacks(p => Math.min(maxPacks, p + 1))} disabled={packs >= maxPacks}>+</Stepper>
-                </div>
-              </div>
-            )}
-
-            <div style={{ background: 'var(--gray)', borderRadius: 10, padding: 11, marginBottom: 10 }}>
-              <Linea label="Usuarios totales" valor={`${usuariosTotal}`} />
-              {(() => {
-                // Precio BASE limpio mientras decide; el desglose con ITBMS y el total real
-                // se muestran SOLO en la pantalla de pago. (El ITBMS se sigue calculando
-                // por detrás igual — solo cambia dónde se enseña.)
-                const base = totalLanzamiento != null ? totalLanzamiento : totalLista
-                return (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 6 }}>
-                    <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{anual ? 'Cuota anual (luego)' : 'Cuota mensual (luego)'}</span>
-                    <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-muted)' }}>
-                      ${base}<span style={{ fontSize: 11, fontWeight: 400 }}>{sufijo}</span>
-                    </span>
-                  </div>
-                )
-              })()}
-              {/* La promoción de Track ya se muestra en la tarjeta del plan; aquí se omite
-                  para no duplicar y ganar altura. */}
-              {/* Trial SIN pago (nuevo flujo): no se cobra nada hoy. La cuota de arriba es
-                  lo que se cobra al terminar la prueba de 5 días. */}
-              {trialElegible && (
-                <div style={{ fontSize: 13, color: 'var(--text-muted)', marginTop: 10, paddingTop: 10, borderTop: '1px solid var(--border)' }}>
-                  <strong style={{ color: 'var(--text)' }}>Pruébelo sin costo.</strong> Al terminar la prueba de 5 días, se cobra la cuota indicada arriba.
-                </div>
-              )}
-            </div>
-
             {/* En MÓVIL el CTA es una barra FIJA al pie de la pantalla: siempre visible al
                 llegar, sin depender del scroll (la vía sticky no enganchaba porque la tarjeta
                 apenas supera el alto del viewport). El bloque de arriba reserva `paddingBottom`
@@ -907,10 +857,10 @@ export default function Registro() {
             } : undefined}>
               <button type="button"
                 onClick={trialElegible
-                  ? () => enviarPaso2('trial')                                       /* trial GRATIS: activa y entra a /app */
-                  : () => { setError(''); setMetodoSel(null); setPaso('metodo') }}   /* completo: pasa al paso de pago */
+                  ? () => enviarPaso2('trial')                                       /* trial GRATIS Pro+: activa y entra a /app */
+                  : () => { setError(''); setMetodoSel(null); setPaso('metodo') }}   /* anti-abuso: ya usó su prueba → pago */
                 disabled={loading} style={btn(!loading)}>
-                {loading ? 'Un momento…' : (trialElegible ? 'Comenzar prueba de 5 días' : 'Continuar al pago')}
+                {loading ? 'Un momento…' : (trialElegible ? 'Comenzar prueba' : 'Continuar al pago')}
               </button>
             </div>
           </div>
