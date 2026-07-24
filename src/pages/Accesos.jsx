@@ -51,6 +51,53 @@ const inp = { padding: '8px 10px', border: '1px solid #e5e7eb', borderRadius: 8,
 const th = { padding: '9px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#9ca3af', borderBottom: '1px solid #e5e7eb', whiteSpace: 'nowrap' }
 const td = { padding: '10px 12px', fontSize: 12, color: '#374151', borderBottom: '1px solid #f3f4f6', whiteSpace: 'nowrap' }
 
+// ============================ ORDENACIÓN (cliente, presentación) ============================
+// Ordena las filas ya cargadas al clicar un encabezado. Solo presentación: no pide al backend
+// ni toca datos. En "Accesos" reordena la página cargada (máx. 300 recientes), no toda la BD.
+function useOrden(inicialKey, inicialDir = 'desc') {
+  const [key, setKey] = useState(inicialKey)
+  const [dir, setDir] = useState(inicialDir)
+  // Mismo encabezado → alterna asc/desc. Encabezado nuevo → empieza ascendente.
+  const toggle = (k) => {
+    if (k === key) setDir(d => (d === 'asc' ? 'desc' : 'asc'))
+    else { setKey(k); setDir('asc') }
+  }
+  return { key, dir, toggle }
+}
+
+function ordenar(filas, cols, key, dir) {
+  const col = cols.find(c => c.key === key)
+  if (!col) return filas
+  const mult = dir === 'asc' ? 1 : -1
+  // decora-ordena-desdecora para un orden ESTABLE (empates conservan el orden de origen)
+  return filas.map((f, i) => [f, i]).sort((a, b) => {
+    const va = col.valor(a[0]), vb = col.valor(b[0])
+    const na = va == null || va === '', nb = vb == null || vb === ''
+    if (na && nb) return a[1] - b[1]
+    if (na) return 1            // vacíos SIEMPRE al final, en ambos sentidos
+    if (nb) return -1
+    let c
+    if (col.tipo === 'num') c = va - vb
+    else if (col.tipo === 'fecha') c = new Date(va) - new Date(vb)
+    else c = String(va).localeCompare(String(vb), 'es', { sensitivity: 'base', numeric: true })
+    return c !== 0 ? c * mult : a[1] - b[1]
+  }).map(x => x[0])
+}
+
+// Encabezado clicable con indicador visual de columna+sentido activos.
+function ThOrden({ col, orden }) {
+  const activo = orden.key === col.key
+  return (
+    <th style={{ ...th, cursor: 'pointer', userSelect: 'none', color: activo ? 'var(--blue)' : th.color }}
+        onClick={() => orden.toggle(col.key)} title="Ordenar por esta columna">
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+        {col.label}
+        <span style={{ fontSize: 10, opacity: activo ? 1 : 0.3 }}>{activo ? (orden.dir === 'asc' ? '▲' : '▼') : '↕'}</span>
+      </span>
+    </th>
+  )
+}
+
 // ============================ DETALLE DE UN ACCESO ============================
 function DetalleAcceso({ ev, onClose }) {
   return (
@@ -83,19 +130,33 @@ function DetalleAcceso({ ev, onClose }) {
 }
 
 // ============================ VISTA: ACCESOS ============================
+// Columnas (etiqueta + cómo extraer/ordenar su valor). Mismo orden que la tabla.
+const COLS_ACCESOS = [
+  { key: 'fecha', label: 'Fecha y hora', tipo: 'fecha', valor: e => e.creado_en },
+  { key: 'resultado', label: 'Resultado', tipo: 'txt', valor: e => etiquetaAcceso(e) },
+  { key: 'email', label: 'Email intentado', tipo: 'txt', valor: e => e.email_intento },
+  { key: 'empresa', label: 'Empresa', tipo: 'txt', valor: e => e.empresa },
+  { key: 'ip', label: 'IP', tipo: 'txt', valor: e => e.ip },
+  { key: 'ua', label: 'Navegador', tipo: 'txt', valor: e => e.user_agent },
+]
+
 function VistaAccesos() {
   const [q, setQ] = useState('')
   const [empresaId, setEmpresaId] = useState('')
   const [exito, setExito] = useState('')
   const [desde, setDesde] = useState('')
   const [hasta, setHasta] = useState('')
+  const [hoy, setHoy] = useState(false)   // filtro rápido: solo el día natural de Panamá
   const [empresas, setEmpresas] = useState([])
   const [filas, setFilas] = useState([])
   const [meta, setMeta] = useState({ truncado: false, limite: 300 })
   const [cargando, setCargando] = useState(true)
   const [sel, setSel] = useState(null)
+  const orden = useOrden('fecha', 'desc')
 
-  const buscar = () => {
+  // `over` permite pasar el nuevo valor de un toggle sin esperar al re-render (setState async).
+  const buscar = (over = {}) => {
+    const hoyEff = over.hoy !== undefined ? over.hoy : hoy
     setCargando(true)
     const p = new URLSearchParams()
     if (q.trim()) p.set('q', q.trim())
@@ -103,6 +164,7 @@ function VistaAccesos() {
     if (exito) p.set('exito', exito)
     if (desde) p.set('desde', desde)
     if (hasta) p.set('hasta', hasta)
+    if (hoyEff) p.set('hoy', '1')
     axios.get(`/api/admin/login-eventos?${p.toString()}`)
       .then(r => { setFilas(r.data.eventos || []); setMeta({ truncado: r.data.truncado, limite: r.data.limite }) })
       .catch(() => setFilas([]))
@@ -157,16 +219,24 @@ function VistaAccesos() {
           <label style={{ ...dl, display: 'block', marginBottom: 4 }}>Hasta</label>
           <input type="date" style={inp} value={hasta} onChange={e => setHasta(e.target.value)} />
         </div>
-        <button onClick={buscar} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Buscar</button>
+        <button
+          onClick={() => { const nv = !hoy; setHoy(nv); buscar({ hoy: nv }) }}
+          title="Solo accesos del día natural de Panamá (desde las 00:00 hora Panamá)"
+          style={{ padding: '9px 16px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+                   border: hoy ? '1px solid var(--blue)' : '1px solid #e5e7eb',
+                   background: hoy ? 'var(--blue)' : 'white', color: hoy ? 'white' : 'var(--blue)' }}>
+          Hoy
+        </button>
+        <button onClick={() => buscar()} style={{ padding: '9px 20px', background: 'var(--blue)', color: 'white', borderRadius: 8, fontSize: 13, fontWeight: 600, border: 'none', cursor: 'pointer' }}>Buscar</button>
       </div>
 
       <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-          <thead><tr style={{ background: '#f8f9fa' }}>{['Fecha y hora', 'Resultado', 'Email intentado', 'Empresa', 'IP', 'Navegador'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+          <thead><tr style={{ background: '#f8f9fa' }}>{COLS_ACCESOS.map(c => <ThOrden key={c.key} col={c} orden={orden} />)}</tr></thead>
           <tbody>
             {cargando && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={6}>Cargando…</td></tr>}
             {!cargando && filas.length === 0 && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={6}>Sin accesos para esta búsqueda.</td></tr>}
-            {filas.map(ev => (
+            {ordenar(filas, COLS_ACCESOS, orden.key, orden.dir).map(ev => (
               <tr key={ev.id} onClick={() => setSel(ev)} style={{ cursor: 'pointer' }}
                 onMouseEnter={e => e.currentTarget.style.background = '#f8f9fa'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                 <td style={td}>{fmtFechaHora(ev.creado_en)}</td>
@@ -190,9 +260,20 @@ function VistaAccesos() {
 }
 
 // ============================ VISTA: RESUMEN POR EMPRESA ============================
+// "Éxitos hoy" = día natural de Panamá (00:00 Panamá → ahora), NO 24 h rodantes; lo calcula
+// el backend con conversión explícita a UTC-5 (el servidor corre en UTC).
+const COLS_RESUMEN = [
+  { key: 'empresa', label: 'Empresa', tipo: 'txt', valor: r => r.empresa || `Empresa ${r.empresa_id}` },
+  { key: 'ultimo', label: 'Último acceso exitoso', tipo: 'fecha', valor: r => r.ultimo_exito },
+  { key: 'hoy', label: 'Éxitos hoy', tipo: 'num', valor: r => r.exitos_hoy },
+  { key: '7d', label: 'Éxitos (7 días)', tipo: 'num', valor: r => r.exitos_7d },
+  { key: '30d', label: 'Éxitos (30 días)', tipo: 'num', valor: r => r.exitos_30d },
+]
+
 function VistaResumen() {
   const [filas, setFilas] = useState([])
   const [cargando, setCargando] = useState(true)
+  const orden = useOrden('ultimo', 'desc')   // por defecto: como lo ordena el backend
 
   useEffect(() => {
     let vivo = true
@@ -206,14 +287,15 @@ function VistaResumen() {
   return (
     <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e5e7eb', overflowX: 'auto' }}>
       <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead><tr style={{ background: '#f8f9fa' }}>{['Empresa', 'Último acceso exitoso', 'Éxitos (7 días)', 'Éxitos (30 días)'].map(h => <th key={h} style={th}>{h}</th>)}</tr></thead>
+        <thead><tr style={{ background: '#f8f9fa' }}>{COLS_RESUMEN.map(c => <ThOrden key={c.key} col={c} orden={orden} />)}</tr></thead>
         <tbody>
-          {cargando && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={4}>Cargando…</td></tr>}
-          {!cargando && filas.length === 0 && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={4}>Sin accesos exitosos registrados aún.</td></tr>}
-          {filas.map(r => (
+          {cargando && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={5}>Cargando…</td></tr>}
+          {!cargando && filas.length === 0 && <tr><td style={{ ...td, color: '#9ca3af', textAlign: 'center' }} colSpan={5}>Sin accesos exitosos registrados aún.</td></tr>}
+          {ordenar(filas, COLS_RESUMEN, orden.key, orden.dir).map(r => (
             <tr key={r.empresa_id}>
               <td style={td}><span style={{ fontWeight: 600, color: 'var(--blue)' }}>{r.empresa || `Empresa ${r.empresa_id}`}</span></td>
               <td style={td}>{fmtFechaHora(r.ultimo_exito)}</td>
+              <td style={td}>{r.exitos_hoy}</td>
               <td style={td}>{r.exitos_7d}</td>
               <td style={td}>{r.exitos_30d}</td>
             </tr>
